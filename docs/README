@@ -1,0 +1,46 @@
+nVentory - Ruby on Rails Datacenter Inventory Manager
+http://nventory.sourceforge.net
+
+** This is still Alpha quality code and under heavy development **
+We use it, we modify it a lot, and we understand how it works.
+Your mileage may vary. 
+But it's pretty cool so far and getting cooler.
+
+------------------------------------------------------------------------------
+Setup
+------------------------------------------------------------------------------
+
+See the GettingStarted page on http://nventory.wiki.sourceforge.net/
+
+------------------------------------------------------------------------------
+Help
+------------------------------------------------------------------------------
+
+If you run into any problems or have any questions you'll find us on the
+nventory-users mailing list:
+
+https://lists.sourceforge.net/lists/listinfo/nventory-users
+
+------------------------------------------------------------------------------
+License
+------------------------------------------------------------------------------
+
+License: MIT (http://www.opensource.org/osi3.0/licenses/mit-license.php)
+
+------------------------------------------------------------------------------
+Credits
+------------------------------------------------------------------------------
+
+Initial development:
+
+Concept and specs:
+  Warwick Poole, Rolando Berrios, Gilbert Iancu - Vidavee Systems Team
+Ruby on Rails development and coding:
+  Mike Zornek (http://www.clickablebliss.com)
+copyright 2007, Vidavee
+
+More recent work:
+
+Jason Heiss, YELLOWPAGES.COM
+copyright 2008, YELLOWPAGES.COM LLC
+
