@@ -1,0 +1,26 @@
+<%- if node.rack -%>
+  <table cellspacing="0" class="styled" summary="Rack assignment for this node.">
+  <caption>Rack</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>Assigned at</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in [node.rack_node_assignment] %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.rack.name, rack_path(assignment.rack) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), rack_node_assignment_path(assignment) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => rack_node_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p>This node is not assigned to a rack.</p>
+<%- end -%>

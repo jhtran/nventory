@@ -1,0 +1,2 @@
+module NodeDatabaseInstanceAssignmentsHelper
+end

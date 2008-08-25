@@ -1,0 +1,45 @@
+<%- @page_title = "Network Interface: " + h(@network_interface.name) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @network_interface} %>
+
+<div class="record_view">
+
+<h1>Name: <%=h @network_interface.name %></h1>
+
+<p><strong>Node:</strong> <%= link_to h(@network_interface.node.name), node_url(@network_interface.node_id) if !@network_interface.node_id.nil? %></p>
+
+<p><strong>Interface type:</strong> <%= h(@network_interface.interface_type) %></p>
+<p><strong>Physical:</strong> <%= h(@network_interface.physical) %></p>
+<p><strong>Hardware address:</strong> <%= h(@network_interface.hardware_address) %></p>
+<p><strong>Up:</strong> <%= h(@network_interface.up) %></p>
+<p><strong>Link:</strong> <%= h(@network_interface.link) %></p>
+<p><strong>Speed:</strong> <%= h(@network_interface.speed) %></p>
+<p><strong>Full duplex:</strong> <%= h(@network_interface.full_duplex) %></p>
+<p><strong>Auto-negotiate:</strong> <%= h(@network_interface.autonegotiate) %></p>
+
+<p>
+<strong>IP addresses:</strong>
+<ul>
+<%- @network_interface.ip_addresses.each do |ip| -%>
+  <li><%= link_to ip.address, ip_address_url(ip) %></li>
+<%- end -%>
+</ul>
+</p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@network_interface.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@network_interface.updated_at) %></p>
+
+</div>
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @network_interface} %>
+
+</div> <!-- end relationship -->
+
+<%- if !@network_interface.deleted_at -%>
+<p><%= link_to 'Edit', edit_network_interface_path(@network_interface) %> | 
+<%= link_to 'Delete', network_interface_path(@network_interface), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @network_interface} %>

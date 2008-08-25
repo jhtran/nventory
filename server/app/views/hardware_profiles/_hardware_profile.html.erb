@@ -1,0 +1,21 @@
+<p><strong>Name:</strong> <em>*</em> <br /><%= f.text_field :name %> </p>
+<p><strong>Manufacturer:</strong> <br /><%= f.text_field :manufacturer %> </p>
+<p><strong>Model:</strong> <br /><%= f.text_field :model %> </p>
+<p><strong>Rack size:</strong> <br /><%= f.text_field :rack_size %> </p>
+<p><strong>Memory:</strong> <br /><%= f.text_field :memory %> </p>
+<p><strong>Disk:</strong> <br /><%= f.text_field :disk %> </p>
+<p><strong>Nics:</strong> <br /><%= f.text_field :nics %> </p>
+<p><strong>Power supply slot count:</strong> <br /><%= f.text_field :power_supply_slot_count %> </p>
+<p><strong>Power supply count:</strong> <br /><%= f.text_field :power_supply_count %> </p>
+<p><strong>Power consumption:</strong> <br /><%= f.text_field :power_consumption %> </p>
+<p><strong>Processor manufacturer:</strong> <br /><%= f.text_field :processor_manufacturer %> </p>
+<p><strong>Processor model:</strong> <br /><%= f.text_field :processor_model %> </p>
+<p><strong>Processor speed:</strong> <br /><%= f.text_field :processor_speed %> </p>
+<p><strong>Processor socket count:</strong> <br /><%= f.text_field :processor_socket_count %> </p>
+<p><strong>Processor count:</strong> <br /><%= f.text_field :processor_count %> </p>
+<p><strong>Outlet count:</strong> <br /><%= f.text_field :outlet_count %> </p>
+<p><strong>Outlet type:</strong> <br /><%= f.select :outlet_type, HardwareProfile.allowed_outlet_types.collect { |ot| [ ot, ot ] } %></p>
+<p><strong>Cards:</strong> <br /><%= f.text_field :cards %> </p>
+<p><strong>Visualization Color:</strong> <br /><%= f.text_field :visualization_color %> </p>
+<p><strong>Estimated Cost:</strong> <br /><%= f.text_field :estimated_cost %> </p>
+<p><strong>Description:</strong> <br /><%= f.text_area :description, {"cols" => 60, "rows" => 4} %> </p>

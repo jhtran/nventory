@@ -1,0 +1,252 @@
+[2007-04-10: REVISION 103]
+
+[CHANGED] Now using flash instead of @flash -- which is deprecated and will not be in Rails 2.0.
+
+[NEW] Added DB Indexes for all of the various columns we search, sort and order by in various queries.
+
+[NEW] Added a series of "N" links to the main sidebar. Clicking this will create a New Object of the type it is next to.
+
+[NEW] Adding validation to make sure a rack can only have one datacenter assignment.
+
+[NEW] Adding validation to make sure a environment can only have one datacenter assignment.
+
+[NEW] Adding validation to make sure a node can only have one rack assignment.
+
+[NEW] Adding validation to make sure a database instance can only have one node assignment.
+
+[NEW] Added edge case to ajax addition of functions to a node, that checks when you are adding a function that enables_database_instance_access and if so reloads the whole node page (thus showing the UI to manage Database Instances) rather than just the inline updating of the function list.
+
+[NEW] Added before_destroy check on Node Function Assignment. We catch those functions that enables_database_instance_access and make sure you can delete a DB Server function from a node, where the node is actively managing database instances. You need to decouple the instances first.
+
+[NEW] Added Main URL, Stream URL, Analytics URL and Reporting URL as optional attributes to a program.
+
+[2007-04-08: REVISION 96]
+
+[NEW] Added new model and basic CRUD UI for Function Type object.
+
+[CHANGED] Each function now has a function type model relationship.
+
+[CHANGED] Took out default functions from schema and put them into setup sample data.
+
+[CHANGED] Updated the dashboard, environment xml configuration template, node model, and some unit tests to use the new FunctionType model properly. 
+
+[NEW] New before_destroy check for Function Type: A function type can not be destroyed that has functions using it. We catch this exception in the function_type_controller and show a flash error if needed.
+
+[CHANGED] Updated the visualization summary of a node to cope with the new idea that a node can belong to more than one environment.
+
+[CHANGED] Made the Nics attribute on hardware profile an integer. 
+
+[NEW] Added Power Supply Count attribute to hardware profile to represent the count of power supplies a node might have.
+
+[NEW] Added Outlet Type to hardware profile to help us differentiate the outlets that will be supplied by a node.
+
+[NEW] Added a section called 'Smart Relationships' on the Node view page which shows links and info we can gain from other relationships in the system. Ie: what rack this node is in. What environments it is apart of, who are the producers for it's power/network outlets, etc.
+
+[NEW] Added validation to the outlet object that will protect against saving invalid data such as a streamer node has two power supplies yet has three outlet relationships as 'power' consumer.
+
+[CHANGED] Previously we would look for the string 'Database Server' in the function list to determine if a node should display the UI to manage database instances. Now there is a flag in the function type that will enable database instances access (when connected to a node). 
+
+[2007-04-05: REVISION 91]
+
+[CHANGED] Removed the sortability of the rack index by datacenter since current business logic dictates a rack does not have to have a datacenter. We could make this a requirement and bring this feature back by removing the concept of DatabaseRackAssignment all together (and having a Datacenter pull down when creating a rack, like that of customer when creating a program). For RackNodeAssignment it's important to model the relationship as we (in time) want to know when a node was added to a rack and by whom but this is probable less interesting for racks in a datacenter.
+
+[FIXED] Fixed a bug where ipaddresses on node was assumed to never be null. Currently, it can be ... though I may edit the DB schema to force empty strings rather than store null. 
+
+[NEW] New before_destroy check for Datacenter: A datacenter can not be destroyed that has racks assigned to it. We catch this exception in the datacenter_controller and show a flash error if needed.
+
+[NEW] New before_destroy check for Datacenter: A datacenter can not be destroyed that has environments assigned to it. We catch this exception in the datacenter_controller and show a flash error if needed.
+
+[NEW] When you delete a rack it will delete the datacenter_rack_assignment it might have been a member of.
+
+[NEW] New before_destroy check for Rack: A rack can not be destroyed that has nodes assigned to it. We catch this exception in the rack_controller and show a flash error if needed.
+
+[NEW] When you delete a node it will delete the rack_node_assignment it might have been a member of.
+
+[NEW] When you delete a node it will delete the node_function_assignments it might have been a member of.
+
+[NEW] When you delete a node it will delete the environment_node_assignments it might have been a member of.
+
+[NEW] New before_destroy check for Node: A node can not be destroyed that has database instances assigned to it. We catch this exception in the node_controller and show a flash error if needed.
+
+[NEW] When you delete a environment it will delete the environment_program_assignments it might have been a member of.
+
+[NEW] When you delete a environment it will delete the environment_node_assignments it might have been a member of.
+
+[NEW] When you delete a program it will delete the environment_program_assignments it might have been a member of.
+
+[NEW] New before_destroy check for Customer: A customer can not be destroyed that has programs assigned to it. We catch this exception in the customer_controller and show a flash error if needed.
+
+[NEW] New before_destroy check for Function: A function can not be destroyed that has nodes assigned to it. We catch this exception in the function_controller and show a flash error if needed.
+
+[NEW] When you delete a database instance it will delete the node_database_instance_assignment it might have been a member of.
+
+[NEW] Added many unit tests to help validate these new destroy exceptions/rules.
+
+[CHANGED] Programs can now be assigned of more than one environment.
+
+[CHANGED] Reworked the implementation of the view for show environment where we list the customer programs. There was a previous assumption a program was assigned to only one env.
+
+[CHANGED] Nodes can now be assigned of more than one environment.
+
+[CHANGED] Edited the show now page to handle listings of related environments. Previously it assumed only one.
+
+[CHANGED] Edited the index for nodes to handle multiple environments. Previously it assumed only one.
+
+
+[2007-04-02: REVISION 81]
+
+[NEW] Started working on the xml configuration file for environment. I have it working mostly though I need to discuss function_types and how it might relate to the style of this code (ie: a static, expected list of function types or something more dynamic defined and editable in the system by the user which brings up other issues).
+
+[NEW] Added UI to manage Database Instances on the node page. The UI will only show up if the node is a database server. If adding this function, refresh page to see UI.
+
+[FIXED] Fixed a validation issue where we were checking validates_presence_of object instead of object_id
+
+[NEW] Added new model an basic CRUD UI for database instance relationship. I'd like guidance if this is the correct way the relationships should be modeled and how you might want this to be presented in an AJAXy way on the core object pages (ie: node show page).
+
+[NEW] Added new model and basic CRUD UI for Account object.
+
+[NEW] We now require authentication to access the application.
+
+[CHANGED] Operating System is now an optional attribute of a node.
+
+[2007-03-29: REVISION 74]
+
+[FIXED] Fixed a nasty bug that showed up when rendering a partial with different local hashes in two different views. Seems rails was doing some aggressive caching so it would only fail when i would visit the page with less locals first.
+
+[NEW] Added a new property to Function, "function_type". This is set through a static pull down when editing a Function. The basic idea is that you can create functions like stream-1, stream-2, stream-3 yet they all belong to the family (function_type) "streamer" -- and thus when we are doing stats for the places like the dashboard we'll count based on function_type not specific function definition.
+
+[NEW] Iterating over nodes and their functions on dashboard index to create numbers to fill network summary.
+
+[NEW] Added Customer Summary by iterating over Customers and their environments on dashboard index.
+
+[2007-03-28: REVISION 71]
+
+[CHANGED] Made the status list on the dashboard under Node be a dynamic list based on db (was static html before).
+
+[NEW] Added dynamic "Nodes by Hardware Profile" link list on Dashboard + search capability for that property to the node controller.
+
+[NEW] Added dynamic "Nodes by Function" link list on Dashboard + search capability for that property to the node controller.
+
+[NEW] Added unique validator for HardwareProfile name.
+
+[NEW] Added unique validator for Function name.
+
+[NEW] Added unique validator for Status name scoped to the relevant model.
+
+[FIXED] Fixed a bug introduced in the last release that would show deleted objects on the indexes.
+
+[CHANGED] Instead of a list of links I've made the dashboard menu use pulldowns which is what was originally asked for in an early prototype PDF.
+
+[NEW] Added Nodes By Customer pull down to dashboard.
+
+[FIXED] Fixed a bug where under the right search query and situation a node might be listed twice on the index page.
+
+[2007-03-27: REVISION 65]
+
+[CHANGED] Updated required Rails to version 1.2.3.
+
+[FIXED] Fixed a bug that would cause the pull down of all inline assignment creation forms to show customer programs.
+
+[FIXED] Fixed a bug that would cause and RJS error when deleting a environment program assignment inline on the environment page.
+
+[NEW] Added inline pagination for all the indexes. It is a very basic paginater, let me know if you want it to behave differently or if you want it to have any more features.
+
+[NEW] Added the ability to sort on various columns in the indexes. Not all columns or sortable (longer story). If you you spot a column you see and want it to be sortable let me know and I'll try to add it.
+
+[NEW] Added new columns to various core object indexes-based on request.
+
+[CHANGED] Reworded the generic index_none page to handle the concept that search terms may have been used when requesting this index.
+
+[NEW] Starting with the Node index we are now processing some search queries. The only current example of this in use is on the Dashboard page: there is a list of the three node statuses, clicking on this will bring up the node index limited to that status. I plan to expand on this in the next day or so.
+
+[2007-03-22: REVISION 57]
+
+[CHANGED] Reworked the visualization of a rack to represent 42Us of height. Also tightened up the node visualization. Basically a node will take up 25 pixels of height and a rack container is 42*25 pixels tall. A new version of the sample data represents this by creating Rack 1 with 42 1U sized nodes. We also now set the PDU U height to 2U with a different color for demo purposes.
+
+[NEW] Added estimated_cost as a new attribute to HardwareProfile. Also added validations in HardwareProfile to make sure rack_size, processor_count, outlet_count and  estimated_cost were numbers and not less than zero.
+
+[NEW] Added estimated investment read-only attribute to environment which totals the estimated costs of the nodes within.
+
+[CHANGED] Move the 'New [something]' links on the index pages to the top for easier access.
+
+[NEW] Added a unique validation on the name attribute of a node. Each node should have a unique name.
+
+[NEW] Added a highlight to the various add assignment forms when a new item has been added into the pull down (via an AJAX creation on the same page)
+
+[CHANGED] Edited the layout of the View Environment page significantly to match the PDF sent to me by Rick.
+
+[NEW] Started to work out the dashboard. (Network summary added, basic layout and a few links to the right)
+
+[CHANGED] Add a link to the visualization view for datacenter and rack right on the main index listing for each object type.
+
+[2007-03-21: REVISION 52]
+
+[FIXED] Fixed cancel links on rack relationship section of Datacenter page.
+
+[NEW] Added environment model and basic CRUD UI.
+
+[NEW] Added datacenter environment assignment model and basic CRUD UI.
+
+[NEW] Added AJAX UI front end for adding environments to a datacenter on the datacenter page.
+
+[NEW] Added environment program assignment model and basic CRUD UI.
+
+[NEW] Added AJAX UI front end for adding programs to an environment on the environment page.
+
+[FIXED] Added conditions to the :has_many :through statements in the models to make sure we do the join filtering out the deleted objects.
+
+[NEW] Added a list of customer related to an environment on the environment page. This list is based on the programs this node has. Also as you update the program list via AJAX the customer list will update as well.
+
+[NEW] Added environment node assignment model and basic CRUD UI.
+
+[NEW] Added AJAX UI front end for adding nodes to an environment on the environment page. Required a little referrer detection on ajax request to see if any new nodes are being generated from the rack view page or the environment view page.
+
+[NEW] Gave rack a new property, u_height. It is currently a static 42. We can make this into an editable attribute if needed.
+
+[NEW] Gave the rack node assignment the concept of position. This is not a full solution as there still lacks a way to define the specific space in the rack, and which spaces are empty, etc.
+
+[NEW] Hardware Profiles have a new attribute `visualization_color`. This is the color we push into the CSS to color the backgrounds on nodes when visualizing racks.
+
+[NOTE] Did some experimentation with CSS popups on the new rack visualization. The basic goal being that you want more info on this node, but don't want to jump to a new page. Overall this <http://www.communitymx.com/content/article.cfm?cid=4E2C0&print=true> implementation is nice and works well, but doesn't fit our exact need and so it looks like we will have to use JS to generate the CSS positioned popups. The killer reason is that we are using overflow:hidden as a natural way to truncate the node summary and this messes up visualizing the span (Safari bugs + general clunky-ness).
+
+[NEW] There is now a visualization view of a rack. A link is available on the rack's show page. The visualization wraps and visualizes the nodes in that rack. Each node has a summary of the node (name, ipaddresses, hardware profile, functions and environment) and links to the node show page. Visually, each node is 30 pixels * the U height (based on the hardware profile) and also used the visualization color as defined in the hardware profile for the background color. To prepare for when these visuals are lined up and horizontally we also use a CSS property of overflow:hidden which will truncate the node summaries naturally in the HTML.
+
+[NEW] Added a new variant for a node's visual summary if the node in question contains a function with the name 'Network Switch' or 'PDU'. If this is the case we show some outlet totals (in use/total available) in substitute of function list and environment. This does bring up a question though:
+
+[QUESTION: 3/20/07] - Currently you will define a hardware profile that represents a PDU or a Network Switch; then create a node and assign it one of these hardware profiles. At that point it can almost be assumed what "functions" this node serves. Should we automate (and possible lock) functions of nodes with these hardware profiles?
+
+[NEW] Added new (yet still empty) Dashboard controller.
+
+[CHANGED] Reorganized left side menu.
+
+[NEW] Added a link (and method) on the dashboard for create some sample data. This is still in-progress but does current create a New York datacenter, 9 racks under it, and for each rack 9 nodes.
+
+[NEW] Added a link on the show datacenter page to a visualization view of the datacenter's racks.
+
+[2007-03-09: REVISION 37]
+
+[FIXED] Nodes have a method that will update the existence of outlets related to itself (dependent on its hardware profile). There was a bug discovered right before Preview 2 that caused a loop during the creation of a new node that required outlets. This has been fixed by moving the outlet update to an after_save callback.
+
+[NEW] Added customer model and basic CRUD UI.
+
+[CHANGED] Rather than add a whole new model/table for ProgramStatus, I've modified the existing Status object to hold a `Relevant Model` attribute. We will use this to filter the status pull down in the various crud forms for Node status and Program status. Status has a class method for `relevant_models_allowed` which currently returns a status array of ['Node','Program'] ... we could expand this in the future if we ever need statuses for other objects. I avoided making the pulldown dynamic for all the models in the system since it would list 15+ objects and be a hindrance in the user experience.
+
+[NEW] Added program model and basic CRUD UI.
+
+[NEW] Added ability for a program to have a customer (required) and a customer to have many programs.
+
+[NEW] Programs can now have a status.
+
+[NEW] Added a standard View / Edit link set on the indexes of all objects. I did this since I'd experienced a usability issue where you can't always expect that the first linked word in column one will link to the view page of said object. The presence of Edit is a convenience link -- if you know you want to edit the object why force a person to go through the view page. One issue that might pop up is as we add AJAX-Y UI to the View page, where people mange the relationship of objects, people will think of this as editing .. though such features won't be available on the Edit page -- this is for the attributes of the object. A solution to that might be to offer in-line editing of object attributes on the View page .. but this is a NICE TO HAVE feature that we should sit on for a while.
+
+[FIXED] Version Information was not working for racks; fixed.
+
+[NEW] Cleaned up some of the existing AJAX functionality on the Database page that let you assign Racks. Now, not only can you assign existing racks, but you can create new racks inline and then assign the new rack inline as well.
+
+[NEW] Added AJAX UI front end for adding Nodes to a Rack on the Rack page.
+
+[NEW] Added AJAX UI front end for adding Functions to a Node on the Node page.
+
+[NEW] Added AJAX UI front end for assigning Outlets on the Node page.
+
+

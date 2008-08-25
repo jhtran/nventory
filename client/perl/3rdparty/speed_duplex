@@ -1,0 +1,134 @@
+#!/bin/sh
+
+PATH=/bin:/usr/bin:/usr/sbin
+
+# Print column header information
+echo "Interface\tLink\tSpeed\t\tDuplex"
+echo "---------\t----\t-----\t\t------"
+
+# Determine the speed and duplex for each live NIC on the system
+for INTERFACE in `netstat -i | egrep -v "^Name|^lo0" \
+   | awk '{print $1}' | cut -d: -f1 | sort | uniq`
+do
+   # Only gather information for active interfaces
+   # Note: "ce" interfaces can be "UP" in "ifconfig" but have link down
+   ifconfig $INTERFACE | grep "^$INTERFACE:.*<UP," > /dev/null 2>&1 || continue
+   # Skip "cip" ATM interfaces
+   echo $INTERFACE | grep "^cip" > /dev/null 2>&1 && continue
+   # "ce" interfaces
+   if [ "`echo $INTERFACE | awk '/^ce[0-9]+/ { print }'`" ] ; then
+      kstat > /dev/null 2>&1
+      if [ $? -ne 0 ] ; then
+         echo "The \"kstat\" command failed for interface $INTERFACE."
+         continue
+      fi
+      # Determine the ce interface number
+      INSTANCE=`echo $INTERFACE | cut -c 3-`
+      DUPLEX=`kstat ce:$INSTANCE | grep link_duplex | awk '{ print $2 }'`
+      case "$DUPLEX" in
+         0) DUPLEX="link down" ;;
+         1) DUPLEX="half" ;;
+         2) DUPLEX="full" ;;
+      esac
+      SPEED=`kstat ce:$INSTANCE | grep link_speed | awk '{ print $2 }'`
+      case "$SPEED" in
+         0) SPEED="link down" ;;
+         10) SPEED="10 Mbit/s" ;;
+         100) SPEED="100 Mbit/s" ;;
+         1000) SPEED="1 Gbit/s" ;;
+      esac
+      LINK="unknown"  # FIXME
+   # "bge" interfaces
+   elif [ "`echo $INTERFACE | awk '/^bge[0-9]+/ { print }'`" ] ; then
+      # Only the root user should run "ndd"
+      if [ "`id | cut -c1-5`" != "uid=0" ] ; then
+         echo "You must be the root user to determine \
+${INTERFACE_TYPE}${INSTANCE} speed and duplex information."
+	 continue
+      fi
+      DUPLEX=`ndd -get /dev/${INTERFACE} link_duplex`
+      case "$DUPLEX" in
+         1) DUPLEX="half" ;;
+         2) DUPLEX="full" ;;
+      esac
+      SPEED=`ndd -get /dev/${INTERFACE} link_speed`
+      case "$SPEED" in
+         10) SPEED="10 Mbit/s" ;;
+         100) SPEED="100 Mbit/s" ;;
+         1000) SPEED="1 Gbit/s" ;;
+      esac
+      LINK="unknown"  # FIXME
+   # "dmfe" interfaces
+   elif [ "`echo $INTERFACE | awk '/^dmfe[0-9]+/ { print }'`" ] ; then
+      # Only the root user should run "ndd"
+      if [ "`id | cut -c1-5`" != "uid=0" ] ; then
+         echo "You must be the root user to determine \
+${INTERFACE_TYPE}${INSTANCE} speed and duplex information."
+	 continue
+      fi
+      DUPLEX=`ndd /dev/${INTERFACE} link_mode`
+      case "$DUPLEX" in
+         0) DUPLEX="half" ;;
+         1) DUPLEX="full" ;;
+      esac
+      SPEED=`ndd /dev/${INTERFACE} link_speed`
+      case "$SPEED" in
+         10) SPEED="10 Mbit/s" ;;
+         100) SPEED="100 Mbit/s" ;;
+         1000) SPEED="1 Gbit/s" ;;
+      esac
+      LINK="unknown"  # FIXME
+   # "iprb" interfaces
+   elif [ "`echo $INTERFACE | awk '/^iprb[0-9]+/ { print }'`" ] ; then
+      kstat > /dev/null 2>&1
+      if [ $? -ne 0 ] ; then
+         DUPLEX="The \"kstat\" command failed for interface $INTERFACE."
+         continue
+      fi
+      # Determine the iprb interface number
+      INSTANCE=`echo $INTERFACE | cut -c 5-`
+      DUPLEX=`kstat iprb:$INSTANCE | grep duplex | awk '{ print $2 }'`
+      SPEED=`kstat iprb:$INSTANCE | grep ifspeed | awk '{ print $2 }'`
+      case "$SPEED" in
+         10000000) SPEED="10 Mbit/s" ;;
+         100000000) SPEED="100 Mbit/s" ;;
+         1000000000) SPEED="1 Gbit/s" ;;
+      esac
+      LINK="unknown"  # FIXME
+   # le interfaces are always 10 Mbit half-duplex
+   elif [ "`echo $INTERFACE | awk '/^le[0-9]+/ { print }'`" ] ; then
+      DUPLEX="half"
+      SPEED="10 Mbit/s"
+      LINK="unknown"  # FIXME
+   # All other interfaces
+   else
+      INTERFACE_TYPE=`echo $INTERFACE | sed -e "s/[0-9]*$//"`
+      INSTANCE=`echo $INTERFACE | sed -e "s/^[a-z]*//"`
+      # Only the root user should run "ndd"
+      if [ "`id | cut -c1-5`" != "uid=0" ] ; then
+         echo "You must be the root user to determine \
+${INTERFACE_TYPE}${INSTANCE} speed and duplex information."
+	 continue
+      fi
+      ndd -set /dev/$INTERFACE_TYPE instance $INSTANCE
+      SPEED=`ndd -get /dev/$INTERFACE_TYPE link_speed`
+      case "$SPEED" in
+         0) SPEED="10 Mbit/s" ;;
+         1) SPEED="100 Mbit/s" ;;
+         1000) SPEED="1 Gbit/s" ;;
+      esac
+      DUPLEX=`ndd -get /dev/$INTERFACE_TYPE link_mode`
+      case "$DUPLEX" in
+         0) DUPLEX="half" ;;
+         1) DUPLEX="full" ;;
+         *) DUPLEX="" ;;
+      esac
+      LINK=`/usr/sbin/ndd -get /dev/$INTERFACE_TYPE link_status`
+      case "$LINK" in
+         0) LINK="down" ;;
+         1) LINK="up" ;;
+         *) LINK="" ;;
+      esac
+   fi
+   echo "$INTERFACE\t\t$LINK\t$SPEED\t$DUPLEX"
+done

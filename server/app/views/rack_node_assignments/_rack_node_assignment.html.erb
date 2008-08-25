@@ -1,0 +1,7 @@
+<p><strong>Rack:</strong> <br /><%= f.select :rack_id, Rack.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Node:</strong> <br /><%= f.select :node_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Position:</strong> <br /><%= f.text_field :position %></p>
+
+<p><strong>Assigned at:</strong> <br/><%= f.datetime_select :assigned_at %></p>

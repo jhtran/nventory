@@ -1,0 +1,26 @@
+<%- if datacenter.datacenter_rack_assignments.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the racks assigned to this datacenter.">
+  <caption>Racks</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>Assigned at</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in datacenter.datacenter_rack_assignments.sort { |a,b| a.rack.name <=> b.rack.name } %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.rack.name, rack_path(assignment.rack) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), datacenter_rack_assignment_path(assignment) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => datacenter_rack_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p>No racks are assigned to this datacenter.</p>
+<%- end -%>

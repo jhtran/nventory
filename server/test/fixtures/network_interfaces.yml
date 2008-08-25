@@ -1,0 +1,26 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+one:
+  id: 1
+  name: eth0
+  interface_type: Ethernet
+  physical: true
+  hardware_address: 00:00:00:00:00:00
+  link: true
+  speed: 1000
+  full_duplex: true
+  autonegotiate: true
+  node_id: 1
+two:
+  id: 2
+  name: eth1
+  interface_type: Ethernet
+  physical: true
+  hardware_address: 11:00:00:00:00:00
+  link: false
+  node_id: 1
+three:
+  id: 3
+  name: lo
+  interface_type: Loopback
+  physical: false
+  node_id: 1

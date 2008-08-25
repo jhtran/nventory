@@ -1,0 +1,7 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+  <td><%= link_to index_row.datacenter.name, datacenter_path(index_row.datacenter) %></td>
+  <td><%= link_to index_row.vip.name, vip_path(index_row.vip) %></td>
+  <td><%= index_row.priority %></td>
+  <td><%= link_to index_row.assigned_at.to_formatted_s(:long), datacenter_vip_assignment_path(index_row) %></td>
+</tr>

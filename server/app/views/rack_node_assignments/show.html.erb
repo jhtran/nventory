@@ -1,0 +1,24 @@
+<%- @page_title = "Rack Node Assignment: " + h(@rack_node_assignment.rack.name) + '<->' + h(@rack_node_assignment.node.name) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @rack_node_assignment} %>
+
+<div class="record_view">
+
+<h1>Rack Node Assignment</h1>
+
+<p><strong>Rack:</strong> <%= h(@rack_node_assignment.rack.name) %><br />
+<strong>Node:</strong> <%= h(@rack_node_assignment.node.name) %><br />
+<strong>Position:</strong> <%= h(@rack_node_assignment.position) %><br />
+<strong>Assigned at:</strong> <%= h(@rack_node_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@rack_node_assignment.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@rack_node_assignment.updated_at) %></p>
+
+</div>
+
+<%- if !@rack_node_assignment.deleted_at -%>
+<p><%= link_to 'Edit', edit_rack_node_assignment_path(@rack_node_assignment) %> | 
+<%= link_to 'Delete', rack_node_assignment_path(@rack_node_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @rack_node_assignment} %>

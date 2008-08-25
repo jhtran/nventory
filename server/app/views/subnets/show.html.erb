@@ -1,0 +1,34 @@
+<%- @page_title = "Subnet: " + h(@subnet.network) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @subnet} %>
+
+<div class="record_view">
+
+<h1>Subnet: <%=h @subnet.network %></h1>
+
+<p><strong>Netmask:</strong> <%= h(@subnet.netmask) %></p>
+<p><strong>Broadcast:</strong> <%= h(@subnet.broadcast) %></p>
+<p><strong>Gateway:</strong> <%= h(@subnet.gateway) %></p>
+
+<p><strong>Node Group:</strong> <%= link_to h(@subnet.node_group.name), node_group_url(@subnet.node_group_id) if !@subnet.node_group_id.nil? %></p>
+
+<p><strong>Description:</strong><br />
+<%= textilize_without_paragraph(h(@subnet.description)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@subnet.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@subnet.updated_at) %></p>
+
+</div>
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @subnet} %>
+
+</div> <!-- end relationship -->
+
+<%- if !@subnet.deleted_at -%>
+<p><%= link_to 'Edit', edit_subnet_path(@subnet) %> | 
+<%= link_to 'Delete', subnet_path(@subnet), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @subnet} %>

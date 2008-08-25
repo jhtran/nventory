@@ -1,0 +1,10 @@
+<%= will_paginate objects %>
+
+<table cellspacing="0" class="styled">
+<thead>
+<%= render :partial => objects.first.class.to_s.tableize + '/index_header' %>
+</thead>
+<tbody>
+<%= render :partial => objects.first.class.to_s.tableize + '/index_row', :collection => objects %>
+</tbody>
+</table>

@@ -1,0 +1,34 @@
+<div id="comments">
+<p>
+<strong>Comments:</strong>
+<%- if object.comments.length > 0 -%>
+  <ul>
+  <%- object.comments.each do |comment| -%>
+    <li><%= h(comment.created_at) + ' (' + link_to(comment.account.login, comment.account) + ')' %>: <%= h(comment.comment) %></li>
+  <%- end -%>
+  </ul>
+<%- else -%>
+  <p>This <%= object.class.to_s.humanize.downcase %> does not have any comments.</p>
+<%- end -%>
+
+<div id="add_comment">
+<% remote_form_for(:comment, :url => self.send("comments_path")) do |f| %>
+  <%= f.text_field :comment %>
+  <%= f.hidden_field :commentable_id, { :value => object.id } %>
+  <%= f.hidden_field :commentable_type, { :value => object.class.to_s } %>
+  <%= submit_tag 'Add Comment' %> | <%= link_to_function 'Cancel', "Element.show('add_comment_link');Element.hide('add_comment')" %>
+<% end %>
+<br/>
+</div>
+
+<script type="text/javascript">
+  Element.hide('add_comment')
+</script>
+
+
+<div id="add_comment_link">
+<p><%= link_to_function 'Add Comment', "Element.show('add_comment');Element.hide('add_comment_link')" %></p>
+</div>
+
+</p>
+</div> <!-- end comments -->

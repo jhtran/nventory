@@ -1,0 +1,11 @@
+<%- @page_title = "Login" %>
+
+<div id="loginbox">
+
+<form action="login" method="post">
+<p><strong>Login:</strong> <%= text_field_tag "login", params[:login] %></p>
+<p><strong>Password:</strong> <%= password_field_tag "password", params[:password] %></p>
+<p><%= submit_tag "Login" %></p>
+</form>
+
+</div>

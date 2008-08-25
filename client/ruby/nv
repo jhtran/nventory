@@ -1,0 +1,467 @@
+#!/usr/bin/ruby
+##############################################################################
+# A client to query a nVentory server
+##############################################################################
+
+require 'optparse'
+$: << '/usr/nventory/ruby'
+require 'nventory'
+
+# Ensure we have a sane path, particularly since we might be run from
+# cron in registration mode.
+ENV['PATH'] = '/bin:/usr/bin:/sbin:/usr/sbin'
+
+module PasswordCallback
+  @@password = nil
+  def self.get_password
+    while !@@password
+      system "stty -echo"
+      print "Password: "
+      @@password = $stdin.gets.chomp
+      system "stty echo"
+    end
+    @@password
+  end
+end
+
+#
+# Process command line options
+#
+
+$objecttype = 'nodes'
+$get = nil
+$exactget = nil
+$name = nil
+@allfields = nil
+@fields = nil
+$set = nil
+$yes = false
+$getfieldnames = false
+$getallvalues = nil
+$nodegroup = nil
+$nodegroupexpanded = nil
+$createnodegroup = nil
+$addtonodegroup = nil
+$removefromnodegroup = nil
+$addnodegrouptonodegroup = nil
+$removenodegroupfromnodegroup = nil
+$register = false
+$username = ENV['LOGNAME']
+$debug = nil
+$dryrun = nil
+
+def opt_hash_parse(opt)
+  opthash = {}
+  current_field = nil
+  opt.split(',').each do |entry|
+    if (entry =~ /(.+)=(.+)/)
+      current_field = $1
+      opthash[current_field] = [$2]
+    else
+      if current_field
+        opthash[current_field] << entry
+      else
+        abort "Failed to parse '#{opt}' as a series of name=value[,value] pairs"
+      end
+    end
+  end
+  opthash
+end
+
+opts = OptionParser.new
+opts.banner = 'Usage: nv [options]'
+opts.on('--objecttype object',
+        'The type of object to get/set.  Defaults to nodes.') do |opt|
+  $objecttype = opt
+end
+opts.on('--get [field=value1,value2][,field2=value1[,value2]]') do |opt|
+  if opt.nil?
+    $get = {}
+  else
+    $get = opt_hash_parse(opt)
+  end
+end
+opts.on('--exactget [field=value1,value2]',
+        'Select objects for display or updating.  get does a substring',
+        'match, exactget does an exact match.  Multiple fields and values ',
+        'can be specified seperated by commas.') do |opt|
+  if opt.nil?
+    $exactget = {}
+  else
+    $exactget = opt_hash_parse(opt)
+  end
+end
+opts.on('--name value[,value2]', Array,
+        'Shortcut for --get name=value') do |opt|
+  $name = opt
+end
+opts.on('--allfields [excludefield1[,excludefield2]]', Array,
+        'Display all fields for selected objects.',
+        'One or more fields may be specified to be excluded from the',
+        'query, seperate multiple fields with commas.') do |opt|
+  if opt.nil?
+    @allfields = []
+  else
+    @allfields = opt
+  end
+end
+opts.on('--fields field1[,field2]', Array,
+        'Display the specified fields for selected objects.',
+        'One or more fields may be specified, either by specifying this',
+        'option multiple times or by seperating the field names with',
+        'commas.') do |opt|
+  if opt.nil?
+    @fields = []
+  else
+    @fields = opt
+  end
+end
+opts.on('--set field=value1[,value2][,field2=value1[,value2]]',
+        'Update fields in objects selected via get/exactget, Multiple ',
+        'fields and values can be specified seperated by commas.') do |opt|
+  $set = opt_hash_parse(opt)
+end
+opts.on('--yes',
+        'Don\'t prompt for set confirmation') do |opt|
+  $yes = true
+end
+opts.on('--getfieldnames',
+        'Shows get/set fields supported by server') do |opt|
+  $getfieldnames = true
+end
+opts.on('--getallvalues field1[,field2]', Array,
+        'Display all values stored in the database for the specified fields') do |opt|
+  $getallvalues = opt
+end
+opts.on('--nodegroup nodegroup', '--ng nodegroup',
+        'Display the members of the given node group, member groups are',
+        'displayed as groups and are not expanded') do |opt|
+  $nodegroup = opt
+end
+opts.on('--nodegroupexpanded nodegroup', '--nge nodegroup',
+        'Display the members of the given node group, member groups are',
+        'expanded') do |opt|
+  $nodegroupexpanded = opt
+end
+opts.on('--createnodegroup nodegroup1[,nodegroup2]', Array,
+        'Create one or more node groups') do |opt|
+  $createnodegroup = opt
+end
+opts.on('--addtonodegroup nodegroup1[,nodegroup2]', Array,
+        'Add nodes selected via get/exactget to one or more node groups') do |opt|
+  $addtonodegroup = opt
+end
+opts.on('--removefromnodegroup nodegroup1[,nodegroup2]', Array,
+        'Remove nodes selected via get/exactget from one or more node groups') do |opt|
+  $removefromnodegroup = opt
+end
+opts.on('--addnodegrouptonodegroup child_group,parent_group', Array,
+        'Takes two node group names seperated by a comma, adds the first',
+        'node group to the second') do |opt|
+  $addnodegrouptonodegroup = opt[0,1]
+end
+opts.on('--removenodegroupfromnodegroup child_group,parent_group', Array,
+        'Takes two node group names seperated by a comma, removes the first',
+        'node group from the second') do |opt|
+  $removenodegroupfromnodegroup = opt[0,1]
+end
+opts.on('--register',
+        'Gather as much information as possible about the local machine',
+        'and register that information into the nVentory database.') do |opt|
+  $register = true
+end
+opts.on('--username',
+        'Username to use when authenticating to the server.  If not',
+        'specified defaults to the current user.') do |opt|
+  $username = opt
+end
+opts.on('--debug') do |opt|
+  $debug = opt
+end
+opts.on('--dry-run') do |opt|
+  $dryrun = opt
+end
+opts.separator ''
+opts.separator('All options can be shortened to anything that\'s unique.')
+opts.on_tail('--help') do
+  puts opts
+  exit
+end
+
+opts.parse(ARGV)
+
+(puts opts; exit) unless $get || $exactget || $name || $getfieldnames || $getallvalues || $register || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup
+# These options are mutually exclusive
+(puts opts; exit) if @allfields && @fields
+(puts opts; exit) if $getfieldnames && ($get || $exactget || $name)
+(puts opts; exit) if $getallvalues && ($get || $exactget || $name)
+# FIXME: Should support searches on node group membership and other characteristics
+(puts opts; exit) if ($nodegroup || $nodegroupexpanded) && ($get || $exactget || $name)
+(puts opts; exit) if $register && ($get || $exactget || $name || $getfieldnames || $getallvalues || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup)
+(puts opts; exit) if ($addtonodegroup || $removefromnodegroup) && $objecttype != 'nodes'
+
+if $name
+  $get = {} if !$get
+  $get['name'] = $name
+end
+
+SEARCH_SHORTCUTS = {
+  'hw' => 'hardware_profile[name]',
+  'hwmanuf' => 'hardware_profile[manufacturer]',
+  'hwmodel' => 'hardware_profile[model]',
+  'mac' => 'network_interfaces[hardware_address]',
+  'os' => 'operating_system[name]',
+  'osvendor' => 'operating_system[vendor]',
+  'osvariant' => 'operating_system[variant]',
+  'osver' => 'operating_system[version_number]',
+  'osversion' => 'operating_system[version_number]',
+  'osarch' => 'operating_system[architecture]',
+  'serial' => 'serial_number',
+  'status' => 'status[name]',
+}
+
+# Convert any shortcut names to their full names
+if $get
+  $get.each_pair do |key,value|
+    if SEARCH_SHORTCUTS.has_key?(key)
+      $get[SEARCH_SHORTCUTS[key]] = value
+      $get.delete(key)
+    end
+  end
+end
+if $exactget
+  $exactget.each_pair do |key,value|
+    if SEARCH_SHORTCUTS.has_key?(key)
+      $exactget[SEARCH_SHORTCUTS[key]] = value
+      $exactget.delete(key)
+    end
+  end
+end
+if @allfields
+  # The ideal behavior here is probably debatable.  For now I'm _adding_
+  # the expanded value to the list of exclusions, so both the shortcut
+  # string and the expanded value are excluded. That allows the user to
+  # specify 'os' on the command line and get the probably expected behavior
+  # of excluding everything containing 'os' even though 'os' expands to
+  # something specific, but also allows them to specify 'hwmanuf' and have
+  # it exclude the expanded version of that.
+  # Perhaps we should do something like get and exactget?
+  @allfields.each do |key|
+    if SEARCH_SHORTCUTS.has_key?(key)
+      # Replace shortcut with expansion
+      #@allfields[@allfields.index(key)] = SEARCH_SHORTCUTS[key]
+      # Add expansion
+      @allfields << SEARCH_SHORTCUTS[key]
+    end
+  end
+end
+if @fields
+  @fields.each do |key|
+    if SEARCH_SHORTCUTS.has_key?(key)
+      @fields[@fields.index(key)] = SEARCH_SHORTCUTS[key]
+    end
+  end
+end
+
+#
+# Perform requested actions
+#
+
+nvclient = NVentory::Client.new($debug, $dryrun)
+
+# First handle the standalone actions where we perform a single
+# operation and exit.
+
+if $getfieldnames
+  field_names = nvclient.get_field_names($objecttype)
+  field_names.each do |field_name_entry|
+    field_name = field_name_entry.split(' ')
+    shortcut = nil
+    shortcut_field_name = nil
+    SEARCH_SHORTCUTS.each_pair do |shortcut, shortcut_field_name|
+      if field_name == shortcut_field_name
+        field_name_entry << " (#{shortcut})"
+      end
+    end
+    puts field_name_entry
+  end
+  exit
+end
+if $register
+  nvclient.register
+  exit
+end
+if $nodegroup
+  results = nvclient.get_objects('node_groups', {}, {'name' => [$nodegroup]})
+  puts "Child groups:"
+  results[$nodegroup]['child_groups'].each do |child_group|
+    puts "  #{child_group['name']}"
+  end
+  puts "Nodes:"
+  results[$nodegroup]['nodes'].each do |node|
+    puts "  #{node['name']}"
+  end
+  exit
+end
+if $createnodegroup
+  $createnodegroup.each do |newgroup|
+    nvclient.set_objects('node_groups', nil, {'name' => newgroup}, $username, PasswordCallback)
+  end
+  exit
+end
+if $addnodegrouptonodegroup
+  child_results = nvclient.get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[0]]})
+  abort "Child group '#{$addnodegrouptonodegroup[0]}' not found for 'addnodegrouptonodegroup'\n" if (child_results.length != 1)
+  parent_results = nvclient.get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]})
+  abort "Parent group '#{$addnodegrouptonodegroup[1]}' not found for 'addnodegrouptonodegroup'\n" if (parent_results.length != 1)
+  nvclient.add_nodegroups_to_nodegroups(child_results, parent_results, $username, PasswordCallback)
+  exit
+end
+if $removenodegroupfromnodegroup
+  child_results = nvclient.get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[0]]})
+  abort "Child group '#{$removenodegroupfromnodegroup[0]}' not found for 'removenodegroupfromnodegroup'\n" if (child_results.length != 1)
+  parent_results = nvclient.get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]})
+  abort "Parent group '#{$removenodegroupfromnodegroup[1]}' not found for 'removenodegroupfromnodegroup'\n" if (parent_results.length != 1)
+  nvclient.remove_nodegroups_from_nodegroups(child_results, parent_results, $username, PasswordCallback)
+  exit
+end
+
+# Now handle the general case where we fetch a list of objects and then
+# perform operations on them.
+
+results = nil
+names = nil
+if $get || $exactget
+  results = nvclient.get_objects($objecttype, $get, $exactget)
+  names = results.keys.sort
+end
+if $nodegroupexpanded
+  names = nvclient.get_expanded_nodegroup($nodegroupexpanded).sort
+  if @allfields || @fields || $getallvalues
+    results = nvclient.get_objects('nodes', {}, { 'name' => names })
+  end
+end
+
+if names.length == 0
+  puts "No matching objects"
+  exit
+end
+
+# The results hash is a complex data structure.  This function
+# does its best to render that in a human readable format.
+def fieldprint(fields, value)
+  # fields=['name'] => 'name'
+  # fields=['status', 'name'] => 'status[name]'
+  fieldname = ''
+  if fields.length > 0
+    fieldname << fields[0]
+    if fields.length > 1
+      fields[1..-1].each { |f| fieldname << "[#{f}]"}
+    end
+  end
+
+  if value.kind_of?(Hash)
+    value.each_pair do |subfield, subvalue|
+      fieldprint([fields, subfield].flatten, subvalue)
+    end
+  elsif value.kind_of?(Array)
+    value.each do |entry|
+      # Try to insert a relevant bit of data from the
+      # entry into the field list if we can find one,
+      # provides the user with a way to differentiate
+      # the members of the array.  I imagine this might
+      # be controversial as the resulting field name that
+      # is printed out doesn't really match up to anything
+      # meaningful on the server.  I.e. you couldn't
+      # turn around and perform a search on that field
+      # name.  It's a trade-off between usability when
+      # searching and ease of understanding for users.
+      # Suggestions for better ways to handle this welcome.
+      if entry.class == Hash && entry.has_key?('name')
+        fieldprint([fields, entry['name']].flatten, entry)
+      elsif entry.class == Hash && entry.has_key?('id')
+        fieldprint([fields, entry['id']].flatten, entry)
+      else
+        fieldprint(fields, entry)
+      end
+    end
+  elsif (@allfields && !@allfields.any?{|all| fieldname.include?(all)}) || (@fields && @fields.any?{|field| fieldname.include?(field)})
+    puts "#{fieldname}: #{value}"
+  end
+end
+
+if !$getallvalues && !$set && !$addtonodegroup && !$removefromnodegroup
+  names.each do |name|
+    puts name
+    if @allfields || @fields
+      fieldprint([], results[name])
+      puts
+    end
+  end
+end
+
+if $getallvalues
+  allvalues = {}
+
+  # FIXME: This is a terribly inefficient implementation
+  # A proper implementation would require something on the
+  # server side to pull this out of the database efficiently
+  names.each do |name|
+    results[name].each_pair do |field,value|
+      if $getallvalues.include?(field)
+        if !allvalues.has_key?(field)
+          allvalues[field] = {}
+        end
+        allvalues[field][value] = true
+      end
+    end
+  end
+  
+  $getallvalues.each do |field|
+    puts "#{field}:"
+    allvalues.each_pair do |field,valuehash|
+      valuehash.keys.sort do |value|
+        puts "  #{value}"
+      end
+    end
+    puts
+  end
+end
+
+if $set
+  if !$yes
+    number_of_matching_entries = names.length
+    entrystring = 'entry'
+    entrystring = 'entries' if (number_of_matching_entries > 1)
+    print "This will update #{number_of_matching_entries} #{entrystring}, continue?  [y/N]: "
+
+    input = $stdin.gets
+    if input !~ /^y/i
+      puts "Canceled"
+      exit
+    end
+  end
+
+  nvclient.set_objects($objecttype, results, $set, $username, PasswordCallback)
+end
+
+if $addtonodegroup
+  nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => [$addtonodegroup]})
+  if (nodegroup_results.length != $addtonodegroup.length)
+    warn "Not all requested node groups for 'addtonodegroup' were found:"
+    warn "Requested:  #{$addtonodegroup.join(',')}"
+    warn "Found:  #{nodegroup_results.keys.join(',')}"
+    abort
+  end
+  nvclient.add_nodes_to_nodegroups(results, nodegroup_results, $username, PasswordCallback);
+end
+if $removefromnodegroup
+  nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => [$removefromnodegroup]})
+  if (nodegroup_results.length != $removefromnodegroup.length)
+    warn "Not all requested node groups for 'removefromnodegroup' were found:"
+    warn "Requested:  #{$removefromnodegroup.join(',')}"
+    warn "Found:  #{nodegroup_results.keys.join(',')}"
+    abort
+  end
+  nvclient.remove_nodes_from_nodegroups(results, nodegroup_results, $username, PasswordCallback);
+end

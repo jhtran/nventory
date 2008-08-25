@@ -1,0 +1,4 @@
+<p><strong>Database:</strong> <em>*</em> <br /><%= f.select :from_id, DatabaseInstance.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong>Has a relationship of:</strong> <em>*</em> <br /> <%= f.select :name, DatabaseInstanceRelationship.names_allowed.collect { |name| [ name, name ] }, { :include_blank => true } %></p>
+
+<p><strong>To Database:</strong> <em>*</em> <br /><%= f.select :to_id, DatabaseInstance.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>

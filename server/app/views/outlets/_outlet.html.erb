@@ -1,0 +1,3 @@
+<p><strong>Name</strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+<p><strong>Producer:</strong> <br /><%= f.select :producer_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong>Consumer:</strong> <br /><%= f.select :consumer_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>

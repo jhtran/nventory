@@ -1,0 +1,18 @@
+<%- @page_title = 'New ' + object.class.to_s.underscore.titleize %>
+<h1>New <%= object.class.to_s.underscore.titleize %></h1>
+
+<%= error_messages_for object.class.to_s.underscore.to_sym %>
+
+<% form_for(object.class.to_s.underscore.to_sym, :url => self.send(object.class.to_s.tableize + '_path'), :html => { :class => 'edit_record_form' }) do |f| %>
+
+<div class="record_view">
+
+<%= render :partial => object.class.to_s.tableize + '/' + object.class.to_s.underscore, :locals => { :f => f } %>
+
+</div>
+
+<p><%= submit_tag "Create" %> | <%= link_to 'Cancel', self.send(object.class.to_s.tableize + '_url') %></p>
+
+<%= render :partial => 'shared/requirement_note' %>
+
+<% end %>

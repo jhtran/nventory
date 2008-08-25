@@ -1,0 +1,9 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+one:
+  id: 1
+  address: 192.168.0.1
+  network_interface_id: 1
+two:
+  id: 2
+  address: 127.0.0.1
+  network_interface_id: 3

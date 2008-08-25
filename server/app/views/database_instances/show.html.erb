@@ -1,0 +1,28 @@
+<%- @page_title = "Database Instance: " + h(@database_instance.name) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @database_instance} %>
+
+<div class="record_view">
+
+<h1>Database Instance: <%=h @database_instance.name %></h1>
+
+<p><strong>Description:</strong><br />
+<%= textilize_without_paragraph(h(@database_instance.description)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@database_instance.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@database_instance.updated_at) %></p>
+
+</div>
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @database_instance} %>
+
+</div> <!-- end relationship -->
+
+<%- if !@database_instance.deleted_at -%>
+<p><%= link_to 'Edit', edit_database_instance_path(@database_instance) %> | 
+<%= link_to 'Delete', database_instance_path(@database_instance), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @database_instance} %>

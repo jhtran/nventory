@@ -1,0 +1,2 @@
+module NodeGroupNodeAssignmentsHelper
+end

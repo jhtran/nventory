@@ -1,0 +1,5 @@
+<%- if @objects.size > 0 -%>
+  <%= render :partial => 'shared/crud_index', :locals => { :objects => @objects } %>
+<%- else -%>
+  <%= render :partial => 'shared/crud_index_none', :locals => { :object_type => 'status' } %>
+<%- end -%>

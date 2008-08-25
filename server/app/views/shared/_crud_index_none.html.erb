@@ -1,0 +1,4 @@
+<%- @page_title = object_type.titleize.pluralize %>
+<h1>We could not find any <%= object_type.titleize.pluralize.downcase %> in the system for that search.</h1>
+
+<p><%= link_to 'New ' + object_type.titleize, self.send('new_' + object_type + '_path') %></p>

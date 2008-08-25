@@ -1,0 +1,542 @@
+#!/usr/bin/perl
+##############################################################################
+# A client to query a nVentory server
+##############################################################################
+
+use strict;
+use warnings;
+use Getopt::Long;
+use lib '/usr/nventory/perl';
+use nVentory::Client;
+
+# Ensure we have a sane path, particularly since we might be run from
+# cron in registration mode.
+$ENV{PATH} = '/bin:/usr/bin:/sbin:/usr/sbin';
+
+#
+# Process command line options
+#
+
+sub usage
+{
+	die <<EOF;
+Usage: nv
+    [--objecttype object]
+       The type of object to get/set.  Defaults to nodes.
+    [--get field=value1[,value2]]
+    [--exactget field=value1,[value2]]
+       Select objects for display or updating, may be specified multiple
+       times to search on multiple fields.  get does a substring match,
+       exactget does an exact match.  Multiple values for an individual
+       field can be specified seperated by commas.
+    [--name value[,value2]]
+       Shortcut for --get name=value
+    [--allfields [excludefield1[,excludefield2]]]
+       Display all fields for selected objects.
+       One or more fields may be specified to be excluded from the
+       query, seperate multiple fields with commas.
+    [--fields field1[,field2]]
+       Display the specified fields for selected objects.
+       One or more fields may be specified, either by specifying this
+       option multiple times or by seperating the field names with
+       commas.
+    [--set field=value]
+       Update fields in objects selected via get/exactget, may be
+       specified multiple times to update multiple fields.
+    [--yes]
+       Don't prompt for set confirmation
+    [--getfieldnames]
+       Shows get/set fields supported by server
+    [--getallvalues field1[,field2]]
+       Display all values stored in the database for the specified fields
+    [--nodegroup | --ng nodegroup]
+       Display the members of the given node group, member groups are
+       displayed as groups and are not expanded
+    [--nodegroupexpanded | --nge nodegroup]
+       Display the members of the given node group, member groups are
+       expanded
+    [--createnodegroup nodegroup1[,nodegroup2]]
+       Create one or more node groups
+    [--addtonodegroup nodegroup1[,nodegroup2]]
+       Add nodes selected via get/exactget to a node group, may be
+       specified multiple times to add to multiple groups
+    [--removefromnodegroup nodegroup1[,nodegroup2]]
+       Remove nodes selected via get/exactget from a node group, may be
+       specified multiple times to remove from multiple groups
+    [--addnodegrouptonodegroup child_group,parent_group]
+       Takes two node group names seperated by a comma, adds the first
+       node group to the second
+    [--removenodegroupfromnodegroup child_group,parent_group]
+       Takes two node group names seperated by a comma, removes the first
+       node group from the second
+    [--register]
+       Gather as much information as possible about the local machine
+       and register that information into the nVentory database.
+    [--username]
+       Username to use when authenticating to the server.  If not
+       specified defaults to the current user.
+    [--debug]
+    [--dry-run]
+    [--help]
+
+All options can be shortened to anything that's unique.
+EOF
+}
+
+my $objecttype;
+my %get;
+my %exactget;
+my @name;
+my @allfields;
+my @fields;
+my %set;
+my $yes;
+my $getfieldnames;
+my @getallvalues;
+my $nodegroup;
+my $nodegroupexpanded;
+my @createnodegroup;
+my @addtonodegroup;
+my @removefromnodegroup;
+my $addnodegrouptonodegroup;
+my $removenodegroupfromnodegroup;
+my $register;
+my $username = $ENV{LOGNAME};
+my $debug;
+my $dryrun;
+my $help;
+my $getopt = GetOptions(
+	'objecttype:s' => \$objecttype,
+	'get:s' => \%get,
+	'exactget:s' => \%exactget,
+	'name=s' => \@name,
+	'allfields:s' => \@allfields,
+	'fields=s' => \@fields,
+	'set=s' => \%set,
+	'yes' => \$yes,
+	'getfieldnames' => \$getfieldnames,
+	'getallvalues=s' => \@getallvalues,
+	'nodegroup|ng=s' => \$nodegroup,
+	'nodegroupexpanded|nge=s' => \$nodegroupexpanded,
+	'createnodegroup=s' => \@createnodegroup,
+	'addtonodegroup=s' => \@addtonodegroup,
+	'removefromnodegroup=s' => \@removefromnodegroup,
+	'addnodegrouptonodegroup=s' => \$addnodegrouptonodegroup,
+	'removenodegroupfromnodegroup=s' => \$removenodegroupfromnodegroup,
+	'username=s' => \$username,
+	'register' => \$register,
+	'debug' => \$debug,
+	'dry-run' => \$dryrun,
+	'help' => \$help,
+);
+usage() unless ($getopt);
+usage() if ($help);
+usage() unless (
+	%get || %exactget || @name || $getfieldnames || @getallvalues || $register || $nodegroup || $nodegroupexpanded || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup);
+# These options are mutually exclusive
+usage() if (@allfields && @fields);
+usage() if ($getfieldnames && (%get || %exactget || @name));
+usage() if (@getallvalues && (%get || %exactget || @name));
+# FIXME: Should support searches on node group membership and other characteristics
+usage() if (($nodegroup || $nodegroupexpanded) && (%get || %exactget || @name));
+usage() if ($register && (%get || %exactget || @name || $getfieldnames || @getallvalues || $nodegroup || $nodegroupexpanded || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup));
+
+$objecttype = 'nodes' if (!$objecttype);
+
+usage() if
+	((@addtonodegroup || @removefromnodegroup) && $objecttype ne 'nodes');
+
+# allfields might contain comma-seperated fields
+# But there's the special case that allfields might contain just one
+# zero-length element, indicating that it was specified on the command
+# line with no fields to exclude.  So don't split in that case, as split
+# will discard that empty field.
+unless (scalar @allfields == 1 && $allfields[0] eq '')
+{
+	@allfields = split(/,/, join(',', @allfields));
+}
+# fields might contain comma-seperated fields
+@fields = split(/,/, join(',', @fields));
+# getallvalues might contain comma-seperated fields
+@getallvalues = split(/,/, join(',', @getallvalues));
+# createnodegroup might contain comma-seperated fields
+@createnodegroup = split(/,/, join(',', @createnodegroup));
+# addtonodegroup might contain comma-seperated fields
+@addtonodegroup = split(/,/, join(',', @addtonodegroup));
+# removefromnodegroup might contain comma-seperated fields
+@removefromnodegroup = split(/,/, join(',', @removefromnodegroup));
+
+# get/exactget might contain comma-seperated values for fields
+foreach my $field (keys %get)
+{
+	my @values = split /,/, $get{$field};
+	$get{$field} = \@values;
+}
+foreach my $field (keys %exactget)
+{
+	my @values = split /,/, $exactget{$field};
+	$exactget{$field} = \@values;
+}
+
+# addnodegrouptonodegroup must contain comma-seperated fields if specified
+my @addnodegrouptonodegroup;
+if ($addnodegrouptonodegroup)
+{
+	@addnodegrouptonodegroup = split(/,/, $addnodegrouptonodegroup, 2);
+	usage() if (!$addnodegrouptonodegroup[0] || !$addnodegrouptonodegroup[1])
+}
+# removenodegroupfromnodegroup must contain comma-seperated fields if specified
+my @removenodegroupfromnodegroup;
+if ($removenodegroupfromnodegroup)
+{
+	@removenodegroupfromnodegroup = split(/,/, $removenodegroupfromnodegroup, 2);
+	usage() if (!$removenodegroupfromnodegroup[0] || !$removenodegroupfromnodegroup[1])
+}
+
+if (@name)
+{
+	$get{name} = \@name;
+}
+
+my %SEARCH_SHORTCUTS = (
+	'hw' => 'hardware_profile[name]',
+	'hwmanuf' => 'hardware_profile[manufacturer]',
+	'hwmodel' => 'hardware_profile[model]',
+	'mac' => 'network_interfaces[hardware_address]',
+	'os' => 'operating_system[name]',
+	'osvendor' => 'operating_system[vendor]',
+	'osvariant' => 'operating_system[variant]',
+	'osver' => 'operating_system[version_number]',
+	'osversion' => 'operating_system[version_number]',
+	'osarch' => 'operating_system[architecture]',
+	'serial' => 'serial_number',
+	'status' => 'status[name]',
+);
+
+# Convert any shortcut names to their full names
+foreach my $key (keys %get)
+{
+	if (exists $SEARCH_SHORTCUTS{$key})
+	{
+		$get{$SEARCH_SHORTCUTS{$key}} = $get{$key};
+		delete $get{$key};
+	}
+}
+foreach my $key (keys %exactget)
+{
+	if (exists $SEARCH_SHORTCUTS{$key})
+	{
+		$get{$SEARCH_SHORTCUTS{$key}} = $exactget{$key};
+		delete $exactget{$key};
+	}
+}
+for (my $i=0; $i<scalar(@allfields); $i++)
+{
+	if (exists $SEARCH_SHORTCUTS{$allfields[$i]})
+	{
+		$allfields[$i] = $SEARCH_SHORTCUTS{$allfields[$i]};
+	}
+}
+for (my $i=0; $i<scalar(@fields); $i++)
+{
+	if (exists $SEARCH_SHORTCUTS{$fields[$i]})
+	{
+		$fields[$i] = $SEARCH_SHORTCUTS{$fields[$i]};
+	}
+}
+
+if ($debug)
+{
+	warn "Enabling debug mode\n";
+	nVentory::Client::setdebug(1);
+}
+
+#
+# Perform requested actions
+#
+
+# First handle the standalone actions where we perform a single
+# operation and exit.
+
+if ($getfieldnames)
+{
+	my @field_names = nVentory::Client::get_field_names($objecttype);
+	foreach my $field_name_entry (@field_names)
+	{
+		my ($field_name) = split(' ', $field_name_entry);
+		my ($shortcut, $shortcut_field_name);
+		while (($shortcut, $shortcut_field_name) = each %SEARCH_SHORTCUTS)
+		{
+			if ($field_name eq $shortcut_field_name)
+			{
+				$field_name_entry .= " ($shortcut)"
+			}
+		}
+		print $field_name_entry, "\n";
+	}
+	exit;
+}
+if ($register)
+{
+	nVentory::Client::register($dryrun);
+	exit;
+}
+if ($nodegroup)
+{
+	my %results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$nodegroup]});
+	print "Child groups:\n";
+	if ($results{$nodegroup}->{child_groups})
+	{
+		foreach my $child_group (@{$results{$nodegroup}->{child_groups}})
+		{
+			print '  ', $child_group->{name}, "\n";
+		}
+	}
+	else
+	{
+		print "\n";
+	}
+	print "Nodes:\n";
+	if ($results{$nodegroup}->{nodes})
+	{
+		foreach my $node (@{$results{$nodegroup}->{nodes}})
+		{
+			print '  ', $node->{name}, "\n";
+		}
+	}
+	else
+	{
+		print "\n";
+	}
+	exit;
+}
+if (@createnodegroup)
+{
+	foreach my $newgroup (@createnodegroup)
+	{
+		nVentory::Client::set_objects('node_groups', undef, {'name' => $newgroup}, $username, \&get_password);
+	}
+	exit;
+}
+if ($addnodegrouptonodegroup)
+{
+	my %child_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[0]]});
+	die "Child group '$addnodegrouptonodegroup[0]' not found for 'addnodegrouptonodegroup'\n" if (scalar keys %child_results != 1);
+	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]});	
+	die "Parent group '$addnodegrouptonodegroup[1]' not found for 'addnodegrouptonodegroup'\n" if (scalar keys %parent_results != 1);
+	nVentory::Client::add_nodegroups_to_nodegroups(\%child_results, \%parent_results, $username, \&get_password);
+	exit;
+}
+if ($removenodegroupfromnodegroup)
+{
+	my %child_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[0]]});
+	die "Child group '$removenodegroupfromnodegroup[0]' not found for 'removenodegroupfromnodegroup'\n" if (scalar keys %child_results != 1);
+	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]});	
+	die "Parent group '$removenodegroupfromnodegroup[1]' not found for 'removenodegroupfromnodegroup'\n" if (scalar keys %parent_results != 1);
+	nVentory::Client::remove_nodegroups_from_nodegroups(\%child_results, \%parent_results, $username, \&get_password);
+	exit;
+}
+
+# Now handle the general case where we fetch a list of objects and then
+# perform operations on them.
+
+my %results;
+my @names;
+if (%get || %exactget)
+{
+	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget);
+	@names = sort keys %results;
+}
+if ($nodegroupexpanded)
+{
+	@names = sort(nVentory::Client::get_expanded_nodegroup($nodegroupexpanded));
+	if (@allfields || @fields || @getallvalues)
+	{
+		%results = nVentory::Client::get_objects(
+			'nodes', {}, { 'name' => \@names });		
+	}
+}
+
+if (scalar(@names) == 0)
+{
+	print "No matching objects\n";
+	exit;
+}
+
+if (!%set && !@addtonodegroup && !@removefromnodegroup)
+{
+	my %allvalues;
+
+	foreach my $name (@names)
+	{
+		if (@allfields || @fields)
+		{
+			print "$name:\n";
+			fieldprint([], $results{$name});
+			print "\n";
+
+			# The results hash is a complex data structure.  This function
+			# does its best to render that in a human readable format.
+			sub fieldprint
+			{
+				my ($fieldsref, $value) = @_;
+				my @fieldnames = @$fieldsref;
+				# fields=['name'] => 'name'
+				# fields=['status', 'name'] => 'status[name]'
+				my $fieldname = '';
+				if (scalar @fieldnames > 0)
+				{
+					$fieldname .= $fieldnames[0];
+					if (scalar @fieldnames > 1)
+					{
+						foreach my $f (@fieldnames[1..$#fieldnames])
+						{
+							$fieldname .= "[$f]";
+						}
+					}
+				}
+
+				if (ref $value eq 'HASH')
+				{
+					foreach my $subfield (sort keys %$value)
+					{
+						fieldprint([@fieldnames, $subfield], $value->{$subfield});
+					}
+				}
+				elsif (ref $value eq 'ARRAY')
+				{
+					foreach my $entry (@$value)
+					{
+						# Try to insert a relevant bit of data from the
+						# entry into the field list if we can find one,
+						# provides the user with a way to differentiate
+						# the members of the array.  I imagine this might
+						# be controversial as the resulting field name that
+						# is printed out doesn't really match up to anything
+						# meaningful on the server.  I.e. you couldn't
+						# turn around and perform a search on that field
+						# name.  It's a trade-off between usability when
+						# searching and ease of understanding for users.
+						# Suggestions for better ways to handle this welcome.
+						if (ref $entry eq 'HASH' && ($entry->{name}))
+						{
+							fieldprint([@fieldnames, $entry->{name}], $entry);
+						}
+						elsif (ref $entry eq 'HASH' && ($entry->{id}))
+						{
+							fieldprint([@fieldnames, $entry->{id}], $entry);
+						}
+						else
+						{
+							fieldprint([@fieldnames], $entry);
+						}
+					}
+				}
+				elsif (
+					(@allfields && (!$allfields[0] || !grep(index($fieldname, $_) != -1, @allfields))) || 
+					 (@fields && grep(index($fieldname, $_) != -1, @fields)))
+				{
+					print "$fieldname: $value\n";
+				}
+			}
+		}
+		elsif (@getallvalues)
+		{
+			# FIXME: This is a terribly inefficient implementation
+			# A proper implementation would require something on the
+			# server side to pull this out of the database efficiently
+			foreach my $field (sort keys %{$results{$name}})
+			{
+				if (grep($_ eq $field, @getallvalues))
+				{
+					my $value = $results{$name}->{$field};
+					next if !$value;
+					$allvalues{$field}->{$value} = 1;
+				}
+			}
+		}
+		else
+		{
+			print $name, "\n";
+		}
+	}
+
+	if (@getallvalues)
+	{
+		foreach my $field (@getallvalues)
+		{
+			print "$field:\n";
+			foreach my $value (sort keys %{$allvalues{$field}})
+			{
+				print "  $value\n";
+			}
+			print "\n";
+		}
+	}
+}
+
+if (%set)
+{
+	if (!$yes)
+	{
+		my $number_of_matching_entries = scalar(@names);
+		my $entrystring = 'entry';
+		$entrystring = 'entries' if ($number_of_matching_entries > 1);
+		print "This will update $number_of_matching_entries",
+			" $entrystring, continue?  [y/N]: ";
+
+		my $input = <STDIN>;
+		if ($input !~ /^y/i)
+		{
+			print "Canceled\n";
+			exit;
+		}
+	}
+
+	nVentory::Client::set_objects($objecttype, \%results, \%set, $username, \&get_password);
+}
+
+if (@addtonodegroup)
+{
+	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@addtonodegroup]});
+	if (scalar keys %nodegroup_results != scalar @addtonodegroup)
+	{
+		warn "Not all requested node groups for 'addtonodegroup' were found:\n";
+		warn "Requested:  ", join(', ', sort @addtonodegroup), "\n";
+		warn "Found:  ", join(', ', sort keys %nodegroup_results), "\n";
+		exit 1;
+	}
+	nVentory::Client::add_nodes_to_nodegroups(\%results, \%nodegroup_results, $username, \&get_password);
+}
+if (@removefromnodegroup)
+{
+	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@removefromnodegroup]});
+	if (scalar keys %nodegroup_results != scalar @removefromnodegroup)
+	{
+		warn "Not all requested node groups for 'removefromnodegroup' were found:\n";
+		warn "Requested:  ", join(', ', sort @removefromnodegroup), "\n";
+		warn "Found:  ", join(', ', sort keys %nodegroup_results), "\n";
+		exit 1;
+	}
+	nVentory::Client::remove_nodes_from_nodegroups(\%results, \%nodegroup_results, $username, \&get_password);
+}
+
+#
+# Subroutines
+#
+
+my $password;
+sub get_password
+{
+	while (!$password)
+	{
+		system "stty -echo";
+		print "Password: ";
+		chomp($password = <STDIN>);
+		print "\n";
+		system "stty echo";
+	}
+
+	return $password;
+}
+

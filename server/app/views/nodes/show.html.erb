@@ -1,0 +1,215 @@
+<%- @page_title = "Node: " + h(@node.name) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @node} %>
+
+<div class="record_view">
+
+<h1>Node: <%=h @node.name %></h1>
+
+<strong>Alternate Names:</strong> <%= h(@node.alternate_names) %><br />
+
+<p><strong>Status:</strong> <%= link_to h(@node.status.name), status_url(@node.status) %><br />
+
+<strong>Hardware Profile:</strong> <%= link_to h(@node.hardware_profile.name), hardware_profile_url(@node.hardware_profile) %><br />
+
+<strong>Serial Number:</strong> <%= h(@node.serial_number) %><br />
+<strong>Asset Tag:</strong> <%= h(@node.asset_tag) %><br />
+<strong>Unique ID:</strong> <%= h(@node.uniqueid) %><br />
+
+<strong>Processor manufacturer:</strong> <%=h @node.processor_manufacturer %><br />
+<strong>Processor model:</strong> <%=h @node.processor_model %><br />
+<strong>Processor speed:</strong> <%=h @node.processor_speed %><br />
+<strong>Processor socket count:</strong> <%=h @node.processor_socket_count %><br />
+<strong>Processor count:</strong> <%=h @node.processor_count %><br />
+<strong>Processor core count:</strong> <%=h @node.processor_core_count %><br />
+<strong>OS processor count:</strong> <%=h @node.os_processor_count %><br />
+
+<strong>Physical memory:</strong> <%=h @node.physical_memory %><br />
+<strong>Physical memory sizes:</strong> <%=h @node.physical_memory_sizes %><br />
+<strong>OS memory:</strong> <%=h @node.os_memory %><br />
+<strong>Swap:</strong> <%=h @node.swap %><br />
+
+<strong>Power supply count:</strong> <%=h @node.power_supply_count %><br />
+
+<strong>Console type:</strong> <%=h @node.console_type %><br />
+
+<strong>Operating System:</strong> 
+<%- if @node.operating_system -%>
+  <%= link_to h(@node.operating_system.name), operating_system_url(@node.operating_system) %>
+<%- end -%>
+<br />
+<strong>Preferred Operating System:</strong> 
+<%- if @node.preferred_operating_system -%>
+  <%= link_to h(@node.preferred_operating_system.name), operating_system_url(@node.preferred_operating_system) %>
+<%- end -%>
+<br />
+
+<strong>Kernel version:</strong> <%=h @node.kernel_version %><br />
+
+<strong>Timezone:</strong> <%=h @node.timezone %><br />
+
+<p><strong>Description:</strong><br />
+<%= textilize_without_paragraph(h(@node.description)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@node.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@node.updated_at) %></p>
+
+</div>
+
+<div class="relationship">
+
+<div id="node_group_node_assignments">
+<%= render :partial => 'node_group_assignments', :locals => { :node => @node} %>
+</div>
+
+<div id="create_node_group_assignment">
+<%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'node_group', :to => 'node'} %>
+</div>
+
+<p id="new_node_group">
+
+</p>
+
+<p id="add_node_group_assignment_link">
+<%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'node_group', :to => 'node'} %>
+</p>
+
+</div> <!-- end relationship -->
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @node} %>
+
+</div> <!-- end relationship -->
+
+<div class="relationship">
+
+<p>
+<strong>NICs:</strong>
+<%- if @node.network_interfaces.length > 0 -%>
+  <ul>
+  <%- @node.network_interfaces.each do |nic| -%>
+    <li><%= link_to nic.name, network_interface_url(nic) %></li>
+    <ul>
+    <%- nic.ip_addresses.each do |ip| -%>
+      <li><%= link_to ip.address, ip_address_url(ip) %></li>
+    <%- end -%>
+    </ul>
+  <%- end -%>
+  </ul>
+<%- else -%>
+  <p>This node does not have any network interfaces defined.</p>
+<%- end -%>
+</p>
+
+</div> <!-- end relationship -->
+
+<div class="relationship">
+
+<div id="rack_node_assignments">
+<%= render :partial => 'rack_assignment', :locals => { :node => @node} %>
+</div> <!-- end rack_node_assignments -->
+
+<div id="create_rack_assignment">
+<%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'rack', :to => 'node'} %>
+</div>
+
+<p id="new_rack">
+
+</p>
+
+<p id="add_rack_assignment_link">
+<%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'rack', :to => 'node'} %>
+</p>
+
+</div> <!-- end relationship -->
+
+
+
+<%- if !@node.hardware_profile.outlet_count.nil? and @node.hardware_profile.outlet_count > 0 and @node.produced_outlets.count > 0 -%>
+<div class="relationship">
+  <table cellspacing="0" class="styled" summary="A list of the outlets supplied by this node.">
+  <caption><%= @node.hardware_profile.outlet_type %> Outlets</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>Consumer</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for outlet in @node.produced_outlets %>
+  <tr class="<%= cycle('odd', 'even') -%>">
+      <td><%= h(outlet.name) %></td>
+      <td id="<%= dom_id(outlet) %>"><%- if outlet.consumer.nil? -%>
+        n/a
+      <%- else -%>
+        <%= link_to outlet.consumer.name, node_path(outlet.consumer) %>
+      <%- end -%>
+      </td>
+      <td><%= link_to_remote "Assign", :url => edit_outlet_path(outlet), :method => :get, :update => dom_id(outlet) %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+</div> <!-- end relationship -->
+<%- end -%>
+
+<div class="smartrelationship">
+<h3>Smart Relationships</h3>
+
+<%- if @node.number_of_physical_nics > 0 -%>
+<p>This node has <%= h(@node.number_of_physical_nics.to_s) %> NICS that consume bandwidth. Connected producers are:</p>
+<ul>
+<%- i = 0 -%>
+<%- @node.number_of_physical_nics.times do -%>
+<li>#<%= i.to_s %>: <%= !@node.consumed_network_outlets.at(i).nil? ? link_to(@node.consumed_network_outlets.at(i).producer.name, node_path(@node.consumed_network_outlets.at(i).producer)) : 'n/a' %></li>
+<%- i = i + 1 -%>
+<%- end -%>
+</ul>
+<%- else -%>
+<p>This node is does not have any NICS that consume bandwidth.</p>
+<%- end -%>
+
+<%- if @node.number_of_power_supplies > 0 -%>
+<p>This node has <%= h(@node.number_of_power_supplies.to_s) %> power supplies that consume electricity. Connected producers are:</p>
+
+<ul>
+<%- i = 0 -%>
+<%- @node.number_of_power_supplies.times do -%>
+<li>#<%= i.to_s %>: <%= !@node.consumed_power_outlets.at(i).nil? ? link_to(@node.consumed_power_outlets.at(i).producer.name, node_path(@node.consumed_power_outlets.at(i).producer)) : 'n/a' %></li>
+<%- i = i + 1 -%>
+<%- end -%>
+</ul>
+
+
+<%- else -%>
+<p>This node is does not have any power supplies that consume power.</p>
+<%- end -%>
+
+<p>Serial console connected to:</p>
+
+<ul>
+<%- i = 0 -%>
+<%- 1.times do -%>
+<li>#<%= i.to_s %>: <%= !@node.consumed_console_outlets.at(i).nil? ?  link_to(@node.consumed_console_outlets.at(i).producer.name, node_path(@node.consumed_console_outlets.at(i).producer)) : 'n/a' %></li>
+<%- i = i + 1 -%>
+<%- end -%>
+</ul>
+
+</div> <!-- end smartrelationship -->
+
+<%- if !@node.deleted_at -%>
+<p><%= link_to 'Edit', edit_node_path(@node) %> | 
+<%= link_to 'Delete', node_path(@node), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @node} %>
+
+<%= javascript_tag "Element.hide('create_node_group_assignment')" %>
+<%= javascript_tag "Element.hide('create_rack_assignment')" %>
+<% if @node.rack %>
+  <%= javascript_tag "Element.hide('add_rack_assignment_link')" %>
+<% end %>
+
+<%= javascript_tag "_node_id = "+@node.id.to_s %>

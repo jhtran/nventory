@@ -1,0 +1,38 @@
+<%- @page_title = "VIP: " + h(@vip.name) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @vip} %>
+
+<div class="record_view">
+
+<h1>VIP: <%=h @vip.name %></h1>
+
+<p><strong>Node Group:</strong> <%= link_to h(@vip.node_group.name), node_group_url(@vip.node_group_id) if !@vip.node_group_id.nil? %></p>
+
+<p><strong>Description:</strong><br />
+<%= textilize_without_paragraph(h(@vip.description)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@vip.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@vip.updated_at) %></p>
+
+</div>
+
+<div class="relationship">
+
+<div id="datacenter_vip_assignments">
+<%= render :partial => 'datacenter_assignments', :locals => { :vip => @vip} %>
+</div> <!-- end datacenter_vip_assignments -->
+
+</div> <!-- end relationship -->
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @vip} %>
+
+</div> <!-- end relationship -->
+
+<%- if !@vip.deleted_at -%>
+<p><%= link_to 'Edit', edit_vip_path(@vip) %> | 
+<%= link_to 'Delete', vip_path(@vip), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @vip} %>

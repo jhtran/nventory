@@ -1,0 +1,12 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+  <td><%= link_to index_row.created_at, self.send(index_row.class.to_s.underscore + '_path', index_row) %></td>
+  <td><%= link_to index_row.account.login, self.send('account_path', index_row.account) %></td>
+  <td>
+    <% if index_row.commentable.class.respond_to?('default_search_attribute') %>
+      <%= link_to(index_row.commentable.send(index_row.commentable.class.default_search_attribute), index_row.commentable)  + ' (' + index_row.commentable_type + ')' %><br />
+    <% else %>
+      <%= link_to index_row.commentable_type + ' ' + index_row.commentable_id.to_s, index_row.commentable %><br />
+    <% end %>
+  </td>
+</tr>

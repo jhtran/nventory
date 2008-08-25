@@ -1,0 +1,7 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %></td>
+  <td><%= h(index_row.from.name) %></td>
+  <td><%= link_to index_row.name, self.send(index_row.class.to_s.underscore + '_path', index_row) %></td>
+  <td><%= h(index_row.to.name) %></td>
+  <td><%= h(index_row.assigned_at.to_formatted_s(:long)) %></td>
+</tr>

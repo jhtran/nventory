@@ -1,0 +1,81 @@
+<%- @page_title = "Rack: " + h(@rack.name) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @rack} %>
+
+<div class="record_view">
+
+<h1>Rack: <%=h @rack.name %></h1>
+
+<p><%= link_to 'Visualization', visualization_rack_path(@rack) %>
+
+<p><strong>Location:</strong><br />
+<%= textilize_without_paragraph(h(@rack.location)) %></p>
+
+<p><strong>Description:</strong><br />
+<%= textilize_without_paragraph(h(@rack.description)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@rack.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@rack.updated_at) %></p>
+
+</div>
+
+<div class="relationship">
+
+<div id="rack_node_assignments">
+<%= render :partial => 'node_assignments', :locals => { :rack => @rack} %>
+</div> <!-- end rack_node_assignments -->
+
+<div id="create_node_assignment">
+<%= render :partial => 'shared/create_assignment', :locals => { :from => 'rack', :to => 'node'} %>
+</div>
+
+<p id="new_node">
+
+</p>
+
+<p id="add_node_assignment_link">
+<%= render :partial => 'shared/add_inline_link', :locals => { :from => 'rack', :to => 'node'} %>
+</p>
+
+</div> <!-- end relationship -->
+
+<div class="relationship">
+
+<div id="datacenter_rack_assignments">
+<%= render :partial => 'datacenter_assignment', :locals => { :rack => @rack} %>
+</div> <!-- end datacenter_rack_assignments -->
+
+<div id="create_datacenter_assignment">
+<%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'datacenter', :to => 'rack'} %>
+</div>
+
+<p id="new_datacenter">
+
+</p>
+
+<p id="add_datacenter_assignment_link">
+<%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'datacenter', :to => 'rack'} %>
+</p>
+
+</div> <!-- end relationship -->
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @rack} %>
+
+</div> <!-- end relationship -->
+
+<%- if !@rack.deleted_at -%>
+<p><%= link_to 'Edit', edit_rack_path(@rack) %> | 
+<%= link_to 'Delete', rack_path(@rack), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @rack} %>
+
+<%= javascript_tag "Element.hide('create_node_assignment')" %>
+<%= javascript_tag "Element.hide('create_datacenter_assignment')" %>
+<% if @rack.datacenter %>
+  <%= javascript_tag "Element.hide('add_datacenter_assignment_link')" %>
+<% end %>
+
+<%= javascript_tag "_rack_id = "+@rack.id.to_s %>

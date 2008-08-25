@@ -1,0 +1,15 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+one:
+  id: 1
+  network: 192.168.1.0
+  netmask: 255.255.255.0
+  gateway: 192.168.1.1
+  broadcast: 192.168.1.255
+  node_group_id: 1
+two:
+  id: 2
+  network: 10.0.2.0
+  netmask: 255.255.254.0
+  gateway: 10.0.2.1
+  broadcast: 10.0.3.255
+  node_group_id: 2

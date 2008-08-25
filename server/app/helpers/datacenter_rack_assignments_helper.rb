@@ -1,0 +1,2 @@
+module DatacenterRackAssignmentsHelper
+end

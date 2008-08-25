@@ -1,0 +1,47 @@
+<%- @page_title = "Node Group: " + h(@node_group.name) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @node_group} %>
+
+<div class="record_view">
+
+<h1>Node Group: <%=h @node_group.name %></h1>
+
+<p><strong>Description:</strong><br />
+<%= textilize_without_paragraph(h(@node_group.description)) %></p>
+
+<p>
+<strong>Children:</strong>
+<ul>
+<%- @node_group.child_groups.each do |ng| -%>
+  <li><%= link_to ng.name, node_group_url(ng) %></li>
+<%- end -%>
+</ul>
+</p>
+
+<p>
+<strong>Nodes:</strong>
+<ul>
+<%- @node_group.nodes.each do |node| -%>
+  <li><%= link_to node.name, node_url(node) %></li>
+<%- end -%>
+</ul>
+</p>
+
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@node_group.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@node_group.updated_at) %></p>
+
+</div>
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @node_group} %>
+
+</div> <!-- end relationship -->
+
+<%- if !@node_group.deleted_at -%>
+<p><%= link_to 'Edit', edit_node_group_path(@node_group) %> | 
+<%= link_to 'Delete', node_group_path(@node_group), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @node_group} %>

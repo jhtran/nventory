@@ -1,0 +1,24 @@
+<%- @page_title = "Database Instance Relationship: " + h(@database_instance_relationship.id) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @database_instance_relationship} %>
+
+<div class="record_view">
+
+<h1>Database Instance Relationship</h1>
+
+<p><strong>Database:</strong> <%= link_to h(@database_instance_relationship.from.name), database_instance_path(@database_instance_relationship.from) %><br />
+<strong>has a relationship of:</strong> <%= h(@database_instance_relationship.name) %> <br />
+<strong>to Database:</strong> <%= link_to h(@database_instance_relationship.to.name), database_instance_path(@database_instance_relationship.to) %> <br />
+<strong>Assigned at:</strong> <%= h(@database_instance_relationship.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@database_instance_relationship.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@database_instance_relationship.updated_at) %></p>
+
+</div>
+
+<%- if !@database_instance_relationship.deleted_at -%>
+<p><%= link_to 'Edit', edit_database_instance_relationship_path(@database_instance_relationship) %> | 
+<%= link_to 'Delete', database_instance_relationship_path(@database_instance_relationship), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @database_instance_relationship} %>

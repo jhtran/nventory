@@ -1,0 +1,17 @@
+<%- pixel_height_of_node = 12 -%>
+
+<div class="v_rack">
+
+<div class="v_rack_name">RACK: <%= link_to h(rack.name), rack_path(rack) %></div>
+
+<div class="v_rack_container" style="height:<%= (rack.u_height * 25).to_s %>px;">
+
+<ul class="v_rack_node">
+<%- rack.rack_node_assignments.each do |assignment| -%>
+  <li><%= link_to h(assignment.node.visualization_summary), node_path(assignment.node), { :style => 'background-color:' + h(assignment.node.hardware_profile.visualization_color) + ';height:' + ((assignment.node.hardware_profile.rack_size || 0)*pixel_height_of_node).to_s + 'px;line-height:'+  ((assignment.node.hardware_profile.rack_size || 0)*pixel_height_of_node).to_s + 'px;' } %></li>
+<%- end -%>
+</ul>
+
+</div>
+
+</div>

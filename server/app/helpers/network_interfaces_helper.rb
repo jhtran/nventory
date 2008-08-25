@@ -1,0 +1,2 @@
+module NetworkInterfacesHelper
+end

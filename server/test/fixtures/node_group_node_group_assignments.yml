@@ -1,0 +1,13 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+one:
+  id: 1
+  parent_id: 1
+  child_id: 2
+two:
+  id: 2
+  parent_id: 1
+  child_id: 3
+three:
+  id: 3
+  parent_id: 3
+  child_id: 4

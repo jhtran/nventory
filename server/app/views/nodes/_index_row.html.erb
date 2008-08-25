@@ -1,0 +1,8 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+  <td><%= link_to index_row.name, self.send(index_row.class.to_s.downcase + '_path', index_row) %></td>
+  <td><%= index_row.node_groups.blank? ? '&nbsp;' : (index_row.node_groups.collect { |ng| link_to ng.name, node_group_path(ng) }).join(', ') %></td>
+  <td><%= index_row.status.name %></td>
+  <td><%= index_row.hardware_profile.name %></td>
+  <td><%= index_row.operating_system.nil? ? '&nbsp;' : index_row.operating_system.name %></td>
+</tr>

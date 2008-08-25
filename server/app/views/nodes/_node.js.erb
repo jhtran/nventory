@@ -1,0 +1,40 @@
+<p><strong>Name:</strong> <em>*</em> <br/><%= f.text_field :name %></p>
+<p><strong>Alternate Names:</strong> <br/><%= f.text_field :alternate_names %></p>
+
+<p><strong>Status:</strong> <em>*</em> <br /><%= f.select :status_id, Status.find(:all, :order => 'name').collect { |s| [ s.name, s.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Hardware Profile:</strong> <em>*</em> <br /><%= f.select :hardware_profile_id, HardwareProfile.find(:all, :order => 'name').collect { |h| [ h.name, h.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Serial Number:</strong> <br/><%= f.text_field :serial_number %></p>
+<p><strong>Asset Tag:</strong> <br/><%= f.text_field :asset_tag %></p>
+<p><strong>Unique ID:</strong> <br/><%= f.text_field :uniqueid %></p>
+
+<p><strong>Processor manufacturer:</strong> <br /><%= f.text_field :processor_manufacturer %> </p>
+<p><strong>Processor model:</strong> <br /><%= f.text_field :processor_model %> </p>
+<p><strong>Processor speed:</strong> <br /><%= f.text_field :processor_speed %> </p>
+<p><strong>Processor socket count:</strong> <br /><%= f.text_field :processor_socket_count %> </p>
+<p><strong>Processor count:</strong> <br /><%= f.text_field :processor_count %> </p>
+<p><strong>Processor core count:</strong> <br /><%= f.text_field :processor_core_count %> </p>
+<p><strong>OS processor count:</strong> <br /><%= f.text_field :os_processor_count %> </p>
+
+<p><strong>Physical Memory:</strong> <br /><%= f.text_field :physical_memory %> </p>
+<p><strong>Physical Memory Sizes:</strong> <br /><%= f.text_field :physical_memory_sizes %> </p>
+<p><strong>OS Memory:</strong> <br /><%= f.text_field :os_memory %> </p>
+<p><strong>Swap:</strong> <br /><%= f.text_field :swap %> </p>
+
+<p><strong>Power supply count:</strong> <br /><%= f.text_field :power_supply_count %> </p>
+
+<p><strong>Console type:</strong> <br /><%= f.select :console_type, Node.allowed_console_types.collect { |ct| [ ct, ct ] } %></p>
+
+<p><strong>Operating System:</strong> <br /><%= f.select :operating_system_id, OperatingSystem.find(:all, :order => 'name').collect { |o| [ o.name, o.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Preferred Operating System:</strong> <br /><%= f.select :preferred_operating_system_id, OperatingSystem.find(:all, :order => 'name').collect { |o| [ o.name, o.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Kernel version:</strong> <br /><%= f.text_field :kernel_version %> </p>
+
+<p><strong>Timezone:</strong> <br /><%= f.text_field :timezone %> </p>
+
+<p><strong>NICs:</strong> <br />FIXME </p>
+
+<p><strong>Description:</strong> <br /><%= f.text_area :description, {"cols" => 60, "rows" => 4} %> </p>
+

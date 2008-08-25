@@ -1,0 +1,26 @@
+<%- if node.node_database_instance_assignments.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the database instances assigned to this node.">
+  <caption>Database Instances</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>Assigned at</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in node.node_database_instance_assignments %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.database_instance.name, database_instance_path(assignment.database_instance) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), node_database_instance_assignment_path(assignment) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => node_database_instance_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p>No database instances are assigned to this node.</p>
+<%- end -%>

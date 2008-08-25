@@ -1,0 +1,26 @@
+<h3>Nodes (Name / Assigned At)</h3>
+
+<%- if rack.rack_node_assignments.count > 0 -%>
+
+<ul id="node-list">
+  <%- rack.rack_node_assignments.each do |assignment| -%>
+  <li id="node_<%= assignment.id %>">
+    <span class="handle"><img src="/images/drag.gif" width="25" height="11" alt="Drag" /></span>
+    <%= link_to h(assignment.node.name), node_path(assignment.node) %> / 
+    <%= link_to h(assignment.assigned_at.to_formatted_s(:long)), rack_node_assignment_path(assignment) %> / 
+    <%= link_to_remote 'Remove from rack',
+                              :url => rack_node_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %>
+    </li>
+  <%- end -%>
+</ul>
+
+<%= sortable_element 'node-list', 
+  :url => {:controller => 'ajax', :action => 'sort_nodes_in_rack', :id => rack.id},
+  :handle => 'handle' %>
+
+  
+<%- else -%>
+  <p>No nodes are assigned to this rack.</p>
+<%- end -%>

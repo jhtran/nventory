@@ -1,0 +1,52 @@
+<%- @page_title = "Dashboard" %>
+
+<div id="dashboard_menu">
+
+<h3>Nodes</h3>
+<ul>
+  <li><%= link_to 'Add New Node', new_node_path %></li>
+  <li><%= link_to 'Add New Hardware Profile', new_hardware_profile_path %></li>
+  <li><%= link_to 'View All Nodes', nodes_path %></li>
+  <li><%= dashboard_pulldown_form_for_model(Node, HardwareProfile.find(:all, :order => HardwareProfile.default_search_attribute)) %></li>
+  <li><%= dashboard_pulldown_form_for_model(Node, OperatingSystem.find(:all, :order => OperatingSystem.default_search_attribute)) %></li>
+  <li><%= dashboard_pulldown_form_for_model(Node, Status.find(:all, :order => Status.default_search_attribute)) %></li>
+</ul>
+
+<h3>Datacenters</h3>
+<ul>
+  <li><%= link_to 'Add New Datacenter', new_datacenter_path %></li>
+  <li><%= link_to 'View All Datacenters', datacenters_path %></li>
+  <li>
+    <form action="" method="get">
+      &nbsp;&nbsp;&nbsp;<select style="width:20em;" id="datacenter" name="" onchange="if (this.value != '') { window.location = '/datacenters/' + $('datacenter').value; }">
+        <option value="">View Datacenter:</option>
+        <%= options_from_collection_for_select(Datacenter.find(:all), 'id', 'name') %>
+      </select>
+    </form>
+  </li>
+</ul>
+
+
+</div>
+
+<div id="dashboard_body">
+
+
+<table class="network_summary">
+<caption>Network Summary</caption>
+<tbody>
+<tr>
+    <td valign="top">
+      Datacenters: <%= Datacenter.find(:all).length %><br/>
+      Racks: <%= Rack.find(:all).length %><br/>
+      Nodes: <%= Node.find(:all).length %><br/>
+      VIPs: <%= Vip.find(:all).length %><br/>
+    </td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+
+<p><%= link_to "Setup Sample Data", { :action => "setup_sample_data" } %></p>

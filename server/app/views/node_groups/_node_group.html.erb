@@ -1,0 +1,7 @@
+<p><strong>Name</strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+
+<p><strong>Children</strong> <br /> <%= collection_select :node_group, :child_group_ids, NodeGroup.find(:all, :order => NodeGroup.default_search_attribute), :id, :name, {}, :multiple => true, :name => 'node_group_node_group_assignments[child_groups][]'  %></p>
+
+<p><strong>Nodes</strong> <br /> <%= collection_select :node_group, :node_ids, Node.find(:all, :order => Node.default_search_attribute), :id, :name, {}, :multiple => true, :name => 'node_group_node_assignments[nodes][]'  %></p>
+
+<p><strong>Description</strong> <br /> <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %></p>

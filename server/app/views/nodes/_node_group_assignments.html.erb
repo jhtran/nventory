@@ -1,0 +1,26 @@
+<%- if node.node_group_node_assignments.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the node groups assigned to this node.">
+  <caption>Node Groups</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>Assigned at</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in node.node_group_node_assignments %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.node_group.name, node_group_path(assignment.node_group) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), node_group_node_assignment_path(assignment) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => node_group_node_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p>This node is not assigned to any node groups.</p>
+<%- end -%>

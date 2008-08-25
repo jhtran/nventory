@@ -1,0 +1,24 @@
+<%- @page_title = "Comment" %>
+
+<div class="record_view">
+
+<h1>Note</h1>
+
+<strong>Account:</strong> <%= link_to @comment.account.login, @comment.account %><br />
+<strong>Comment on:</strong>
+<% if @comment.commentable.class.respond_to?('default_search_attribute') %>
+  <%= link_to(@comment.commentable.send(@comment.commentable.class.default_search_attribute), @comment.commentable)  + ' (' + @comment.commentable_type + ')' %><br />
+<% else %>
+  <%= link_to @comment.commentable_type + ' ' + @comment.commentable_id.to_s, @comment.commentable %><br />
+<% end %>
+
+<p><strong>Comment:</strong><br />
+<%= textilize_without_paragraph(h(@comment.comment)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@comment.created_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_comment_path(@comment) %> | 
+<%= link_to 'Delete', comment_path(@comment), :confirm => 'Are you sure?', :method => :delete %></p>
+

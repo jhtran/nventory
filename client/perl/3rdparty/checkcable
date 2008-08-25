@@ -1,0 +1,308 @@
+#!/usr/bin/perl -w
+#
+# checkcable - Check cable on network interfaces. Solaris.
+#
+# This program prints the link up status for network interfaces, which
+# also appears in /var/adm/messages as cables are connected or
+# disconnected. (This is different to the link UP that ifconfig prints).
+#
+# This version uses ndd, and must be run as root (see CODE comments below).
+# 
+# 23-Jan-2007    ver 0.98    (check for newer versions)
+#
+# USAGE:    checkcable [-h] [interface ...]
+#           checkcable                       # check all configured interfaces
+#           checkcable hme0                  # look at specific interface
+#
+# FIELDS:
+#           Link        "link up", this is the cable status (plugged in)
+#           Duplex      half or full duplex
+#           Speed       Mb/s
+#
+# NOTES:
+# - If a value cannot be read from the interface, "ERR" is printed.
+#   This is likely on older servers or Solaris x86 where not all network
+#   cards support this status information.
+# - If you have upgraded /usr/bin/perl, this program may be unable to 
+#   find the Sun::Solaris::Kstat library (which is under /usr/perl5).
+#   Before the "use strict;" line, you may need to add,
+#   use lib "/usr/perl5/5.6.1/lib";
+#   to point to your location of Sun/Solaris/Kstat.pm.
+#
+# COPYRIGHT: Copyright (c) 2006 Brendan Gregg.
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+#  (http://www.gnu.org/copyleft/gpl.html)
+#
+# CODE:
+#
+# While this program works, it is a temporary solution that is not ideal.
+# 
+# This script fetches most of it's values by running "ndd" as root. It would
+# be better to fetch these values from Kstat, as Kstat doesn't require root
+# access AND there is a Perl library for Kstat. The first version I wrote did
+# just that - but I found the output was often incorrect when run for
+# different NICs. It turns out that the Kstat values are unreliable for some
+# network cards, however this is being improved in future versions of Solaris.
+# For now, we must use ndd to get many of the values, but I hope in the future
+# I can switch back to an entirely Kstat based solution.
+#
+# HISTORY:
+#
+# 21-Mar-2004   Brendan Gregg   Created this.
+# 14-Apr-2004   Michael Miller  Added support for dfme, bge, ce.
+# 29-Apr-2004   Kevin Kwast     Added support for gigabit ge.
+# 28-Oct-2005   Markus Schulewski  Added AutoNEG column; bge DUPLEX corrected
+# 25-Jan-2006   Brendan Gregg   Tweaked style, added some rtls support.
+# 26-Jan-2006      "      "     Readded Sun::Solaris::Kstat (ce, rtls).
+# 22-Apr-2006	Lasse Osterild	Added support for rge.
+# 22-May-2006	   "      "	Added support for ipge.
+
+use strict;
+use Sun::Solaris::Kstat;
+
+#
+#  Global Vars
+#
+$ENV{PATH} = "/usr/bin:/usr/sbin";
+$main::Kstat = Sun::Solaris::Kstat->new();
+my %Interfaces;
+
+#
+#  Process command line args
+#
+usage() if (defined $ARGV[0] ? $ARGV[0] : "") =~ /^(-h|--help)$/;
+die "ERROR1: Sorry, you must be root to run this.\n" unless -r "/dev/mem";
+if ($ARGV[0]) {
+    ### Read from args
+    while (defined $ARGV[0] and $ARGV[0] ne "") {
+        $Interfaces{$ARGV[0]} = 1;
+        shift @ARGV;
+    }
+}
+else {
+    ### Fetch from ifconfig
+    foreach my $line (`ifconfig -a`) {
+        next unless $line =~ /^\w*:/;
+        my ($interface, $junk) = split /:/, $line, 2;
+        next if $interface eq "lo0";
+        $Interfaces{$interface} = 1;
+    }
+}
+
+#
+#  Main
+#
+printf "%-9s %6s %6s %6s %8s\n", "Interface", "Link", "Duplex", "Speed",
+                                 "AutoNEG";
+
+foreach my $interface (keys %Interfaces) {
+    my ($dev, $ins) = $interface =~ /(.*)(.)/;
+
+    ### Defaults
+    my $link   = "ERR";
+    my $duplex = "ERR";
+    my $speed  = "ERR";
+    my $auto   = "ERR";
+
+    # --- dmfe card ---
+    if ($dev eq "dmfe") {
+        ### Fetch status
+        chomp($link   = `ndd /dev/$dev$ins link_status 2> /dev/null`);
+        chomp($duplex = `ndd /dev/$dev$ins link_mode 2> /dev/null`);
+        chomp($speed  = `ndd /dev/$dev$ins link_speed 2> /dev/null`);
+        chomp($auto   = `ndd /dev/$dev$ins adv_autoneg_cap 2> /dev/null`);
+
+        ### Process status
+        unless ($speed =~ /^(10|100|1000)$/) { $speed = "ERR"; }
+    }
+
+    # --- bge card ---
+    elsif ($dev eq "bge") {
+        ### Fetch status
+        chomp($link   = `ndd /dev/$dev$ins link_status 2> /dev/null`);
+        chomp($duplex = `ndd /dev/$dev$ins link_duplex 2> /dev/null`);
+        chomp($speed  = `ndd /dev/$dev$ins link_speed 2> /dev/null`);
+        chomp($auto   = `ndd /dev/$dev$ins adv_autoneg_cap 2> /dev/null`);
+
+        ### Process status
+        unless ($speed =~ /^(10|100|1000)$/) { $speed = "ERR"; }
+        if ($duplex eq "2")    { $duplex = 1;     }
+        elsif ($duplex eq "1") { $duplex = 0;     }
+        else                   { $duplex = "ERR"; }
+    }
+
+    # --- ce card ---
+    elsif ($dev eq "ce") {
+        ### Fetch status
+        $link   = $main::Kstat->{$dev}->{$ins}->{$interface}->{link_up};
+        $duplex = $main::Kstat->{$dev}->{$ins}->{$interface}->{link_duplex};
+        $speed  = $main::Kstat->{$dev}->{$ins}->{$interface}->{link_speed};
+
+        ### Fetch auto
+        system "ndd -set /dev/$dev instance $ins > /dev/null 2>&1"
+               and die "ERROR2: ndd failed, $interface: $!\n";
+        chomp($auto = `ndd /dev/$dev adv_autoneg_cap 2> /dev/null`);
+
+        ### Process status
+        $link   = unpack "Z*", $link;     # remove NULL padding
+        $duplex = unpack "Z*", $duplex;
+        $speed  = unpack "Z*", $speed;
+        if ($duplex eq "2")    { $duplex = 1;     }
+        elsif ($duplex eq "1") { $duplex = 0;     }
+        else                   { $duplex = "ERR"; }
+    }
+
+    # --- rtls card ---
+    elsif ($dev eq "rtls") {
+        ## Kstat provides a couple of these values, the others will be
+        ## printed as "???".
+
+        ### Fetch status
+        $duplex = $main::Kstat->{$dev}->{$ins}->{$interface}->{duplex};
+        $speed  = $main::Kstat->{$dev}->{$ins}->{$interface}->{ifspeed};
+        $link = "???";
+        $auto = "???";
+
+        ### Process status
+        $duplex = unpack "Z*", $duplex;   # remove NULL padding
+        $speed  = unpack "Z*", $speed;
+        $speed  /= 1000000;
+        if ($duplex eq "full")    { $duplex = 1;     }
+        elsif ($duplex eq "half") { $duplex = 0;     }
+        else                      { $duplex = "ERR"; }
+    }
+
+    # --- ge card ---
+    elsif ($dev eq "ge") {
+        ## Unfortunately ge info from kstat is not always complete.
+        ## My ge returns the speed as 10, 100, or 1000, but I left
+        ## support for the simple "0" or "1" response just in case.
+
+        ### Set instance
+        system "ndd -set /dev/$dev instance $ins > /dev/null 2>&1"
+               and die "ERROR2: ndd failed, $interface: $!\n";
+
+        ### Fetch status
+        chomp($link   = `ndd /dev/$dev link_status 2> /dev/null`);
+        chomp($duplex = `ndd /dev/$dev link_mode 2> /dev/null`);
+        chomp($speed  = `ndd /dev/$dev link_speed 2> /dev/null`);
+        chomp($auto   = `ndd /dev/$dev adv_1000autoneg_cap 2> /dev/null`);
+
+        ### Process speed (10, 100, or 1000)
+        if ($speed =~ m/^(10+)/) { $speed = $1;    }
+        elsif ($speed eq "1")    { $speed = 100;   }
+        elsif ($speed eq "0")    { $speed = 10;    }
+        else                     { $speed = "ERR"; }
+    }
+
+    # --- rge or e1000g card ---
+    elsif ($dev eq "rge" or $dev eq "e1000g") {
+        ### Fetch status
+        chomp($link   = `ndd /dev/$dev$ins link_status 2> /dev/null`);
+        chomp($duplex = `ndd /dev/$dev$ins link_duplex 2> /dev/null`);
+        chomp($speed  = `ndd /dev/$dev$ins link_speed 2> /dev/null`);
+        chomp($auto   = `ndd /dev/$dev$ins adv_autoneg_cap 2> /dev/null`);
+
+        ### Process status
+        unless ($speed =~ /^(10|100|1000)$/) { $speed = "ERR"; }
+        if ($duplex eq "2")    { $duplex = 1;     }
+        elsif ($duplex eq "1") { $duplex = 0;     }
+        else                   { $duplex = "ERR"; }
+    }
+
+    # --- ipge card ---
+    elsif ($dev eq "ipge") {
+        ### Fetch status
+        $link   = $main::Kstat->{$dev}->{$ins}->{$interface}->{link_up};
+        $duplex = $main::Kstat->{$dev}->{$ins}->{$interface}->{link_duplex};
+        $speed  = $main::Kstat->{$dev}->{$ins}->{$interface}->{link_speed};
+
+        ### Fetch auto
+        system "ndd -set /dev/$dev instance $ins > /dev/null 2>&1"
+               and die "ERROR2: ndd failed, $interface: $!\n";
+        chomp($auto = `ndd /dev/$dev adv_autoneg_cap 2> /dev/null`);
+
+        ### Process status
+        unless ($speed =~ /^(10|100|1000)$/) { $speed = "ERR"; }
+	if ($speed eq "0")     { $speed = "???";  }
+        if ($duplex eq "2")    { $duplex = 1;     }
+        elsif ($duplex eq "1") { $duplex = 0;     }
+        elsif ($duplex eq "0") { $duplex = "???"; }
+        else                   { $duplex = "ERR"; }
+    }
+
+    # --- bnx card ---
+    elsif ($dev eq "bnx") {
+        ### Fetch status
+        chomp($link   = `ndd /dev/$dev$ins link_status 2> /dev/null`);
+        chomp($duplex = `ndd /dev/$dev$ins link_duplex 2> /dev/null`);
+        chomp($speed  = `ndd /dev/$dev$ins link_speed 2> /dev/null`);
+        chomp($auto   = `ndd /dev/$dev$ins adv_autoneg_cap 2> /dev/null`);
+
+        ### Process status
+        unless ($speed =~ /^(10|100|1000)$/) { $speed = "ERR"; }
+        if ($duplex eq "2")    { $duplex = 1;     }
+        elsif ($duplex eq "1") { $duplex = 0;     }
+        else                   { $duplex = "ERR"; }
+    }
+
+    # --- all other cards ---
+    else {
+        ### Set instance
+        system "ndd -set /dev/$dev instance $ins > /dev/null 2>&1"
+               and die "ERROR2: ndd failed, $interface: $!\n";
+
+        ### Fetch status
+        chomp($link   = `ndd /dev/$dev link_status 2> /dev/null`);
+        chomp($duplex = `ndd /dev/$dev link_mode 2> /dev/null`);
+        chomp($speed  = `ndd /dev/$dev link_speed 2> /dev/null`);
+        chomp($auto   = `ndd /dev/$dev adv_autoneg_cap 2> /dev/null`);
+
+        ### Process status
+        if ($speed eq "0")    { $speed = 10;    }
+        elsif ($speed eq "1") { $speed = 100;   }
+        else                  { $speed = "ERR"; }
+    }
+
+    ### Process status
+    if ($link eq "0")        { $link = "DOWN"; }
+    elsif ($link eq "1")     { $link = "UP";   }
+    elsif ($link ne "???")   { $link = "ERR";  }
+
+    if ($duplex eq "0")      { $duplex = "HALF"; } 
+    elsif ($duplex eq "1")   { $duplex = "FULL"; } 
+    elsif ($duplex ne "???") { $duplex = "ERR";  }
+
+    if ($auto eq "0")        { $auto = "OFF"; }
+    elsif ($auto eq "1")     { $auto = "ON";  }
+    elsif ($auto ne "???")   { $auto = "ERR"; }
+
+    ### Print line
+    printf "%-9s %6s %6s %6s %8s\n", $interface, $link, $duplex, $speed, $auto;
+}
+
+#
+#  Subroutines
+#
+sub usage {
+        print STDERR <<END;
+USAGE: checkcable [-h] [interface ...]
+       checkcable                    # check all configured interfaces
+       checkcable hme0               # look at specific interface
+END
+        exit 1;
+}

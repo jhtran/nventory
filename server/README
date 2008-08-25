@@ -1,0 +1,53 @@
+nVentory - Ruby on Rails Datacenter Inventory Manager - http://nventory.sourceforge.net
+
+** This is still Alpha quality code and under heavy development **
+We use it, we modify it a lot, and we understand how it works.
+Your mileage may vary. 
+But it's pretty cool so far and getting cooler.
+
+---------------------------------------------------------------------------------------------------
+Requirements:
+---------------------------------------------------------------------------------------------------
+
+You need to have a fully working Ruby on Rails setup first, obviously.
+
+I like this guide: http://blog.codahale.com/2006/06/19/time-for-a-grown-up-server-rails-mongrel-apache-capistrano-and-you/
+
+You will need the RedCloth gem
+
+You should use Capistrano or some other method of deploying this application
+(You could also try: rake db:migrate RAILS_ENV="production" )
+
+---------------------------------------------------------------------------------------------------
+** First LOGIN **
+---------------------------------------------------------------------------------------------------
+
+Once installed, you can login with username/password of admin/admin
+
+If you get to the dashboard, you have a working nVentory system.
+
+You can click "Setup Sample Data" on the Dashboard if you want to populate your database with some demo data, node types, racks, IPs, etc etc, to take a look around the application.
+
+---------------------------------------------------------------------------------------------------
+Website, Documentation
+---------------------------------------------------------------------------------------------------
+
+Please refer to the main project website for all info and (not-very-existent-yet) documentation
+
+http://nventory.sourceforge.net
+
+
+---------------------------------------------------------------------------------------------------
+License
+---------------------------------------------------------------------------------------------------
+
+License: MIT (http://www.opensource.org/osi3.0/licenses/mit-license.php)
+
+---------------------------------------------------------------------------------------------------
+Credits
+---------------------------------------------------------------------------------------------------
+
+Concept and specs: Warwick Poole, Rolando Berrios, Gilbert Iancu - Vidavee Systems Team
+Ruby on Rails development and coding: Mike Zornek (http://www.clickablebliss.com)
+
+copyright 2007, Vidavee

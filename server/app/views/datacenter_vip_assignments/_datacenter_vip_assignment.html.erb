@@ -1,0 +1,7 @@
+<p><strong>Datacenter:</strong> <br /><%= f.select :datacenter_id, Datacenter.find(:all, :order => 'name').collect { |d| [ d.name, d.id ] }, { :include_blank => true } %></p>
+
+<p><strong>VIP:</strong> <br /><%= f.select :vip_id, Vip.find(:all, :order => 'name').collect { |v| [ v.name, v.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Priority:</strong> <br/><%= f.text_field :priority %></p>
+
+<p><strong>Assigned at:</strong> <br/><%= f.datetime_select :assigned_at %></p>

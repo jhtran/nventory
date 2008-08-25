@@ -1,0 +1,28 @@
+<%- @page_title = objects.first.class.to_s.underscore.titleize.pluralize %>
+<h1><%= objects.first.class.to_s.underscore.titleize.pluralize %></h1>
+
+<table width="100%">
+<tr>
+
+<td>
+<%= link_to 'New ' + objects.first.class.to_s.titleize, self.send('new_' + objects.first.class.to_s.underscore + '_path') %><br/>
+<%= page_entries_info objects %>
+</td>
+
+<td align="right">
+<% if self.respond_to?('search_' + objects.first.class.to_s.underscore.pluralize + '_path') -%>
+  <%= link_to 'Advanced Search', self.send('search_' + objects.first.class.to_s.underscore.pluralize + '_path') %><br/>
+<% end -%>
+<% if objects.first.class.respond_to?('default_search_attribute') -%>
+  Search by <%= objects.first.class.default_search_attribute %>: <% form_tag '/' + objects.first.class.to_s.underscore.pluralize, :method => :get do -%>
+    <%= text_field_tag objects.first.class.default_search_attribute -%>
+  <% end %>
+<% end -%>
+</td>
+
+</tr>
+</table>
+
+<div id="results_table">
+<%= render :partial => 'shared/results_table', :locals => { :objects => objects } %>
+</div> <!-- end results_table div -->

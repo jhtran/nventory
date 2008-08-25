@@ -1,0 +1,39 @@
+<%- @page_title = "Operating System: " + h(@operating_system.name) %>
+
+<%= render :partial => 'shared/deleted_message', :locals => { :object => @operating_system} %>
+
+<div class="record_view">
+
+<h1>Operating System: <%=h @operating_system.name %></h1>
+
+<p><strong>Vendor:</strong> <%=h @operating_system.vendor %><br />
+<strong>Variant:</strong> <%=h @operating_system.variant %><br />
+<strong>Version Number:</strong> <%=h @operating_system.version_number %></p>
+<strong>Architecture:</strong> <%=h @operating_system.architecture %></p>
+
+<p><strong>Description:</strong><br />
+<%= textilize_without_paragraph(h(@operating_system.description)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@operating_system.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@operating_system.updated_at) %></p>
+
+</div>
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @operating_system} %>
+
+</div> <!-- end relationship -->
+
+<div class="relationship">
+
+<%= link_to 'Search', "#{nodes_path}?operating_system=#{CGI.escape(@operating_system.name)}" %> for nodes with this operating system
+
+</div> <!-- end relationship -->
+
+<%- if !@operating_system.deleted_at -%>
+<p><%= link_to 'Edit', edit_operating_system_path(@operating_system) %> | 
+<%= link_to 'Delete', operating_system_path(@operating_system), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- end -%>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @operating_system} %>

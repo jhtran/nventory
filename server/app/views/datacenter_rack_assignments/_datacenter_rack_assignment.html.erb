@@ -1,0 +1,5 @@
+<p><strong>Datacenter:</strong> <br /><%= f.select :datacenter_id, Datacenter.find(:all, :order => 'name').collect { |d| [ d.name, d.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Rack:</strong> <br /><%= f.select :rack_id, Rack.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Assigned at:</strong> <br/><%= f.datetime_select :assigned_at %></p>

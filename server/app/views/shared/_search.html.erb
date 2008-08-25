@@ -1,0 +1,44 @@
+<%- @page_title = 'Search ' + object.class.to_s.underscore.titleize.pluralize %>
+<h1><%= 'Search ' + object.class.to_s.underscore.titleize.pluralize %></h1>
+
+<% form_tag self.send(object.class.to_s.underscore.pluralize + '_path'), :method => :get do -%>
+  <table>
+  <% object.class.content_columns.each do |column| %>
+    <% next if (column.name == 'description') %>
+    <% next if (exclude && exclude.include?(column.name))%>
+    <tr>
+    <td><%= h(column.name.humanize) %></td>
+    <% optionshash = {} -%>
+    <% object.class.find(:all).each do |obj| -%>
+      <% value = obj.send(column.name) -%>
+      <% optionshash[value] = true if (!value.nil? && !value.blank?) -%>
+    <% end -%>
+    <% options = optionshash.keys.sort -%>
+    <% size = options.length -%>
+    <% size = 5 if options.length >= 5 %>
+    <td><%= select_tag column.name, options_for_select(options), :multiple => true, :id => "select_#{column.name}", :name => "exact_#{column.name}[]", :size => size %></td>
+    <td><%= text_field_tag column.name %></td>
+    </tr>
+  <% end -%>
+  <% object.class.reflect_on_all_associations.each do |assoc| -%>
+    <% next if assoc.name == :audits -%>
+    <% next if assoc.name.to_s =~ /_assignments?$/ -%>
+    <% if assoc.klass.respond_to?('default_search_attribute') -%>
+      <tr>
+      <td><%= h(assoc.name.to_s.humanize) %></td>
+      <% optionshash = {} -%>
+      <% assoc.klass.find(:all).each do |obj| -%>
+        <% value = obj.send(assoc.klass.default_search_attribute) -%>
+        <% optionshash[value] = true if (!value.nil? && !value.blank?) -%>
+      <% end -%>
+      <% options = optionshash.keys.sort -%>
+      <% size = options.length -%>
+      <% size = 5 if options.length >= 5 %>
+      <td><%= select_tag assoc.klass.default_search_attribute, options_for_select(options), :multiple => true, :id => "select_#{assoc.name}[#{assoc.klass.default_search_attribute}]", :name => "exact_#{assoc.name}[#{assoc.klass.default_search_attribute}][]", :size => size %></td>
+      <td><%= text_field_tag "#{assoc.name}[#{assoc.klass.default_search_attribute}]" %></td>
+      </tr>
+    <% end -%>
+  <% end -%>
+  </table>
+  <%= submit_tag 'Search', :name => '' %>
+<% end -%>

@@ -1,0 +1,42 @@
+# TODO LIST
+
+# Phase 2: Core Feature and UI Refinement
+
+* Finish implementation of Database Instances + Database Instance Relationships. Need guidance here.
+* DRY up Meta data and if deleted buttons/link stuff on show page.
+* Add pagination to the visualization of a datacenter.
+* Use the existing is_admin? flag to deny write access for non-admins. 
+* Investigate LDAP for accounts/authentication.
+* Work out the workflow of a node being purchased by the company, assembled/setup, and assigned. Might need to add more attributes to store purchase info (when/PO order number/warrantee). I don't think we've thought this out enough.
+* Add a system that will scan the local network for IP addresses and compare to our own internal record of IP assignments. This will help us flag items that need to be tracked/edited (will probably require the full modeling of IP Addresses)
+* Investigate a notification system -- where individuals can signup for alerts when a object they are watching has changed.
+* Currently we store the position of the node in a rack, but this really doesn't define it's space (ie: it's exact location, how many spaces it's taking up, are their empty space in-between nodes -- not sure how important this is, but it's not trivial to add.)
+* There are some task which will be very common. We need to make sure the UI/experience for these tasks are especially easy to use.
+    * "Add a new node to an existing client"
+    * "Reassign a node to a different existing client"
+    * "Add a new node to a new client"
+    * "Change a node's function and reassign to a different client"
+    * "Change a node's IP"
+    * "Add a new rack"
+    * "Add PDUs to an existing rack"
+
+# Phase 3: Configuration System Development 
+
+* ??? <Everything was moved to phase 1 or 2> ?
+
+# SOMEDAY
+
+* Offer a way to hide the main menu to get more horizontal space (could be very handy for datacenter visualization view)
+* When viewing the datacenter visualization page you should be able to toggle the column count between 2-6. 
+* Add optimistic locking
+* Write some documentation on what adding attributes to a model would be like. How such things work in the rails world.
+* It might be necessary to limit the list of versions when someone requests version history. Maybe latest 10, then inline AJAX pagination?
+* For the models that have a relationship to another model the version history will show the foreign key ... we might want to instead show the name of the model it points to and link to that record?
+* It would be nice if on the assignment pages the objects the assignment is connected were linked to their own show pages.
+* Add a flash notice for successful deletion of objects?
+* Double check that flash notices are not created foe AJAX CRUD.
+
+# QUESTIONS FOR RICK
+
+[3/20/07] - Currently you will define a hardware profile that represents a PDU or a Network Switch; then create a node and assign it one of these hardware profiles. At that point it can almost be assumed what "functions" this node serves. Should we automate (and possible lock) functions of nodes with these hardware profiles?
+   

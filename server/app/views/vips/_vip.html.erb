@@ -1,0 +1,5 @@
+<p><strong>Name</strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+
+<p><strong>Node group:</strong> <br /><%= f.select :node_group_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+
+<p><strong>Description</strong> <br /> <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %></p>
