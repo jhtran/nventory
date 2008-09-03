@@ -1,0 +1,42 @@
+#!/usr/bin/ruby -w
+##############################################################################
+# This is a node classifier script for puppet
+# http://reductivelabs.com/trac/puppet/wiki/ExternalNodes
+##############################################################################
+
+require 'yaml'
+$: << '/usr/nventory/ruby'
+require 'nventory'
+
+name = ARGV[0] or abort "No hostname passed"
+
+# NVentory::Client uses ENV['HOME'] to build the path to the cookie
+# file it uses.  puppetmasterd (which runs this script) inherits root's
+# environment, but drops privileges and runs as the puppet user.  So
+# ENV['HOME'] is set to '/root' and we can't write to it.  So hard-code
+# it to something we should be able to write to as the puppet user.
+ENV['HOME'] = '/home/puppet'
+
+output = {}
+
+#
+# Grab classes from nVentory
+#
+
+nvclient = NVentory::Client.new
+results = nvclient.get_objects('nodes', {}, { 'name' => name }, ['node_groups'])
+
+if results.empty?
+  # Silently exit, puppet will call this script again with the name
+  # 'default', which you could use to implement a default set of groups
+  # if desired.
+  exit
+end
+
+output['classes'] = []
+results[results.keys.first]['node_groups'].each do |ng|
+  output['classes'] << ng['name']
+end
+
+print YAML::dump(output)
+
