@@ -179,7 +179,7 @@ sub _xml_to_perl
 
 sub get_objects
 {
-	my ($objecttype, $getref, $exactgetref, $login) = @_;
+	my ($objecttype, $getref, $exactgetref, $includesref, $login) = @_;
 	my %get = %$getref;
 	my %exactget = %$exactgetref;
 	
@@ -217,6 +217,10 @@ sub get_objects
 			my $value = @{$values}[0];
 			$metaget{'exact_' . $key} = $value;
 		}
+	}
+	if ($includesref)
+	{
+		$metaget{'include[]'} = $includesref;
 	}
 
 	#
@@ -344,7 +348,7 @@ sub set_objects
 	# Convert any keys which don't already specify a model
 	# from 'foo' to 'objecttype[foo]'
 	my %cleandata;
-    my $objecttype = singularize($objecttypes);
+	my $objecttype = singularize($objecttypes);
 	while (my ($key, $value) = each %data)
 	{
 		if ($key !~ /\[.+\]/)
@@ -521,7 +525,7 @@ sub register
 
 	if ($data{'hardware_profile[model]'} eq 'VMware Virtual Platform')
 	{
-		my %results = get_objects('nodes', {'virtual_client_ids' => [$data{uniqueid}]}, {}, 'autoreg');
+		my %results = get_objects('nodes', {'virtual_client_ids' => [$data{uniqueid}]}, {}, [], 'autoreg');
 		if (scalar keys %results == 1)
 		{
 			$data{virtual_parent_node_id} = $results{(keys(%results))[0]}->{id};
@@ -543,7 +547,7 @@ sub register
 	my %results;
 	if ($data{uniqueid})
 	{
-		%results = get_objects('nodes', {}, {'uniqueid' => [$data{uniqueid}]}, 'autoreg');
+		%results = get_objects('nodes', {}, {'uniqueid' => [$data{uniqueid}]}, [], 'autoreg');
 	}
 
 	# If we failed to find an existing entry based on the unique id
@@ -551,9 +555,9 @@ sub register
 	# if this is a new host, but that's OK as it will leave %results
 	# as undef, which triggers set_objects to create a new entry on the
 	# server.
-	if (!%results)
+	if (!%results && $data{name})
 	{
-		%results = get_objects('nodes', {}, {'name' => [$data{name}]}, 'autoreg');
+		%results = get_objects('nodes', {}, {'name' => [$data{name}]}, [], 'autoreg');
 	}
 
 	if (!$dryrun)

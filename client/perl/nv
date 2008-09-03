@@ -340,11 +340,45 @@ if ($removenodegroupfromnodegroup)
 # Now handle the general case where we fetch a list of objects and then
 # perform operations on them.
 
+# If the user has requested data which lies outside the base object model
+# then we need to tell the server to include that data in the results it
+# sends us.
+# For example, in a 'nodes' search the user requests the
+# 'hardware_profile[name]' field then we need to request that
+# 'hardware_profile' data be included in the results.
+my @includes;
+if (@fields)
+{
+	my %includes;
+	foreach my $field (@fields)
+	{
+		if ($field =~ /([^[]+)\[.+\]/)
+		{
+			$includes{$1} = 1;
+		}
+	}
+	@includes = sort keys %includes;
+}
+elsif (@allfields)
+{
+	my %includes;
+	my @field_names = nVentory::Client::get_field_names($objecttype);
+	foreach my $field_name_entry (@field_names)
+	{
+		my ($field_name) = split(' ', $field_name_entry);
+		if ($field_name =~ /([^[]+)\[.+\]/)
+		{
+			$includes{$1} = 1;
+		}
+	}
+	@includes = sort keys %includes;
+}
+
 my %results;
 my @names;
 if (%get || %exactget)
 {
-	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget);
+	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget, \@includes);
 	@names = sort keys %results;
 }
 if ($nodegroupexpanded)
@@ -353,7 +387,7 @@ if ($nodegroupexpanded)
 	if (@allfields || @fields || @getallvalues)
 	{
 		%results = nVentory::Client::get_objects(
-			'nodes', {}, { 'name' => \@names });		
+			'nodes', {}, { 'name' => \@names }, \@includes);
 	}
 }
 
