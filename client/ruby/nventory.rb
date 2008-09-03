@@ -13,6 +13,8 @@ class NVentory::Client
   def initialize(debug=false, dryrun=false)
     @debug = debug
     @dryrun = dryrun
+    @write_http = nil
+    @read_http = nil
     @server = 'http://nventory'
 
     ['/etc/nventory.conf', "#{ENV['HOME']}/.nventory.conf"].each do |configfile|
@@ -41,7 +43,7 @@ class NVentory::Client
     end
   end
 
-  def get_objects(objecttype, get, exactget, login=nil)
+  def get_objects(objecttype, get, exactget, includes=nil, login=nil)
     #
     # Package up the search parameters in the format the server expects
     #
@@ -75,6 +77,9 @@ class NVentory::Client
         end
       end
     end
+    if includes
+      includes.each { |inc| metaget << "include[]=#{inc}" }
+    end
 
     querystring = metaget.join('&')
 
@@ -99,13 +104,15 @@ class NVentory::Client
     puts response.body if (@debug)
     results_xml = REXML::Document.new(response.body)
     results = {}
-    results_xml.root.elements["/#{objecttype}"].each do |elem|
-      # For some reason Elements[] is returning things other than elements,
-      # like text nodes
-      next if elem.node_type != :element
-      data = xml_to_ruby(elem)
-      name = data['name'] || data['id']
-      results[name] = data
+    if results_xml.root.elements["/#{objecttype}"]
+      results_xml.root.elements["/#{objecttype}"].each do |elem|
+        # For some reason Elements[] is returning things other than elements,
+        # like text nodes
+        next if elem.node_type != :element
+        data = xml_to_ruby(elem)
+        name = data['name'] || data['id']
+        results[name] = data
+      end
     end
 
     #puts results.inspect if (@debug)
@@ -163,7 +170,7 @@ class NVentory::Client
     #puts cleandata.inspect if (@debug)
     puts YAML.dump(cleandata) if (@debug)
 
-    if results
+    if results && !results.empty?
       results.each_pair do |result_name, result|
         # PUT to update an existing object
         if result['id']
@@ -207,47 +214,44 @@ class NVentory::Client
     #
     # Gather software-related information
     #
-    #p Facter['architecture']
-    #p Facter['architecture'].value
-    #p Facter['kernel']
-    #p Facter['macosx_productName']
-    #p Facter['macosx_productname']
-    #p Facter['sp_machine_name']
     data['name'] = Facter['fqdn'].value
-    if Facter['kernel'].value == 'Linux'
+    if Facter['kernel'] && Facter['kernel'].value == 'Linux'
       # Strip release version and code name from lsbdistdescription
       lsbdistdesc = Facter['lsbdistdescription'].value
       lsbdistdesc.gsub!(/ release \S+/, '')
       lsbdistdesc.gsub!(/ \([^)]\)/, '')
       data['operating_system[variant]'] = lsbdistdesc
       data['operating_system[version_number]'] = Facter['lsbdistrelease'].value
-    elsif Facter['kernel'].value == 'Darwin' && Facter['macosx_productname'].value
+    elsif Facter['kernel'] && Facter['kernel'].value == 'Darwin' &&
+          Facter['macosx_productname'] && Facter['macosx_productname'].value
         data['operating_system[variant]'] = Facter['macosx_productname'].value
         data['operating_system[version_number]'] = Facter['macosx_productversion'].value
     else
       data['operating_system[variant]'] = Facter['operatingsystem'].value
       data['operating_system[version_number]'] = Facter['operatingsystemrelease'].value
     end
-    if Facter['architecture'].value
+    if Facter['architecture'] && Facter['architecture'].value
       data['operating_system[architecture]'] = Facter['architecture'].value
     else
       # Not sure if this is reasonable
       data['operating_system[architecture]'] = Facter['hardwaremodel'].value
     end
     data['kernel_version'] = Facter['kernelrelease'].value
-    if Facter['memorysize'].value
+    if Facter['memorysize'] && Facter['memorysize'].value
       data['os_memory'] = Facter['memorysize'].value
-    elsif Facter['sp_physical_memory'].value  # Mac OS X
+    elsif Facter['sp_physical_memory'] && Facter['sp_physical_memory'].value  # Mac OS X
       # More or less a safe bet that OS memory == physical memory on Mac OS X
       data['os_memory'] = Facter['sp_physical_memory'].value
     end
-    data['swap'] = Facter['swapsize'].value
+    if Facter['swapsize']
+      data['swap'] = Facter['swapsize'].value
+    end
     # Currently the processorcount fact doesn't even get defined on most platforms
     if Facter['processorcount'] && Facter['processorcount'].value
       # This is generally a virtual processor count (cores and HTs),
       # not a physical CPU count
       data['os_processor_count'] = Facter['processorcount'].value
-    elsif Facter['sp_number_processors'].value
+    elsif Facter['sp_number_processors'] && Facter['sp_number_processors'].value
       data['os_processor_count'] = Facter['sp_number_processors'].value
     end
     # Need custom facts for these
@@ -261,7 +265,7 @@ class NVentory::Client
     if Facter['manufacturer'] && Facter['manufacturer'].value  # dmidecode
       data['hardware_profile[manufacturer]'] = Facter['manufacturer'].value
       data['hardware_profile[model]'] = Facter['productname'].value
-    elsif Facter['sp_machine_name'].value  # Mac OS X
+    elsif Facter['sp_machine_name'] && Facter['sp_machine_name'].value  # Mac OS X
       # There's a small chance of this not being true...
       data['hardware_profile[manufacturer]'] = 'Apple'
       data['hardware_profile[model]'] = Facter['sp_machine_name'].value
@@ -271,20 +275,24 @@ class NVentory::Client
     end
     if Facter['serialnumber'] && Facter['serialnumber'].value
       data['serial_number'] = Facter['serialnumber'].value
-    elsif Facter['sp_serial_number'].value # Mac OS X
+    elsif Facter['sp_serial_number'] && Facter['sp_serial_number'].value # Mac OS X
       data['serial_number'] = Facter['sp_serial_number'].value
     end
     if Facter['processor0'] && Facter['processor0'].value
       # FIXME: Parsing this string is less than ideal, as these things
       # are reported as seperate fields by dmidecode, but facter isn't
       # reading that data.
+      # Example: Intel(R) Core(TM)2 Duo CPU     T7300  @ 2.00GHz
       # Example: Intel(R) Pentium(R) 4 CPU 3.60GHz
       processor = Facter['processor0'].value
       if cpu_type =~ /(\S+)\s(.+)/
         manufacturer = $1
         model = $2
         speed = nil
-        if model =~ /(.+)\s+([\d\.].Hz)/
+        if model =~ /(.+\S)\s+\@\s+([\d\.]+.Hz)/
+          model = $1
+          speed = $2
+        elsif model =~ /(.+\S)\s+([\d\.]+.Hz)/
           model = $1
           speed = $2
         end
@@ -292,7 +300,7 @@ class NVentory::Client
         data['processor_model'] = model
         data['processor_speed'] = speed
       end
-    elsif Facter['sp_cpu_type'].value
+    elsif Facter['sp_cpu_type'] && Facter['sp_cpu_type'].value
       # FIXME: Assuming the manufacturer is the first word is
       # less than ideal
       cpu_type = Facter['sp_cpu_type'].value
@@ -316,7 +324,7 @@ class NVentory::Client
     #data['physical_memory'] = 
     #data['physical_memory_sizes'] = 
 
-    if Facter['interfaces'].value
+    if Facter['interfaces'] && Facter['interfaces'].value
       Facter['interfaces'].value.split(',').each do |nic|
         data["network_interfaces[#{nic}][name]"] = nic
         data["network_interfaces[#{nic}][hardware_address]"] = Facter["macaddress_#{nic}"].value
@@ -338,17 +346,17 @@ class NVentory::Client
     # updates its records (removing any NICs and IPs we don't specify)
     data['network_interfaces[authoritative]'] = true
 
-    if Facter['uniqueid'].value
+    if Facter['uniqueid'] && Facter['uniqueid'].value
       # This sucks, it's just using hostid, which is generally tied to an
       # IP address, not the physical hardware
       data['uniqueid'] = Facter['uniqueid'].value
-    elsif Facter['sp_serial_number'].value
+    elsif Facter['sp_serial_number'] && Facter['sp_serial_number'].value
       # I imagine Mac serial numbers are unique
       data['uniqueid'] = Facter['sp_serial_number'].value
     end
 
     if data['hardware_profile[model]'] == 'VMware Virtual Platform'
-      results = get_objects('nodes', {'virtual_client_ids' => [data['uniqueid']]}, {}, 'autoreg')
+      results = get_objects('nodes', {'virtual_client_ids' => [data['uniqueid']]}, {}, [], 'autoreg')
       if results.length == 1
         data['virtual_parent_node_id'] = results.values.first['id']
       elsif results.length > 1
@@ -366,7 +374,7 @@ class NVentory::Client
     # host was renamed).
     results = nil
     if data['uniqueid']
-      results = get_objects('nodes', {}, {'uniqueid' => [data['uniqueid']]}, 'autoreg')
+      results = get_objects('nodes', {}, {'uniqueid' => [data['uniqueid']]}, [], 'autoreg')
     end
 
     # If we failed to find an existing entry based on the unique id
@@ -374,8 +382,8 @@ class NVentory::Client
     # if this is a new host, but that's OK as it will leave %results
     # as undef, which triggers set_nodes to create a new entry on the
     # server.
-    if !results
-      results = get_objects('nodes', {}, {'name' => [data['name']]}, 'autoreg')
+    if !results && data['name']
+      results = get_objects('nodes', {}, {'name' => [data['name']]}, [], 'autoreg')
     end
 
     set_objects('nodes', results, data, 'autoreg')
@@ -626,12 +634,20 @@ class NVentory::Client
         warn "POST to #{@server}/accounts.xml was redirected, authenticating" if (@debug)
         # Extract cookie
         newcookieentry = response['Set-Cookie']
+        # Some cookie fields are optional, and should default to the
+        # values in the request.  We need to insert these so that we
+        # save them properly.
+        # http://cgi.netscape.com/newsref/std/cookie_spec.html
+        if !newcookieentry.include?('domain=')
+          newcookieentry << "; domain=#{serveruri.host}"
+        end
         newcookie, rest = newcookieentry.split('; ', 2)
         if !cookies.include?(newcookie)
           # Update @headers
           cookies << newcookie
           @headers = { 'Cookie' => cookies.join('; ') }
           # Save cookie for the future
+          warn "Updating cookiefile #{cookiefile}" if (@debug)
           File.open(cookiefile, 'a') { |file| file.puts("Set-Cookie: #{newcookieentry}") }
         end
         # Logins need to go to HTTPS

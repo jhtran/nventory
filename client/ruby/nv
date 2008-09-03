@@ -32,8 +32,8 @@ $objecttype = 'nodes'
 $get = nil
 $exactget = nil
 $name = nil
-@allfields = nil
-@fields = nil
+$allfields = nil
+$fields = nil
 $set = nil
 $yes = false
 $getfieldnames = false
@@ -100,9 +100,9 @@ opts.on('--allfields [excludefield1[,excludefield2]]', Array,
         'One or more fields may be specified to be excluded from the',
         'query, seperate multiple fields with commas.') do |opt|
   if opt.nil?
-    @allfields = []
+    $allfields = []
   else
-    @allfields = opt
+    $allfields = opt
   end
 end
 opts.on('--fields field1[,field2]', Array,
@@ -111,9 +111,9 @@ opts.on('--fields field1[,field2]', Array,
         'option multiple times or by seperating the field names with',
         'commas.') do |opt|
   if opt.nil?
-    @fields = []
+    $fields = []
   else
-    @fields = opt
+    $fields = opt
   end
 end
 opts.on('--set field=value1[,value2][,field2=value1[,value2]]',
@@ -192,7 +192,7 @@ opts.parse(ARGV)
 
 (puts opts; exit) unless $get || $exactget || $name || $getfieldnames || $getallvalues || $register || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup
 # These options are mutually exclusive
-(puts opts; exit) if @allfields && @fields
+(puts opts; exit) if $allfields && $fields
 (puts opts; exit) if $getfieldnames && ($get || $exactget || $name)
 (puts opts; exit) if $getallvalues && ($get || $exactget || $name)
 # FIXME: Should support searches on node group membership and other characteristics
@@ -237,7 +237,7 @@ if $exactget
     end
   end
 end
-if @allfields
+if $allfields
   # The ideal behavior here is probably debatable.  For now I'm _adding_
   # the expanded value to the list of exclusions, so both the shortcut
   # string and the expanded value are excluded. That allows the user to
@@ -246,19 +246,19 @@ if @allfields
   # something specific, but also allows them to specify 'hwmanuf' and have
   # it exclude the expanded version of that.
   # Perhaps we should do something like get and exactget?
-  @allfields.each do |key|
+  $allfields.each do |key|
     if SEARCH_SHORTCUTS.has_key?(key)
       # Replace shortcut with expansion
-      #@allfields[@allfields.index(key)] = SEARCH_SHORTCUTS[key]
+      #$allfields[$allfields.index(key)] = SEARCH_SHORTCUTS[key]
       # Add expansion
-      @allfields << SEARCH_SHORTCUTS[key]
+      $allfields << SEARCH_SHORTCUTS[key]
     end
   end
 end
-if @fields
-  @fields.each do |key|
+if $fields
+  $fields.each do |key|
     if SEARCH_SHORTCUTS.has_key?(key)
-      @fields[@fields.index(key)] = SEARCH_SHORTCUTS[key]
+      $fields[$fields.index(key)] = SEARCH_SHORTCUTS[key]
     end
   end
 end
@@ -329,16 +329,43 @@ end
 # Now handle the general case where we fetch a list of objects and then
 # perform operations on them.
 
+# If the user has requested data which lies outside the base object model
+# then we need to tell the server to include that data in the results it
+# sends us.
+# For example, in a 'nodes' search the user requests the
+# 'hardware_profile[name]' field then we need to request that
+# 'hardware_profile' data be included in the results.
+includes = nil
+if $fields
+  includes_hash = {}
+  $fields.each do |field|
+    if field =~ /([^\[]+)\[.+\]/
+      includes_hash[$1] = true
+    end
+  end
+  includes = includes_hash.keys.sort
+elsif $allfields
+  includes_hash = {}
+  field_names = nvclient.get_field_names($objecttype)
+  field_names.each do |field_name_entry|
+    field_name = field_name_entry.split(' ')
+    if field_name =~ /([^\[]+)\[.+\]/
+      includes_hash[$1] = true
+    end
+  end
+  includes = includes_hash.keys.sort
+end
+
 results = nil
 names = nil
 if $get || $exactget
-  results = nvclient.get_objects($objecttype, $get, $exactget)
+  results = nvclient.get_objects($objecttype, $get, $exactget, includes)
   names = results.keys.sort
 end
 if $nodegroupexpanded
   names = nvclient.get_expanded_nodegroup($nodegroupexpanded).sort
-  if @allfields || @fields || $getallvalues
-    results = nvclient.get_objects('nodes', {}, { 'name' => names })
+  if $allfields || $fields || $getallvalues
+    results = nvclient.get_objects('nodes', {}, { 'name' => names }, includes)
   end
 end
 
@@ -385,7 +412,7 @@ def fieldprint(fields, value)
         fieldprint(fields, entry)
       end
     end
-  elsif (@allfields && !@allfields.any?{|all| fieldname.include?(all)}) || (@fields && @fields.any?{|field| fieldname.include?(field)})
+  elsif ($allfields && !$allfields.any?{|all| fieldname.include?(all)}) || ($fields && $fields.any?{|field| fieldname.include?(field)})
     puts "#{fieldname}: #{value}"
   end
 end
@@ -393,7 +420,7 @@ end
 if !$getallvalues && !$set && !$addtonodegroup && !$removefromnodegroup
   names.each do |name|
     puts name
-    if @allfields || @fields
+    if $allfields || $fields
       fieldprint([], results[name])
       puts
     end
