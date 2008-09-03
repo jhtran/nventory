@@ -1,0 +1,437 @@
+#!/usr/bin/perl
+
+# Credit:  This is a heavily modified version of the script found at
+#          http://www.perlmonks.org/?node_id=80979
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Net::SNMP;
+use Socket;
+use Data::Dumper;
+use lib '/usr/nventory/perl';
+use nVentory::Client;
+
+#
+# Command-line options
+#
+
+sub usage
+{
+	die <<EOF;
+Usage: cisco_scanner
+    [--debug]
+    [--dry-run]
+    [--help]
+
+All options can be shortened to anything that's unique.
+EOF
+}
+
+my $debug;
+my $dryrun;
+my $help;
+my $getopt = GetOptions(
+	'debug' => \$debug,
+	'dry-run' => \$dryrun,
+	'help' => \$help,
+);
+usage() unless ($getopt);
+usage() if ($help);
+
+if ($debug)
+{
+	warn "Enabling debug mode\n";
+	nVentory::Client::setdebug(1);
+}
+
+#
+# Config file
+#
+
+# Starting points for our scan.  The rest of the network gear will be
+# found by walking the CDP tree.  Either names or IPs should work.
+my @seeds;
+# SNMP read community string
+my $community;
+open my $configfh, '<', '/etc/cisco_scanner.conf' or die "open: $!";
+while (<$configfh>)
+{
+	next if (/^\s*$/);  # Skip blank lines
+	next if (/^\s*#/);  # Skip comments
+	chomp;
+	my ($key, $value) = split /\s*=\s*/, $_, 2;
+	if ($key eq 'seeds')
+	{
+		@seeds = split(/\s*,\s*/, $value);
+		print "Read ", scalar(@seeds), " seeds from config file\n" if ($debug);
+	}
+	elsif ($key eq 'community')
+	{
+		$community = $value;
+	}
+}
+close $configfh;
+
+if (!@seeds)
+{
+	die "No seed hosts found in config file\n";
+}
+if (!$community)
+{
+	die "No community string found in config file\n";
+}
+
+#
+# Constants
+#
+
+# Define the OIDs to search for each nVentory field we want to try to populate
+my %NODE_INFO_OIDS;
+$NODE_INFO_OIDS{name} = [
+	# SNMPv2-MIB, sysName
+	'1.3.6.1.2.1.1.5.0',
+];
+$NODE_INFO_OIDS{serial_number} = [
+	# ENTITY-MIB, entPhysicalSerialNum
+	'1.3.6.1.2.1.47.1.1.1.1.11.1',
+	# http://www.cisco.com/warp/public/477/SNMP/chassis.shtml
+	# CISCO-STACK-MIB, chassisSerialNumberString
+	'1.3.6.1.4.1.9.5.1.2.19.0',
+	# OLD-CISCO-CHASSIS-MIB, chassisId
+	'1.3.6.1.4.1.9.3.6.3.0',
+];
+$NODE_INFO_OIDS{'hardware_profile[manufacturer]'} = [
+	# ENTITY-MIB, entPhysicalMfgName
+	'1.3.6.1.2.1.47.1.1.1.1.12.1',
+];
+$NODE_INFO_OIDS{'hardware_profile[model]'} = [
+	# ENTITY-MIB, entPhysicalModelName
+	'1.3.6.1.2.1.47.1.1.1.1.13.1',
+	# ENTITY-MIB, entPhysicalName
+	'1.3.6.1.2.1.47.1.1.1.1.7.1',
+	# ENTITY-MIB, entPhysicalModelName
+	# On 4948s this seems to contain the proper model number.  On some
+	# of the bigger switches (like 6509s) it contains something else,
+	# but we pick up their model numbers with the earlier OIDs so that's
+	# not a problem.
+	'1.3.6.1.2.1.47.1.1.1.1.13.1000',
+	# ENTITY-MIB, entPhysicalDescr
+	# This returns a more verbose string than the others
+	#'1.3.6.1.2.1.47.1.1.1.1.2.1',
+	# http://www.cisco.com/warp/public/477/SNMP/chassis.shtml
+	# CISCO-STACK-MIB, chassisModel
+	'1.3.6.1.4.1.9.5.1.2.16.0',
+	# OLD-CISCO-CHASSIS-MIB, chassisType
+	# This returns an integer which has to be looked up against a
+	# lookup table in the MIB.  However, I've seen several devices
+	# that responded to this OID but none of the ones above, so it
+	# would be nice to get that working.
+	# ftp://ftp.cisco.com/pub/mibs/v1/OLD-CISCO-CHASSIS-MIB-V1SMI.my
+	#'1.3.6.1.4.1.9.3.6.1.0',
+];
+#$NODE_INFO_OIDS{'operating_system[variant]'} = [
+#$NODE_INFO_OIDS{'operating_system[version_number]'} = [
+$NODE_INFO_OIDS{'timezone'} = [
+	# CISCO-STACK-MIB, ntpTimezoneName
+	'1.3.6.1.4.1.9.5.1.15.7',
+];
+# This provides a way to map values returned from the gear into
+# more user-friendly strings.
+my %NODE_INFO_MAP;
+$NODE_INFO_MAP{'hardware_profile[model]'} = {
+	'CISCO7204VXR'    => '7204VXR',
+};
+
+my $CDP_OID_ROOT = "1.3.6.1.4.1.9.9.23.1.2.1.1";
+my $CDP_SEED_OID = ("$CDP_OID_ROOT".".3");
+
+#
+# Populate our initial todo list
+#
+
+my @todo;
+my $recurse;
+
+# Any leftover command-line components are assumed to be specific nodes
+# that the user would like scanned.  These are used as the working list
+# instead of reading a list of seeds from the config file and following
+# the CDP hierarchy.
+my @starts;
+if (@ARGV)
+{
+	@starts = @ARGV;
+	$recurse = 0;
+}
+else
+{
+	@starts = @seeds;
+	$recurse = 1;
+}
+
+foreach my $start (@starts)
+{
+	if ($start =~ /^\d/)
+	{
+		# Looks like this one is already an IP
+		push @todo, $start;
+	}
+	else
+	{
+		# It doesn't look like an IP so we try to perform an IP lookup
+		my $iaddr = gethostbyname($start);
+		if ($iaddr)
+		{
+			push @todo, inet_ntoa($iaddr);
+		}
+		else
+		{
+			warn "IP lookup for starting node $start failed\n";
+		}
+	}
+}
+
+#
+# Work on our todo list until it runs out
+#
+my %done;
+my %submitted;
+
+while (@todo)
+{
+	my $ip = shift @todo;
+
+	next if exists $done{$ip};
+
+	print "Checking $ip\n" if ($debug);
+	my ($session, $error) =
+		Net::SNMP->session(Hostname => $ip, Community => $community);
+	if (!$session)
+	{
+		warn "Failed to establish session to $ip\n";
+		next;
+	}
+
+	# Get the general hardware and OS info for this node
+
+	my %data;
+	# This script is pretty Cisco specific, so default this field
+	# since most of their gear doesn't make this available via SNMP.
+	$data{'hardware_profile[manufacturer]'} = 'Cisco';
+
+	FIELD: foreach my $field (keys %NODE_INFO_OIDS)
+	{
+		print "Looking for value for $field\n" if ($debug);
+		OID: foreach my $oid (@{$NODE_INFO_OIDS{$field}})
+		{
+			print "Checking OID $oid for value\n" if ($debug);
+			my $value = get_snmp_oid($session, $oid);
+			if ($value)
+			{
+				# Special case:  4948's include the oh so useful
+				# 'Switch System' in the first model OID that we check.
+				# So skip that and we'll eventually get to an OID that
+				# has a real value.
+				next if ($value eq 'Switch System');
+				# Likewise, the 7200 series include 'Chassis' in that OID
+				next if ($value eq 'Chassis');
+
+				print "Found value '$value' via OID $oid\n" if ($debug);
+				if ($NODE_INFO_MAP{$field} && $NODE_INFO_MAP{$field}->{$value})
+				{
+					$value = $NODE_INFO_MAP{$field}->{$value};
+				}
+				elsif ($field eq 'hardware_profile[manufacturer]')
+				{
+					# Normalize all forms of Cisco's name to just 'Cisco'
+					# Some variants I've seen:
+					# 'Cisco Systems'
+					# 'Cisco Systems, Inc.'
+					# 'cisco'
+					if ($value =~ /Cisco/i)
+					{
+						$value = 'Cisco';
+					}
+				}
+				elsif ($field eq 'hardware_profile[model]')
+				{
+					# 'WS-C6509-E' => 'Catalyst 6509-E'
+					$value =~ s/^WS-C/Catalyst /;
+				}
+				$data{$field} = $value;
+				next FIELD;
+			}
+		}
+	}
+
+	# Get the switch port info (if it's a switch)
+	my @ifnames = get_ifnames($session);
+	if (@ifnames)
+	{
+		@ifnames = sort @ifnames;
+		$data{'node[outlet_names][]'} = \@ifnames;
+	}
+
+	print Dumper \%data if ($debug);
+	print "\n" if ($debug);
+
+	# If we have the minimum required fields then update the entry
+	# in the database for this node
+	if ($data{name} &&
+		$data{'hardware_profile[manufacturer]'} &&
+		$data{'hardware_profile[model]'})
+	{
+		if ($data{serial_number})
+		{
+			# Seems like a safe bet that we can use the serial number
+			# as the unique id for the node
+			$data{uniqueid} = $data{serial_number};
+		}
+
+		# Check to see if there's an existing entry for this host that matches
+		# our unique id.  If so we want to update it, even if the hostname
+		# doesn't match our current hostname (as it probably indicates this
+		# host was renamed).
+		my %results;
+		if ($data{uniqueid})
+		{
+			%results =
+				nVentory::Client::get_objects(
+					'nodes', {}, {'uniqueid' => [$data{uniqueid}]}, [], 'autoreg');
+		}
+
+		# If we failed to find an existing entry based on the unique id
+		# fall back to the hostname.  This may still fail to find an entry,
+		# if this is a new host, but that's OK as it will leave %results
+		# as undef, which triggers set_objects to create a new entry on the
+		# server.
+		if (!%results && $data{name})
+		{
+			%results =
+				nVentory::Client::get_objects(
+					'nodes', {}, {'name' => [$data{name}]}, [], 'autoreg');
+		}
+
+		if (!$dryrun)
+		{
+			nVentory::Client::set_objects(
+				'nodes', \%results, \%data, 'autoreg');
+		}
+
+		$submitted{$ip} = \%data;
+	}
+
+	# Add any CDP neighbors to the todo list
+	if ($recurse)
+	{
+		get_cdp_neighbors($session, $CDP_SEED_OID);
+	}
+
+	$done{$ip} = 1;
+
+	print "todo: ", join(',', @todo), "\n" if ($debug);
+}
+
+print "Scanned ", scalar(keys(%done)), " IPs\n";
+print "Submitted ", scalar(keys(%submitted)), " nodes to database\n";
+
+#
+# Subroutines
+#
+
+sub get_cdp_neighbors
+{
+	my ($session, $starting_oid) = @_;
+
+	my $new_oid = $starting_oid;
+
+	while (Net::SNMP::oid_context_match($starting_oid, $new_oid))
+	{
+		my $result = $session->get_next_request(($new_oid));
+		return unless (defined $result);
+		($new_oid, undef) = %$result;
+		if (Net::SNMP::oid_context_match($starting_oid,$new_oid))
+		{
+			my $unique_oid = $new_oid;
+			$unique_oid =~ s/$starting_oid//g;
+			my $ip =
+				convert_ip(
+					get_snmp_oid($session, $CDP_OID_ROOT.'.4'.$unique_oid));
+			my $name =
+				get_snmp_oid($session, $CDP_OID_ROOT.'.6'.$unique_oid);
+			my $port =
+				get_snmp_oid($session, $CDP_OID_ROOT.'.7'.$unique_oid);
+			my $type =
+				get_snmp_oid($session, $CDP_OID_ROOT.'.8'.$unique_oid);
+			print "CDP neighbor: $ip, $name, $port, $type\n" if ($debug);
+			push @todo, $ip;
+			get_cdp_neighbors($new_oid);
+		}
+	}
+}
+
+sub get_ifnames
+{
+	my ($session) = @_;
+
+	my $starting_oid = '1.3.6.1.2.1.31.1.1.1.1';
+	my $new_oid = $starting_oid;
+	my @ifnames;
+
+	while (Net::SNMP::oid_context_match($starting_oid, $new_oid))
+	{
+		my $result = $session->get_next_request(($new_oid));
+		return unless (defined $result);
+		($new_oid, my $ifname) = %$result;
+		if (Net::SNMP::oid_context_match($starting_oid,$new_oid))
+		{
+			if ($ifname =~ /^Gi/ || $ifname =~ /^Fa/)
+			{
+				push @ifnames, $ifname;
+			}
+			else
+			{
+				print "Ignoring non-Ethernet port $ifname\n" if ($debug);
+			}
+		}
+	}
+
+	return @ifnames;
+}
+
+# This sub converts a hex IP (0x40d18402) to standard xxx.xxx.xxx.xxx format
+sub convert_ip
+{
+	my($hex_ip) = @_;
+
+	my $ip;
+	if (substr($hex_ip,0,1) eq "")
+	{
+		$ip = "0.0.0.0";
+	}
+	else
+	{
+		$hex_ip =~ s/0x//g;
+		my ($hex1, $hex2, $hex3, $hex4) = unpack 'A2A2A2A2', $hex_ip;
+
+		my $oct1 = hex($hex1);
+		my $oct2 = hex($hex2);
+		my $oct3 = hex($hex3);
+		my $oct4 = hex($hex4);
+		$ip = join('.', $oct1, $oct2, $oct3, $oct4);
+	}
+	return $ip;
+}
+
+# This sub gets the value of an oid
+sub get_snmp_oid
+{
+	my($session, $oid) = @_;
+	#print "Getting OID $oid\n" if ($debug);
+	my $result = $session->get_request("$oid");
+	return unless (defined $result);
+	(undef, my $value) = %$result;
+	return $value;
+}
+
