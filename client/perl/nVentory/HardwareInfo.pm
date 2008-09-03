@@ -47,8 +47,10 @@ sub get_host_manufacturer
 			}
 			else # Solaris x86 <= 5.9
 			{
-				warn "Running 'prtdiag'" if ($debug);
-				open my $prtdiagfh, '-|', 'prtdiag'
+				warn "Running 'uname -s'" if ($debug);
+				my $unamei=`uname -i`;
+				warn "Running '/usr/platform/$unamei/sbin/prtdiag'" if ($debug);
+				open my $prtdiagfh, '-|', "/usr/platform/$unamei/sbin/prtdiag"
 					or die "open prtdiag: $!";
 				while (<$prtdiagfh>)
 				{
@@ -790,8 +792,10 @@ sub get_power_supply_count
 		}
 		elsif ($os eq 'SunOS')
 		{
-			warn "Running 'prtdiag -v'" if ($debug);
-			open my $prtdiagfh, '-|', 'prtdiag -v'
+			warn "Running 'uname -s'" if ($debug);
+			my $unamei=`uname -i`;
+			warn "Running '/usr/platform/$unamei/sbin/prtdiag -v'" if ($debug);
+			open my $prtdiagfh, '-|', "/usr/platform/$unamei/sbin/prtdiag -v"
 				or die "open prtdiag: $!";
 			my %sun_power_supplies;
 			while (<$prtdiagfh>)
