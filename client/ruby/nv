@@ -138,8 +138,8 @@ opts.on('--nodegroup nodegroup', '--ng nodegroup',
         'displayed as groups and are not expanded') do |opt|
   $nodegroup = opt
 end
-opts.on('--nodegroupexpanded nodegroup', '--nge nodegroup',
-        'Display the members of the given node group, member groups are',
+opts.on('--nodegroupexpanded nodegroup[,nodegroup2]', '--nge nodegroup', Array,
+        'Display the members of the given node groups, member groups are',
         'expanded') do |opt|
   $nodegroupexpanded = opt
 end
@@ -237,6 +237,14 @@ if $exactget
     end
   end
 end
+if $set
+  $set.each_pair do |key,value|
+    if SEARCH_SHORTCUTS.has_key?(key)
+      $set[SEARCH_SHORTCUTS[key]] = value
+      $set.delete(key)
+    end
+  end
+end
 if $allfields
   # The ideal behavior here is probably debatable.  For now I'm _adding_
   # the expanded value to the list of exclusions, so both the shortcut
@@ -292,13 +300,13 @@ if $register
   exit
 end
 if $nodegroup
-  results = nvclient.get_objects('node_groups', {}, {'name' => [$nodegroup]})
+  results = nvclient.get_objects('node_groups', {}, {'name' => [$nodegroup]}, ['child_groups', 'nodes'])
   puts "Child groups:"
-  results[$nodegroup]['child_groups'].each do |child_group|
+  results[$nodegroup]['child_groups'].sort{|a,b| a['name'] <=> b['name']}.each do |child_group|
     puts "  #{child_group['name']}"
   end
   puts "Nodes:"
-  results[$nodegroup]['nodes'].each do |node|
+  results[$nodegroup]['nodes'].sort{|a,b| a['name'] <=> b['name']}.each do |node|
     puts "  #{node['name']}"
   end
   exit
@@ -312,7 +320,7 @@ end
 if $addnodegrouptonodegroup
   child_results = nvclient.get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[0]]})
   abort "Child group '#{$addnodegrouptonodegroup[0]}' not found for 'addnodegrouptonodegroup'\n" if (child_results.length != 1)
-  parent_results = nvclient.get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]})
+  parent_results = nvclient.get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]}, ['child_groups'])
   abort "Parent group '#{$addnodegrouptonodegroup[1]}' not found for 'addnodegrouptonodegroup'\n" if (parent_results.length != 1)
   nvclient.add_nodegroups_to_nodegroups(child_results, parent_results, $username, PasswordCallback)
   exit
@@ -320,7 +328,7 @@ end
 if $removenodegroupfromnodegroup
   child_results = nvclient.get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[0]]})
   abort "Child group '#{$removenodegroupfromnodegroup[0]}' not found for 'removenodegroupfromnodegroup'\n" if (child_results.length != 1)
-  parent_results = nvclient.get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]})
+  parent_results = nvclient.get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]}, ['child_groups'])
   abort "Parent group '#{$removenodegroupfromnodegroup[1]}' not found for 'removenodegroupfromnodegroup'\n" if (parent_results.length != 1)
   nvclient.remove_nodegroups_from_nodegroups(child_results, parent_results, $username, PasswordCallback)
   exit
@@ -363,7 +371,11 @@ if $get || $exactget
   names = results.keys.sort
 end
 if $nodegroupexpanded
-  names = nvclient.get_expanded_nodegroup($nodegroupexpanded).sort
+  names_hash = {}
+  $nodegroupexpanded.each do |nge|
+    nvclient.get_expanded_nodegroup(nge).each { |name| names_hash[name] = true }
+  end
+  names = names_hash.keys.sort
   if $allfields || $fields || $getallvalues
     results = nvclient.get_objects('nodes', {}, { 'name' => names }, includes)
   end
@@ -473,7 +485,7 @@ if $set
 end
 
 if $addtonodegroup
-  nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => [$addtonodegroup]})
+  nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => [$addtonodegroup]}, ['nodes'])
   if (nodegroup_results.length != $addtonodegroup.length)
     warn "Not all requested node groups for 'addtonodegroup' were found:"
     warn "Requested:  #{$addtonodegroup.join(',')}"
@@ -483,7 +495,7 @@ if $addtonodegroup
   nvclient.add_nodes_to_nodegroups(results, nodegroup_results, $username, PasswordCallback);
 end
 if $removefromnodegroup
-  nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => [$removefromnodegroup]})
+  nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => [$removefromnodegroup]}, ['nodes'])
   if (nodegroup_results.length != $removefromnodegroup.length)
     warn "Not all requested node groups for 'removefromnodegroup' were found:"
     warn "Requested:  #{$removefromnodegroup.join(',')}"

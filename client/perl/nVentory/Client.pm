@@ -290,17 +290,20 @@ sub get_expanded_nodegroup
 {
 	my ($nodegroup) = @_;
 
-	my %results = get_objects('node_groups', {}, {'name' => [$nodegroup]});
-	my @nodes = ();
+	my %results = get_objects('node_groups', {}, {'name' => [$nodegroup]}, ['nodes', 'child_groups']);
+	my %nodes;
 	foreach my $node (@{$results{$nodegroup}->{nodes}})
 	{
-		push(@nodes, $node->{name});
+		$nodes{$node->{name}} = 1;
 	}
 	foreach my $child_group (@{$results{$nodegroup}->{child_groups}})
 	{
-		push(@nodes, get_expanded_nodegroup($child_group->{name}));
+		foreach my $child_group_node (get_expanded_nodegroup($child_group->{name}))
+		{
+			$nodes{$child_group_node} = 1;
+		}
 	}
-	return @nodes;
+	return sort keys %nodes;
 }
 
 # FIXME: Would be really nice to figure out a way to use the Rails inflector
@@ -385,7 +388,7 @@ sub set_objects
 				my $request = POST("$SERVER/$objecttypes/$id.xml", \%cleandata);
 				$request->method('PUT');
 				my $ua = _get_ua($login, $password_callback);
-				warn "POST to URL: $SERVER/$objecttypes/$id.xml\n" if ($debug);
+				warn "PUT to URL: $SERVER/$objecttypes/$id.xml\n" if ($debug);
 				$response = $ua->request($request);
 			}
 			else
@@ -570,6 +573,7 @@ sub register
 # to get_objects
 # The second argument is a reference to a hash returned by a 'node_groups'
 # call to get_objects
+# NOTE: For the node groups you must have requested that the server include 'nodes' in the result
 sub add_nodes_to_nodegroups
 {
 	my ($nodesref, $nodegroupsref, $login, $password_callback) = @_;
@@ -594,12 +598,6 @@ sub add_nodes_to_nodegroups
 
 		foreach my $node (@{$nodegroups{$nodegroup}->{nodes}})
 		{
-			# The node entries in a hash of node_groups are not
-			# identical to the node entries in a hash of nodes,
-			# since nodes includes more complete info about each
-			# node.  But they are close enough for our purposes (they
-			# both contain the 'id' field for the node), so we can
-			# merge them together.
 			my $name = $node->{name};
 			$merged_nodes{$name} = $node;
 		}
@@ -611,6 +609,7 @@ sub add_nodes_to_nodegroups
 # to get_objects
 # The second argument is a reference to a hash returned by a 'node_groups'
 # call to get_objects
+# NOTE: For the node groups you must have requested that the server include 'nodes' in the result
 sub remove_nodes_from_nodegroups
 {
 	my ($nodesref, $nodegroupsref, $login, $password_callback) = @_;
@@ -631,13 +630,6 @@ sub remove_nodes_from_nodegroups
 
 		foreach my $node (@{$nodegroups{$nodegroup}->{nodes}})
 		{
-			# The node entries in a hash of node_groups are not
-			# identical to the node entries in a hash of nodes,
-			# since nodes includes more complete info about each
-			# node.  But they are close enough for our purposes (they
-			# both contain the 'id' field for the node), so we can
-			# build our own hash using node entries from the node group
-			# and pass it off as a hash from nodes.
 			my $name = $node->{name};
 			if (!grep($_ eq $name, keys %nodes))
 			{
@@ -681,6 +673,7 @@ sub set_nodegroup_node_assignments
 
 # Both arguments are references to a hash returned by a 'node_groups'
 # call to get_objects
+# NOTE: For the parent groups you must have requested that the server include 'child_groups' in the result
 sub add_nodegroups_to_nodegroups
 {
 	my ($child_groupsref, $parent_groupsref, $login, $password_callback) = @_;
@@ -705,12 +698,6 @@ sub add_nodegroups_to_nodegroups
 
 		foreach my $current_child (@{$parent_groups{$parent_group}->{child_groups}})
 		{
-			# The child group entries in a hash of node groups are
-			# not identical to the parent group entries, since the parent
-			# group entries include more complete info about each
-			# group.  But they are close enough for our purposes (they
-			# both contain the 'id' field for the node group), so we can
-			# merge them together.
 			my $name = $current_child->{name};
 			$merged_nodegroups{$name} = $current_child;
 		}
@@ -720,6 +707,7 @@ sub add_nodegroups_to_nodegroups
 }
 # Both arguments are references to a hash returned by a 'node_groups'
 # call to get_objects
+# NOTE: For the parent groups you must have requested that the server include 'child_groups' in the result
 sub remove_nodegroups_from_nodegroups
 {
 	my ($child_groupsref, $parent_groupsref, $login, $password_callback) = @_;
@@ -740,13 +728,6 @@ sub remove_nodegroups_from_nodegroups
 
 		foreach my $current_child (@{$parent_groups{$parent_group}->{child_groups}})
 		{
-			# The child group entries in a hash of node groups are
-			# not identical to the parent group entries, since the parent
-			# group entries include more complete info about each
-			# group.  But they are close enough for our purposes (they
-			# both contain the 'id' field for the node group), so we can
-			# build our own hash using child group entries and pass it off
-			# as a hash from parent groups.
 			my $name = $current_child->{name};
 			if (!grep($_ eq $name, keys %child_groups))
 			{

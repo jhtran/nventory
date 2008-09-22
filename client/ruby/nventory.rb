@@ -143,11 +143,15 @@ class NVentory::Client
   end
 
   def get_expanded_nodegroup(nodegroup)
-    results = get_objects('node_groups', {}, {'name' => [nodegroup]})
-    nodes = []
-    results[nodegroup]['nodes'].each { |node| nodes << node['name'] }
-    results[nodegroup]['child_groups'].each { |child_group| nodes.concat(get_expanded_nodegroup(child_group['name'])) }
-    nodes
+    results = get_objects('node_groups', {}, {'name' => [nodegroup]}, ['nodes', 'child_groups'])
+    nodes = {}
+    if results.has_key?(nodegroup)
+      results[nodegroup]['nodes'].each { |node| nodes[node['name']] = true }
+      results[nodegroup]['child_groups'].each do |child_group|
+        get_expanded_nodegroup(child_group['name']).each { |child_group_node| nodes[child_group_node] = true }
+      end
+    end
+    nodes.keys.sort
   end
 
   # The results argument can be a reference to a hash returned by a
@@ -392,6 +396,7 @@ class NVentory::Client
   # The first argument is a hash returned by a 'nodes' call to get_objects
   # The second argument is a hash returned by a 'node_groups'
   # call to get_objects
+  # NOTE: For the node groups you must have requested that the server include 'nodes' in the result
   def add_nodes_to_nodegroups(nodes, nodegroups, login, password_callback)
     # The server only supports setting a complete list of members of
     # a node group.  So we need to retreive the current list of members
@@ -407,12 +412,6 @@ class NVentory::Client
       merged_nodes = nodes
 
       nodegroup[nodes].each do |node|
-        # The node entries in a hash of node_groups are not
-        # identical to the node entries in a hash of nodes,
-        # since nodes includes more complete info about each
-        # node.  But they are close enough for our purposes (they
-        # both contain the 'id' field for the node), so we can
-        # merge them together.
         name = node[name]
         merged_nodes[name] = node
       end
@@ -423,6 +422,7 @@ class NVentory::Client
   # The first argument is a hash returned by a 'nodes' call to get_objects
   # The second argument is a hash returned by a 'node_groups'
   # call to get_objects
+  # NOTE: For the node groups you must have requested that the server include 'nodes' in the result
   def remove_nodes_from_nodegroups(nodes, nodegroups, login, password_callback)
     # The server only supports setting a complete list of members of
     # a node group.  So we need to retreive the current list of members
@@ -436,13 +436,6 @@ class NVentory::Client
       desired_nodes = {}
 
       nodegroup[nodes].each do |node|
-        # The node entries in a hash of node_groups are not
-        # identical to the node entries in a hash of nodes,
-        # since nodes includes more complete info about each
-        # node.  But they are close enough for our purposes (they
-        # both contain the 'id' field for the node), so we can
-        # build our own hash using node entries from the node group
-        # and pass it off as a hash from nodes.
         name = node[name]
         if !nodes.has_key?(name)
           desired_nodes[name] = node
@@ -472,6 +465,7 @@ class NVentory::Client
   end
 
   # Both arguments are hashes returned by a 'node_groups' call to get_objects
+  # NOTE: For the parent groups you must have requested that the server include 'child_groups' in the result
   def add_nodegroups_to_nodegroups(child_groups, parent_groups, login, password_callback)
     # The server only supports setting a complete list of assignments for
     # a node group.  So we need to retreive the current list of assignments
@@ -487,12 +481,6 @@ class NVentory::Client
       merged_nodegroups = child_groups
 
       parent_group[child_groups].each do |child_group|
-        # The child group entries in a hash of node groups are
-        # not identical to the parent group entries, since the parent
-        # group entries include more complete info about each
-        # group.  But they are close enough for our purposes (they
-        # both contain the 'id' field for the node group), so we can
-        # merge them together.
         name = child_group[name]
         merged_nodegroups[name] = child_group
       end
@@ -501,6 +489,7 @@ class NVentory::Client
     end
   end
   # Both arguments are hashes returned by a 'node_groups' call to get_objects
+  # NOTE: For the parent groups you must have requested that the server include 'child_groups' in the result
   def remove_nodegroups_from_nodegroups(child_groups, parent_groups, login, password_callback)
     # The server only supports setting a complete list of assignments for
     # a node group.  So we need to retrieve the current list of assignments
@@ -514,13 +503,6 @@ class NVentory::Client
       desired_child_groups = {}
 
       parent_group[child_groups].each do |child_group|
-        # The child group entries in a hash of node groups are
-        # not identical to the parent group entries, since the parent
-        # group entries include more complete info about each
-        # group.  But they are close enough for our purposes (they
-        # both contain the 'id' field for the node group), so we can
-        # build our own hash using child group entries and pass it off
-        # as a hash from parent groups.
         name = child_group[name]
         if !child_groups.has_key?(name)
           desired_child_groups[name] = child_group

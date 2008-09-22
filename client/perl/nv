@@ -94,7 +94,7 @@ my $yes;
 my $getfieldnames;
 my @getallvalues;
 my $nodegroup;
-my $nodegroupexpanded;
+my @nodegroupexpanded;
 my @createnodegroup;
 my @addtonodegroup;
 my @removefromnodegroup;
@@ -117,7 +117,7 @@ my $getopt = GetOptions(
 	'getfieldnames' => \$getfieldnames,
 	'getallvalues=s' => \@getallvalues,
 	'nodegroup|ng=s' => \$nodegroup,
-	'nodegroupexpanded|nge=s' => \$nodegroupexpanded,
+	'nodegroupexpanded|nge=s' => \@nodegroupexpanded,
 	'createnodegroup=s' => \@createnodegroup,
 	'addtonodegroup=s' => \@addtonodegroup,
 	'removefromnodegroup=s' => \@removefromnodegroup,
@@ -132,14 +132,14 @@ my $getopt = GetOptions(
 usage() unless ($getopt);
 usage() if ($help);
 usage() unless (
-	%get || %exactget || @name || $getfieldnames || @getallvalues || $register || $nodegroup || $nodegroupexpanded || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup);
+	%get || %exactget || @name || $getfieldnames || @getallvalues || $register || $nodegroup || @nodegroupexpanded || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup);
 # These options are mutually exclusive
 usage() if (@allfields && @fields);
 usage() if ($getfieldnames && (%get || %exactget || @name));
 usage() if (@getallvalues && (%get || %exactget || @name));
 # FIXME: Should support searches on node group membership and other characteristics
-usage() if (($nodegroup || $nodegroupexpanded) && (%get || %exactget || @name));
-usage() if ($register && (%get || %exactget || @name || $getfieldnames || @getallvalues || $nodegroup || $nodegroupexpanded || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup));
+usage() if (($nodegroup || @nodegroupexpanded) && (%get || %exactget || @name));
+usage() if ($register && (%get || %exactget || @name || $getfieldnames || @getallvalues || $nodegroup || @nodegroupexpanded || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup));
 
 $objecttype = 'nodes' if (!$objecttype);
 
@@ -159,6 +159,8 @@ unless (scalar @allfields == 1 && $allfields[0] eq '')
 @fields = split(/,/, join(',', @fields));
 # getallvalues might contain comma-seperated fields
 @getallvalues = split(/,/, join(',', @getallvalues));
+# nodegroupexpanded might contain comma-seperated fields
+@nodegroupexpanded = split(/,/, join(',', @nodegroupexpanded));
 # createnodegroup might contain comma-seperated fields
 @createnodegroup = split(/,/, join(',', @createnodegroup));
 # addtonodegroup might contain comma-seperated fields
@@ -230,6 +232,14 @@ foreach my $key (keys %exactget)
 		delete $exactget{$key};
 	}
 }
+foreach my $key (keys %set)
+{
+	if (exists $SEARCH_SHORTCUTS{$key})
+	{
+		$set{$SEARCH_SHORTCUTS{$key}} = $set{$key};
+		delete $set{$key};
+	}
+}
 for (my $i=0; $i<scalar(@allfields); $i++)
 {
 	if (exists $SEARCH_SHORTCUTS{$allfields[$i]})
@@ -283,11 +293,11 @@ if ($register)
 }
 if ($nodegroup)
 {
-	my %results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$nodegroup]});
+	my %results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$nodegroup]}, ['child_groups', 'nodes']);
 	print "Child groups:\n";
 	if ($results{$nodegroup}->{child_groups})
 	{
-		foreach my $child_group (@{$results{$nodegroup}->{child_groups}})
+		foreach my $child_group (sort { $a->{name} cmp $b->{name} } @{$results{$nodegroup}->{child_groups}})
 		{
 			print '  ', $child_group->{name}, "\n";
 		}
@@ -299,7 +309,7 @@ if ($nodegroup)
 	print "Nodes:\n";
 	if ($results{$nodegroup}->{nodes})
 	{
-		foreach my $node (@{$results{$nodegroup}->{nodes}})
+		foreach my $node (sort { $a->{name} cmp $b->{name} } @{$results{$nodegroup}->{nodes}})
 		{
 			print '  ', $node->{name}, "\n";
 		}
@@ -322,7 +332,7 @@ if ($addnodegrouptonodegroup)
 {
 	my %child_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[0]]});
 	die "Child group '$addnodegrouptonodegroup[0]' not found for 'addnodegrouptonodegroup'\n" if (scalar keys %child_results != 1);
-	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]});	
+	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]}, ['child_groups']);	
 	die "Parent group '$addnodegrouptonodegroup[1]' not found for 'addnodegrouptonodegroup'\n" if (scalar keys %parent_results != 1);
 	nVentory::Client::add_nodegroups_to_nodegroups(\%child_results, \%parent_results, $username, \&get_password);
 	exit;
@@ -331,7 +341,7 @@ if ($removenodegroupfromnodegroup)
 {
 	my %child_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[0]]});
 	die "Child group '$removenodegroupfromnodegroup[0]' not found for 'removenodegroupfromnodegroup'\n" if (scalar keys %child_results != 1);
-	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]});	
+	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]}, ['child_groups']);	
 	die "Parent group '$removenodegroupfromnodegroup[1]' not found for 'removenodegroupfromnodegroup'\n" if (scalar keys %parent_results != 1);
 	nVentory::Client::remove_nodegroups_from_nodegroups(\%child_results, \%parent_results, $username, \&get_password);
 	exit;
@@ -381,9 +391,17 @@ if (%get || %exactget)
 	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget, \@includes);
 	@names = sort keys %results;
 }
-if ($nodegroupexpanded)
+if (@nodegroupexpanded)
 {
-	@names = sort(nVentory::Client::get_expanded_nodegroup($nodegroupexpanded));
+	my %names;
+	foreach my $nge (@nodegroupexpanded)
+	{
+		foreach my $name (nVentory::Client::get_expanded_nodegroup($nge))
+		{
+			$names{$name} = 1;
+		}
+	}
+	@names = sort keys %names;
 	if (@allfields || @fields || @getallvalues)
 	{
 		%results = nVentory::Client::get_objects(
@@ -532,7 +550,7 @@ if (%set)
 
 if (@addtonodegroup)
 {
-	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@addtonodegroup]});
+	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@addtonodegroup]}, ['nodes']);
 	if (scalar keys %nodegroup_results != scalar @addtonodegroup)
 	{
 		warn "Not all requested node groups for 'addtonodegroup' were found:\n";
@@ -544,7 +562,7 @@ if (@addtonodegroup)
 }
 if (@removefromnodegroup)
 {
-	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@removefromnodegroup]});
+	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@removefromnodegroup]}, ['nodes']);
 	if (scalar keys %nodegroup_results != scalar @removefromnodegroup)
 	{
 		warn "Not all requested node groups for 'removefromnodegroup' were found:\n";
