@@ -1,74 +1,66 @@
 <h3>Version History | <%= link_to_function 'Show/Hide', "Element.toggle('version_table')" %></h3> 
 
 <table cellspacing="0" class="arversions" summary="A version history of this object." id="version_table">
-<thead>
-<tr>
-    <th>Version (Date) Account</th>
-    <th>Attributes</th>
-</tr>
-</thead>
-<tbody>
-<!-- We insert the current object into the list we iterate over so that -->
-<!-- we display the changes that got us to the current state. -->
-<%- revs = [master_object, *master_object.revisions] -%>
-<!-- We use the un-Ruby for-style loop here because we're iterating over -->
-<!-- two matching arrays simultaneously:  revs and master_object.audits -->
-<!-- I'm not smart enough to iterate over both of them in a Ruby-like -->
-<!-- fashion with iterators.  Bonus points for cleaning this up. -->
-<!-- Looks like SyncEnumerator is the thing to use -->
-<%- 0.upto(revs.length - 1) do |i| -%>
-  <%- master_version = revs[i] -%>
-  <!-- version is a pseudo-attribute supplied in revisions by -->
-  <!-- acts_as_audited. master_object is not a revision, so we -->
-  <!-- have to supply an appropriate version number ourselves. -->
-  <%- if master_version.version.nil? -%>
-    <%- if !master_object.revisions.nil? && master_object.revisions.length > 0 -%>
-      <%- master_version.version = master_object.revisions.first.version + 1 -%>
-    <%- else -%>
-      <%- master_version.version = 1 -%>
-    <%- end -%>
-  <%- end -%>
-  <%- previous_version = revs[i+1] -%>
-  <%- master_audit = master_object.audits[i] -%>
-<tr class="<%= cycle('odd', 'even') -%>">
-    <td>
-      <%= h(master_version.version) %> <span class="arversion_date">(<%= h(master_version.updated_at.to_formatted_s(:short)) %>)
-      <%- if !master_audit.nil? && !master_audit.user_type.nil? && !master_audit.user_id.nil? -%>
-        <%- audit_user = master_audit.user_type.constantize.find(master_audit.user_id)-%>
-        <%- if !audit_user.nil? -%>
-          <%= h(audit_user.login) %>
-        <%- end -%>
-      <%- end -%>
-    </td>
-    <td>
-      <table cellspacing="0" class="arattributes" summary="All the attributes as they were in this version of the model.">
-        <%- master_object.audited_attributes.each do |attribute| -%>
-          <%- if !['created_at', 'updated_at', 'deleted_at', 'version'].include?(attribute) -%>
-            <tr>
-              <th><%= h(attribute) %></th>
-              <td>
-                
-                <%- master_version_value = master_version.send "#{attribute}" -%>
-                <%- if !previous_version.nil? -%>
-                  <%- previous_version_value = previous_version.send "#{attribute}" -%>
-                <%- else -%>
-                  <%- previous_version_value = nil -%>
-                <%- end -%>
-                
-                <%- if !previous_version_value.nil? and previous_version_value != master_version_value -%>
-                  <del><%= h(previous_version_value) %></del><ins><%= h(master_version_value) %></ins>
-                <%- else -%>
-                  <%= h(master_version_value) %>
-                <%- end -%>
-                
-              </td>
-            </tr>
+  <thead>
+    <tr>
+      <th>Version (Date)</th>
+      <th>Who</th>
+      <th>Type</th>
+      <th>Attributes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <%- master_object.audits.each do |audit| -%>
+      <tr class="<%= cycle('odd', 'even') -%>">
+        <td>
+          <%= h(audit.version) %><br/>
+          <span class="arversion_date">(<%= h(audit.created_at.to_formatted_s(:short)) %>)</span>
+        </td>
+        <td>
+          <%- if !audit.user_type.nil? && !audit.user_id.nil? -%>
+            <%- audit_user = audit.user_type.constantize.find(audit.user_id)-%>
+            <%- if !audit_user.nil? -%>
+              <%= h(audit_user.login) %>
+            <%- end -%>
           <%- end -%>
-        <%- end -%>
-      </table>
-    
-    </td>
-</tr>
-<%- end %>
-</tbody>
+        </td>
+        <td>
+          <%= h(audit.action) %>
+        </td>
+        <td>
+          <table cellspacing="0" class="arattributes" summary="Changes in this version of the model.">
+            <%- audit.changes.each do |attribute, oldnew| -%>
+              <%- oldvalue = nil -%>
+              <%- newvalue = nil -%>
+              <%- if oldnew.kind_of?(Array) -%>
+                <%- oldvalue = oldnew[0] -%>
+                <%- newvalue = oldnew[1] -%>
+              <%- else -%>
+                <%- newvalue = oldnew -%>
+                <%- previous_audit = audit.ancestors[-2] -%>
+                <%- if !previous_audit.nil? -%>
+                  <%- oldvalue = previous_audit.revision.send(attribute) -%>
+                <%- end -%>
+              <%- end -%>
+              <%- # Treat nil and '' as the same -%>
+              <%- if oldvalue == '' then oldvalue = nil end -%>
+              <%- if newvalue == '' then newvalue = nil end -%>
+              <%- if oldvalue != newvalue -%>
+                <tr>
+                  <th><%= h(attribute) %></th>
+                  <td>
+                    <%- if oldvalue.nil? -%>
+                      <ins><%= h(newvalue) %></ins>
+                    <%- else -%>
+                      <del><%= h(oldvalue) %></del><ins><%= h(newvalue) %></ins>
+                    <%- end -%>
+                  </td>
+                </tr>
+              <%- end -%>
+            <%- end -%>
+          </table>
+        </td>
+      </tr>
+    <%- end %>
+  </tbody>
 </table>
