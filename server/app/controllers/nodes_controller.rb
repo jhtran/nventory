@@ -2,27 +2,17 @@ class NodesController < ApplicationController
   # GET /nodes
   # GET /nodes.xml
   def index
-    includes = {}
-
-    # The index page includes some data from associations.  If we don't
-    # include those associations then N SQL calls result as that data is
-    # looked up row by row.
-    if !params[:format] || params[:format] == 'html'
-      includes[:operating_system] = true
-      includes[:hardware_profile] = true
-      includes[:node_groups] = true
-      includes[:status] = true
-    end
+    includes = process_includes(Node, params[:include])
 
     sort = case params['sort']
            when "name"                     then "nodes.name"
            when "name_reverse"             then "nodes.name DESC"
-           when "status"                   then includes[:status] = true; "statuses.name"
-           when "status_reverse"           then includes[:status] = true; "statuses.name DESC"
-           when "hardware_profile"         then includes[:hardware_profile] = true; "hardware_profiles.name"
-           when "hardware_profile_reverse" then includes[:hardware_profile] = true; "hardware_profiles.name DESC"
-           when "operating_system"         then includes[:operating_system] = true; "operating_systems.name"
-           when "operating_system_reverse" then includes[:operating_system] = true; "operating_systems.name DESC"
+           when "status"                   then includes[:status] = {}; "statuses.name"
+           when "status_reverse"           then includes[:status] = {}; "statuses.name DESC"
+           when "hardware_profile"         then includes[:hardware_profile] = {}; "hardware_profiles.name"
+           when "hardware_profile_reverse" then includes[:hardware_profile] = {}; "hardware_profiles.name DESC"
+           when "operating_system"         then includes[:operating_system] = {}; "operating_systems.name"
+           when "operating_system_reverse" then includes[:operating_system] = {}; "operating_systems.name DESC"
            end
     
     # if a sort was not defined we'll make one default
@@ -31,6 +21,16 @@ class NodesController < ApplicationController
       sort = 'nodes.' + Node.default_search_attribute
     end
     
+    # The index page includes some data from associations.  If we don't
+    # include those associations then N SQL calls result as that data is
+    # looked up row by row.
+    if !params[:format] || params[:format] == 'html'
+      includes[:operating_system] = {}
+      includes[:hardware_profile] = {}
+      includes[:node_groups] = {}
+      includes[:status] = {}
+    end
+
     # Parse all other params as search query args
     #
     # If the query arg is prefaced by "exact_" then we do an exact match,
@@ -87,6 +87,7 @@ class NodesController < ApplicationController
       next if key == 'format'
       next if key == 'page'
       next if key == 'sort'
+      next if key == 'include'
 
       if content_column_names.include?(key) && !value.empty?
         # We have to disambiguate the column name here (by specifying
@@ -142,7 +143,23 @@ class NodesController < ApplicationController
           exact_search = false
         end
 
-        assoc = Node.reflect_on_association(search_key.to_sym)
+        assoc = nil
+        if (special_joins.include?(search_key))
+          joins[special_joins[search_key]] = true
+          assoc = Node.reflect_on_association(search_key.to_sym)
+        else
+          # Walk the association tree looking for the key, and automatically
+          # populate 'includes' as necessary.
+          # FIXME: Multiple assocations (in different models) can have the
+          # same name.  search_for_association returns the "closest"
+          # association (least hops).  It's possible that isn't the one the
+          # user wants.  We should support a mechanism for the user to give
+          # us a full path or possibly "breadcrumbs" indicating the tree of
+          # associations that would get to the association they want.  I
+          # imagine that would involve URL syntax similar to includes.
+          assoc, includes, depth = search_for_association(Node, search_key.to_sym, includes)
+        end
+        
         if assoc.nil?
           # FIXME: Need better error handling for XML users
           flash[:error] = "Ignored invalid search key #{key}"
@@ -150,11 +167,6 @@ class NodesController < ApplicationController
           next
         end
 
-        if (special_joins.include? search_key)
-          joins[special_joins[search_key]] = true
-        else
-          includes[search_key.to_sym] = true
-        end
         table_name = search_key.tableize
         
         search = {}
@@ -208,7 +220,7 @@ class NodesController < ApplicationController
               end
             end
           end
-        end            
+        end
         
         search.each_pair do |skey,svalue|
           if svalue.empty?
@@ -236,33 +248,20 @@ class NodesController < ApplicationController
       end
     end
     
-    # The data we render to XML includes some data from associations.
-    # If we don't include those associations then N SQL calls result
-    # as that data is looked up row by row.
-    if params[:format] && params[:format] == 'xml'
-      includes[:status] = true
-      includes[:operating_system] = true
-      #includes[:preferred_operating_system] = true
-      includes[:hardware_profile] = true
-      includes[[:network_interfaces => :ip_addresses]] = true
-      includes[:node_groups] = true
-      includes[:comments] = true
-    end
-    
     logger.info "searchquery" + searchquery.to_yaml
-    logger.info "includes" + includes.keys.to_yaml
+    logger.info "includes" + includes.to_yaml
     logger.info "joins" + joins.keys.to_yaml
 
     if searchquery.empty?
       # XML doesn't get pagination
       if params[:format] && params[:format] == 'xml'
         @objects = Node.find(:all,
-                             :include => includes.keys,
+                             :include => includes,
                              :joins => joins.keys.join(' '),
                              :order => sort)
       else
         @objects = Node.paginate(:all,
-                                 :include => includes.keys,
+                                 :include => includes,
                                  :joins => joins.keys.join(' '),
                                  :order => sort,
                                  :page => params[:page])
@@ -296,69 +295,39 @@ class NodesController < ApplicationController
       # XML doesn't get pagination
       if params[:format] && params[:format] == 'xml'
         @objects = Node.find(:all,
-                             :include => includes.keys,
+                             :include => includes,
                              :joins => joins.keys.join(' '),
                              :conditions => [ conditions_string, *conditions_values ],
                              :order => sort)
       else
         @objects = Node.paginate(:all,
-                                 :include => includes.keys,
+                                 :include => includes,
                                  :joins => joins.keys.join(' '),
                                  :conditions => [ conditions_string, *conditions_values ],
                                  :order => sort,
                                  :page => params[:page])
       end
     end
-
+    
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(
-                               :include => {
-                                 :status => {},
-                                 :operating_system => {},
-                                 :preferred_operating_system => {},
-                                 :hardware_profile => {},
-                                 :network_interfaces => { :include => :ip_addresses },
-                                 :node_groups => {},
-                                 :comments => {},
-                                 },
-                             :dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /nodes/1
   # GET /nodes/1.xml
   def show
-    includes = {}
-    # The data we render to XML includes some data from associations.
-    # If we don't include those associations then N SQL calls result
-    # as that data is looked up row by row.
-    if params[:format] && params[:format] == 'xml'
-      includes[:status] = true
-      includes[:operating_system] = true
-      #includes[:preferred_operating_system] = true
-      includes[:hardware_profile] = true
-      includes[[:network_interfaces => :ip_addresses]] = true
-      includes[:node_groups] = true
-      includes[:comments] = true
-    end
-
+    includes = process_includes(Node, params[:include])
+    
     @node = Node.find(params[:id],
-                      :include => includes.keys)
+                      :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @node.to_xml(
-                             :include => {
-                               :status => {},
-                               :operating_system => {},
-                               :preferred_operating_system => {},
-                               :hardware_profile => {},
-                               :network_interfaces => { :include => :ip_addresses },
-                               :node_groups => {},
-                               :comments => {},
-                               },
-                             :dasherize => false) }
+      format.xml  { render :xml => @node.to_xml(:include => convert_includes(includes),
+                                                :dasherize => false) }
     end
   end
 
@@ -405,6 +374,13 @@ class NodesController < ApplicationController
       end
       params[:node][:status_id] = status.id
     end
+    
+    # If the user included outlet names pull them out for later application
+    outlet_names = nil
+    if params[:node].include?(:outlet_names)
+      outlet_names = params[:node][:outlet_names]
+      params[:node].delete(:outlet_names)
+    end
 
     @node = Node.new(params[:node])
 
@@ -416,6 +392,10 @@ class NodesController < ApplicationController
         process_network_interfaces
         # If the user specified a rack assignment then handle that
         process_rack_assignment
+        # If the user included outlet names apply them now
+        if outlet_names
+          @node.update_outlets(outlet_names)
+        end
         
         flash[:notice] = 'Node was successfully created.'
         format.html { redirect_to node_url(@node) }
@@ -496,6 +476,11 @@ class NodesController < ApplicationController
     process_network_interfaces
     # If the user specified a rack assignment then handle that
     process_rack_assignment
+    # If the user included outlet names apply them now
+    if params[:node].include?(:outlet_names)
+      @node.update_outlets(params[:node][:outlet_names])
+      params[:node].delete(:outlet_names)
+    end
 
     respond_to do |format|
       if @node.update_attributes(params[:node])

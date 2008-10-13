@@ -2,6 +2,8 @@ class VipsController < ApplicationController
   # GET /vips
   # GET /vips.xml
   def index
+    includes = process_includes(Vip, params[:include])
+    
     sort = case params['sort']
            when "name" then "vips.name"
            when "name_reverse" then "vips.name DESC"
@@ -15,27 +17,35 @@ class VipsController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = Vip.find(:all, :order => sort)
+      @objects = Vip.find(:all,
+                          :include => includes,
+                          :order => sort)
     else
       @objects = Vip.paginate(:all,
-                          :order => sort,
-                          :page => params[:page])
+                              :include => includes,
+                              :order => sort,
+                              :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:include => [:node_group, :datacenter_vip_assignments], :dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /vips/1
   # GET /vips/1.xml
   def show
-    @vip = Vip.find(params[:id])
+    includes = process_includes(Vip, params[:include])
+    
+    @vip = Vip.find(params[:id],
+                    :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @vip.to_xml(:include => [:node_group, :datacenter_vip_assignments], :dasherize => false) }
+      format.xml  { render :xml => @vip.to_xml(:include => convert_includes(includes),
+                                               :dasherize => false) }
     end
   end
 

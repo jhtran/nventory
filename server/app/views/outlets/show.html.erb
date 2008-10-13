@@ -6,8 +6,8 @@
 
 <h1>Outlet: <%= h(@outlet.name) %></h1>
 
-<p><strong>Producer:</strong> <%= h(@outlet.producer.name) %><br />
-<strong>Consumer:</strong> <%= h(@outlet.consumer.name) unless @outlet.consumer.nil? %></p>
+<p><strong>Producer:</strong> <%= link_to @outlet.producer.name, @outlet.producer %><br />
+<strong>Consumer:</strong> <%= link_to @outlet.consumer.name, @outlet.consumer unless @outlet.consumer.nil? %></p>
 
 <p class="metadata"><strong>Created at:</strong> <%= h(@outlet.created_at) %><br />
 <strong>Updated at:</strong> <%= h(@outlet.updated_at) %></p>

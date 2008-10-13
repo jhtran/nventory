@@ -2,6 +2,8 @@ class NodeGroupsController < ApplicationController
   # GET /node_groups
   # GET /node_groups.xml
   def index
+    includes = process_includes(NodeGroup, params[:include])
+    
     sort = case params['sort']
            when "name" then "node_groups.name"
            when "name_reverse" then "node_groups.name DESC"
@@ -34,9 +36,12 @@ class NodeGroupsController < ApplicationController
     else
       # XML doesn't get pagination
       if params[:format] && params[:format] == 'xml'
-        @objects = NodeGroup.find(:all, :order => sort)
+        @objects = NodeGroup.find(:all,
+                                  :include => includes,
+                                  :order => sort)
       else
         @objects = NodeGroup.paginate(:all,
+                                      :include => includes,
                                       :order => sort,
                                       :page => params[:page])
       end
@@ -44,18 +49,23 @@ class NodeGroupsController < ApplicationController
     
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:include => [:child_groups, :nodes], :dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /node_groups/1
   # GET /node_groups/1.xml
   def show
-    @node_group = NodeGroup.find(params[:id])
+    includes = process_includes(NodeGroup, params[:include])
+    
+    @node_group = NodeGroup.find(params[:id],
+                                 :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @node_group.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @node_group.to_xml(:include => convert_includes(includes),
+                                                      :dasherize => false) }
     end
   end
 
@@ -74,13 +84,17 @@ class NodeGroupsController < ApplicationController
   def create
     @node_group = NodeGroup.new(params[:node_group])
 
-    # Process any node group -> node group assignment creations
-    node_group_assignment_save_successful = process_node_group_assignments()
-    # Process any node -> node group assignment creations
-    node_assignment_save_successful = process_node_assignments()
+    node_save_successful = @node_group.save
+    
+    if node_save_successful
+      # Process any node group -> node group assignment creations
+      node_group_assignment_save_successful = process_node_group_assignments()
+      # Process any node -> node group assignment creations
+      node_assignment_save_successful = process_node_assignments()
+    end
 
     respond_to do |format|
-      if node_group_assignment_save_successful && node_assignment_save_successful && @node_group.save
+      if node_save_successful && node_group_assignment_save_successful && node_assignment_save_successful
         flash[:notice] = 'Node group was successfully created.'
         format.html { redirect_to node_group_url(@node_group) }
         format.xml  { head :created, :location => node_group_url(@node_group) }
@@ -152,7 +166,7 @@ class NodeGroupsController < ApplicationController
           if !cg.nil? && !@node_group.child_groups.include?(cg)
             assignment = NodeGroupNodeGroupAssignment.new(:parent_id => @node_group.id,
                                                           :child_id  => cgid)
-            new_assignments.push(assignment)
+            new_assignments << assignment
           end
         end
 
@@ -171,14 +185,11 @@ class NodeGroupsController < ApplicationController
         node_group_assignment_save_successful = false    
         # Propagate the error from the assignment through to @node_group
         # so that the user gets some feedback as to the problem
-        # FIXME: This needs to handle errors on any field in the new
-        # assignment, not just :parent_id and :child_id
-        @node_group.errors.add(:child_group_ids, assignment.errors.on(:parent_id))
-        @node_group.errors.add(:child_group_ids, assignment.errors.on(:child_id))
+        assignment.errors.each_full { |msg| @node_group.errors.add(:child_group_ids, msg) }
       end
     end
 
-    return node_group_assignment_save_successful
+    node_group_assignment_save_successful
   end
   private :process_node_group_assignments
 
@@ -191,8 +202,8 @@ class NodeGroupsController < ApplicationController
           node = Node.find(nodeid)
           if !node.nil? && !@node_group.nodes.include?(node)
             assignment = NodeGroupNodeAssignment.new(:node_group_id => @node_group.id,
-                                                 :node_id       => nodeid)
-            new_assignments.push(assignment)
+                                                     :node_id       => nodeid)
+            new_assignments << assignment
           end
         end
 
@@ -211,14 +222,11 @@ class NodeGroupsController < ApplicationController
         node_assignment_save_successful = false
         # Propagate the error from the assignment through to @node_group
         # so that the user gets some feedback as to the problem
-        # FIXME: This needs to handle errors on any field in the new
-        # assignment, not just :node_group_id and :node_id
-        @node_group.errors.add(:node_ids, assignment.errors.on(:node_group_id))
-        @node_group.errors.add(:node_ids, assignment.errors.on(:node_id))
+        assignment.errors.each_full { |msg| @node_group.errors.add(:node_ids, msg) }
       end
     end
 
-    return node_assignment_save_successful
+    node_assignment_save_successful
   end
   private :process_node_assignments
 

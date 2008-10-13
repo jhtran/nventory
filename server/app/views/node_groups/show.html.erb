@@ -12,7 +12,7 @@
 <p>
 <strong>Children:</strong>
 <ul>
-<%- @node_group.child_groups.each do |ng| -%>
+<%- @node_group.child_groups.sort{|a,b| a.name <=> b.name}.each do |ng| -%>
   <li><%= link_to ng.name, node_group_url(ng) %></li>
 <%- end -%>
 </ul>
@@ -21,7 +21,7 @@
 <p>
 <strong>Nodes:</strong>
 <ul>
-<%- @node_group.nodes.each do |node| -%>
+<%- @node_group.nodes.sort{|a,b| a.name <=> b.name}.each do |node| -%>
   <li><%= link_to node.name, node_url(node) %></li>
 <%- end -%>
 </ul>

@@ -2,6 +2,8 @@ class DatabaseInstancesController < ApplicationController
   # GET /database_instances
   # GET /database_instances.xml
   def index
+    includes = process_includes(DatabaseInstance, params[:include])
+    
     sort = case params['sort']
            when "name" then "database_instances.name"
            when "name_reverse" then "database_instances.name DESC"
@@ -15,27 +17,35 @@ class DatabaseInstancesController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = DatabaseInstance.find(:all, :order => sort)
+      @objects = DatabaseInstance.find(:all,
+                                       :include => includes,
+                                       :order => sort)
     else
       @objects = DatabaseInstance.paginate(:all,
+                                           :include => includes,
                                            :order => sort,
                                            :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /database_instances/1
   # GET /database_instances/1.xml
   def show
-    @database_instance = DatabaseInstance.find(params[:id])
+    includes = process_includes(DatabaseInstance, params[:include])
+    
+    @database_instance = DatabaseInstance.find(params[:id],
+                                               :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @database_instance.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @database_instance.to_xml(:include => convert_includes(includes),
+                                                             :dasherize => false) }
     end
   end
 

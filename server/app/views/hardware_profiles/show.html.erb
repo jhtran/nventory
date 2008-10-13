@@ -11,7 +11,7 @@
 <strong>Rack size:</strong> <%=h @hardware_profile.rack_size %><br />
 <strong>Memory:</strong> <%=h @hardware_profile.memory %><br />
 <strong>Disk:</strong> <%=h @hardware_profile.disk %><br />
-<strong>Nics:</strong> <%=h @hardware_profile.nics %><br />
+<strong>NICs:</strong> <%=h @hardware_profile.nics %><br />
 <strong>Power supply slot count:</strong> <%=h @hardware_profile.power_supply_slot_count %><br />
 <strong>Power supply count:</strong> <%=h @hardware_profile.power_supply_count %><br />
 <strong>Power consumption:</strong> <%=h @hardware_profile.power_consumption %><br />
@@ -42,7 +42,7 @@
 
 <div class="relationship">
 
-<%= link_to 'Search', "#{nodes_path}?hardware_profile=#{CGI.escape(@hardware_profile.name)}" %> for nodes with this hardware profile
+<%= link_to 'Search', "#{nodes_path}?exact_hardware_profile=#{CGI.escape(@hardware_profile.name)}" %> for nodes with this hardware profile
 
 </div> <!-- end relationship -->
 

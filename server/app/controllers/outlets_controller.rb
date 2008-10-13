@@ -2,6 +2,8 @@ class OutletsController < ApplicationController
   # GET /outlets
   # GET /outlets.xml
   def index
+    includes = process_includes(Outlet, params[:include])
+    
     sort = case params['sort']
            when "name" then "outlets.name"
            when "name_reverse" then "outlets.name DESC"
@@ -15,27 +17,35 @@ class OutletsController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = Outlet.find(:all, :order => sort)
+      @objects = Outlet.find(:all,
+                             :include => includes,
+                             :order => sort)
     else
       @objects = Outlet.paginate(:all,
+                                 :include => includes,
                                  :order => sort,
                                  :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /outlets/1
   # GET /outlets/1.xml
   def show
-    @outlet = Outlet.find(params[:id])
+    includes = process_includes(Outlet, params[:include])
+    
+    @outlet = Outlet.find(params[:id],
+                          :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @outlet.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @outlet.to_xml(:include => convert_includes(includes),
+                                                  :dasherize => false) }
     end
   end
 

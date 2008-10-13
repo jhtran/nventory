@@ -2,6 +2,8 @@ class StatusesController < ApplicationController
   # GET /statuses
   # GET /statuses.xml
   def index
+    includes = process_includes(Status, params[:include])
+    
     sort = case params['sort']
            when "name" then "statuses.name"
            when "name_reverse" then "statuses.name DESC"
@@ -15,27 +17,35 @@ class StatusesController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = Status.find(:all, :order => sort)
+      @objects = Status.find(:all,
+                             :include => includes,
+                             :order => sort)
     else
       @objects = Status.paginate(:all,
+                                 :include => includes,
                                  :order => sort,
                                  :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /statuses/1
   # GET /statuses/1.xml
   def show
-    @status = Status.find(params[:id])
+    includes = process_includes(Status, params[:include])
+    
+    @status = Status.find(params[:id],
+                          :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @status.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @status.to_xml(:include => convert_includes(includes),
+                                                  :dasherize => false) }
     end
   end
 

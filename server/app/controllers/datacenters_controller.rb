@@ -2,6 +2,8 @@ class DatacentersController < ApplicationController
   # GET /datacenters
   # GET /datacenters.xml
   def index
+    includes = process_includes(Datacenter, params[:include])
+    
     sort = case params['sort']
            when "name" then "datacenters.name"
            when "name_reverse" then "datacenters.name DESC"
@@ -13,33 +15,22 @@ class DatacentersController < ApplicationController
       sort = 'datacenters.' + Datacenter.default_search_attribute
     end
     
-    includes = {}
-    # The data we render to XML includes some data from associations.
-    # If we don't include those associations then N SQL calls result
-    # as that data is looked up row by row.
-    if params[:format] && params[:format] == 'xml'
-      includes[[:racks => :nodes]] = true
-    end
-
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
       @objects = Datacenter.find(:all,
-                                 :include => includes.keys,
+                                 :include => includes,
                                  :order => sort)
     else
       @objects = Datacenter.paginate(:all,
-                                     :include => includes.keys,
+                                     :include => includes,
                                      :order => sort,
                                      :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
-      format.xml  { render :xml => @objects.to_xml(
-                               :include => {
-                                 :racks => { :include => :nodes }},
-                             :dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
     
   end
@@ -47,23 +38,15 @@ class DatacentersController < ApplicationController
   # GET /datacenters/1
   # GET /datacenters/1.xml
   def show
-    includes = {}
-    # The data we render to XML includes some data from associations.
-    # If we don't include those associations then N SQL calls result
-    # as that data is looked up row by row.
-    if params[:format] && params[:format] == 'xml'
-      includes[[:racks => :nodes]] = true
-    end
-
+    includes = process_includes(Datacenter, params[:include])
+    
     @datacenter = Datacenter.find(params[:id],
-                                  :include => includes.keys)
+                                  :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @datacenter.to_xml(
-                               :include => {
-                                 :racks => { :include => :nodes }},
-                             :dasherize => false) }
+      format.xml  { render :xml => @datacenter.to_xml(:include => convert_includes(includes),
+                                                      :dasherize => false) }
     end
   end
 

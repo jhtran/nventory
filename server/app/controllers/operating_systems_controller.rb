@@ -2,6 +2,8 @@ class OperatingSystemsController < ApplicationController
   # GET /operating_systems
   # GET /operating_systems.xml
   def index
+    includes = process_includes(OperatingSystem, params[:include])
+    
     sort = case params['sort']
            when "name" then "operating_systems.name"
            when "name_reverse" then "operating_systems.name DESC"
@@ -15,27 +17,35 @@ class OperatingSystemsController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = OperatingSystem.find(:all, :order => sort)
+      @objects = OperatingSystem.find(:all,
+                                      :include => includes,
+                                      :order => sort)
     else
       @objects = OperatingSystem.paginate(:all,
+                                          :include => includes,
                                           :order => sort,
                                           :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /operating_systems/1
   # GET /operating_systems/1.xml
   def show
-    @operating_system = OperatingSystem.find(params[:id])
+    includes = process_includes(OperatingSystem, params[:include])
+    
+    @operating_system = OperatingSystem.find(params[:id],
+                                             :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @operating_system.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @operating_system.to_xml(:include => convert_includes(includes),
+                                                            :dasherize => false) }
     end
   end
 

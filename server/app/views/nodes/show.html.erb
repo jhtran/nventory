@@ -126,7 +126,7 @@
 
 
 
-<%- if !@node.hardware_profile.outlet_count.nil? and @node.hardware_profile.outlet_count > 0 and @node.produced_outlets.count > 0 -%>
+<%- if !@node.hardware_profile.outlet_count.nil? && @node.produced_outlets.count > 0 -%>
 <div class="relationship">
   <table cellspacing="0" class="styled" summary="A list of the outlets supplied by this node.">
   <caption><%= @node.hardware_profile.outlet_type %> Outlets</caption>

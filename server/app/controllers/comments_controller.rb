@@ -2,6 +2,8 @@ class CommentsController < ApplicationController
   # GET /comments
   # GET /comments.xml
   def index
+    includes = process_includes(Comment, params[:include])
+    
     sort = case params['sort']
            when "created_at" then "comments.created_at"
            when "created_at_reverse" then "comments.created_at DESC"
@@ -19,27 +21,35 @@ class CommentsController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = Comment.find(:all, :order => sort)
+      @objects = Comment.find(:all,
+                              :include => includes,
+                              :order => sort)
     else
       @objects = Comment.paginate(:all,
-                                   :order => sort,
-                                   :page => params[:page])
+                                  :include => includes,
+                                  :order => sort,
+                                  :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /comments/1
   # GET /comments/1.xml
   def show
-    @comment = Comment.find(params[:id])
+    includes = process_includes(Comment, params[:include])
+    
+    @comment = Comment.find(params[:id],
+                            :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @comment.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @comment.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 

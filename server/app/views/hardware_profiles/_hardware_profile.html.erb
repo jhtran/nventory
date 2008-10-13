@@ -1,10 +1,10 @@
 <p><strong>Name:</strong> <em>*</em> <br /><%= f.text_field :name %> </p>
 <p><strong>Manufacturer:</strong> <br /><%= f.text_field :manufacturer %> </p>
 <p><strong>Model:</strong> <br /><%= f.text_field :model %> </p>
-<p><strong>Rack size:</strong> <br /><%= f.text_field :rack_size %> </p>
+<p><strong>Rack size:</strong> <br /><%= f.text_field :rack_size, :title => "In rack units (U)" %> </p>
 <p><strong>Memory:</strong> <br /><%= f.text_field :memory %> </p>
 <p><strong>Disk:</strong> <br /><%= f.text_field :disk %> </p>
-<p><strong>Nics:</strong> <br /><%= f.text_field :nics %> </p>
+<p><strong>NICs:</strong> <br /><%= f.text_field :nics, :title => "Standard or minimum number of NICs for this profile, individual nodes can override this if they have additional NICs." %> </p>
 <p><strong>Power supply slot count:</strong> <br /><%= f.text_field :power_supply_slot_count %> </p>
 <p><strong>Power supply count:</strong> <br /><%= f.text_field :power_supply_count %> </p>
 <p><strong>Power consumption:</strong> <br /><%= f.text_field :power_consumption %> </p>
@@ -13,7 +13,7 @@
 <p><strong>Processor speed:</strong> <br /><%= f.text_field :processor_speed %> </p>
 <p><strong>Processor socket count:</strong> <br /><%= f.text_field :processor_socket_count %> </p>
 <p><strong>Processor count:</strong> <br /><%= f.text_field :processor_count %> </p>
-<p><strong>Outlet count:</strong> <br /><%= f.text_field :outlet_count %> </p>
+<p><strong>Outlet count:</strong> <br /><%= f.text_field :outlet_count, :title => "Indicates how many outlets nodes with this profile produce. Set to 0 for dynamic allocation of outlets based on the number of outlet names specified when nodes using the profile are registered. Blank indicates this profile doesn't produce outlets." %> </p>
 <p><strong>Outlet type:</strong> <br /><%= f.select :outlet_type, HardwareProfile.allowed_outlet_types.collect { |ot| [ ot, ot ] } %></p>
 <p><strong>Cards:</strong> <br /><%= f.text_field :cards %> </p>
 <p><strong>Visualization Color:</strong> <br /><%= f.text_field :visualization_color %> </p>

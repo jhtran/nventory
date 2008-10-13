@@ -2,6 +2,8 @@ class HardwareProfilesController < ApplicationController
   # GET /hardware_profiles
   # GET /hardware_profiles.xml
   def index
+    includes = process_includes(HardwareProfile, params[:include])
+    
     sort = case params['sort']
            when "name" then "hardware_profiles.name"
            when "name_reverse" then "hardware_profiles.name DESC"
@@ -15,27 +17,35 @@ class HardwareProfilesController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = HardwareProfile.find(:all, :order => sort)
+      @objects = HardwareProfile.find(:all,
+                                      :include => includes,
+                                      :order => sort)
     else
       @objects = HardwareProfile.paginate(:all,
+                                          :include => includes,
                                           :order => sort,
                                           :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /hardware_profiles/1
   # GET /hardware_profiles/1.xml
   def show
-    @hardware_profile = HardwareProfile.find(params[:id])
+    includes = process_includes(HardwareProfile, params[:include])
+    
+    @hardware_profile = HardwareProfile.find(params[:id],
+                                             :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @hardware_profile.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @hardware_profile.to_xml(:include => convert_includes(includes),
+                                                            :dasherize => false) }
     end
   end
 

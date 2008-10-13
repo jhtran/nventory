@@ -2,21 +2,8 @@ class RacksController < ApplicationController
   # GET /racks
   # GET /racks.xml
   def index
-    includes = {}
-
-    # The index page includes some data from associations.  If we don't
-    # include those associations then N SQL calls result as that data is
-    # looked up row by row.
-    if !params[:format] || params[:format] == 'html'
-      # datacenter is not currently an association, see the comments
-      # in the rack model for why.  When that changes this can be
-      # uncommented.
-      #includes[:datacenter] = true
-      # Need to include the node's hardware profile as that is used
-      # in calculating the free/used space columns
-      includes[[:nodes => :hardware_profile]] = true
-    end
-
+    includes = process_includes(Rack, params[:include])
+    
     sort = case params['sort']
            when "name" then "racks.name"
            when "name_reverse" then "racks.name DESC"
@@ -28,34 +15,47 @@ class RacksController < ApplicationController
       sort = 'racks.' + Rack.default_search_attribute
     end
     
-    logger.info "includes" + includes.keys.to_yaml
+    # The index page includes some data from associations.  If we don't
+    # include those associations then N SQL calls result as that data is
+    # looked up row by row.
+    if !params[:format] || params[:format] == 'html'
+      includes[:datacenter] = {}
+      # Need to include the node's hardware profile as that is used
+      # in calculating the free/used space columns
+      includes[[:nodes => :hardware_profile]] = {}
+    end
 
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
       @objects = Rack.find(:all,
-                           :include => includes.keys,
+                           :include => includes,
                            :order => sort)
     else
       @objects = Rack.paginate(:all,
-                               :include => includes.keys,
+                               :include => includes,
                                :order => sort,
                                :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /racks/1
   # GET /racks/1.xml
   def show
-    @rack = Rack.find(params[:id])
+    includes = process_includes(Rack, params[:include])
+    
+    @rack = Rack.find(params[:id],
+                      :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @rack.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @rack.to_xml(:include => convert_includes(includes),
+                                                :dasherize => false) }
     end
   end
 

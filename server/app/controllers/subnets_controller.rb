@@ -2,6 +2,8 @@ class SubnetsController < ApplicationController
   # GET /subnets
   # GET /subnets.xml
   def index
+    includes = process_includes(Subnet, params[:include])
+    
     sort = case params['sort']
            when "network" then "subnets.network"
            when "network_reverse" then "subnets.network DESC"
@@ -15,27 +17,35 @@ class SubnetsController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = Subnet.find(:all, :order => sort)
+      @objects = Subnet.find(:all,
+                             :include => includes,
+                             :order => sort)
     else
       @objects = Subnet.paginate(:all,
+                                 :include => includes,
                                  :order => sort,
                                  :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /subnets/1
   # GET /subnets/1.xml
   def show
-    @subnet = Subnet.find(params[:id])
+    includes = process_includes(Subnet, params[:include])
+    
+    @subnet = Subnet.find(params[:id],
+                          :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @subnet.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @subnet.to_xml(:include => convert_includes(includes),
+                                                  :dasherize => false) }
     end
   end
 

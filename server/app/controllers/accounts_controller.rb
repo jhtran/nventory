@@ -2,6 +2,8 @@ class AccountsController < ApplicationController
   # GET /accounts
   # GET /accounts.xml
   def index
+    includes = process_includes(Account, params[:include])
+    
     sort = case params['sort']
            when "login" then "accounts.login"
            when "login_reverse" then "accounts.login DESC"
@@ -15,27 +17,35 @@ class AccountsController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = Account.find(:all, :order => sort)
+      @objects = Account.find(:all,
+                              :include => includes,
+                              :order => sort)
     else
       @objects = Account.paginate(:all,
+                                  :include => includes,
                                   :order => sort,
                                   :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 
   # GET /accounts/1
   # GET /accounts/1.xml
   def show
-    @account = Account.find(params[:id])
+    includes = process_includes(Account, params[:include])
+    
+    @account = Account.find(params[:id],
+                            :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @account.to_xml(:dasherize => false) }
+      format.xml  { render :xml => @account.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false) }
     end
   end
 

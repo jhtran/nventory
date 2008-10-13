@@ -2,6 +2,8 @@ class NetworkInterfacesController < ApplicationController
   # GET /network_interfaces
   # GET /network_interfaces.xml
   def index
+    includes = process_includes(NetworkInterface, params[:include])
+    
     sort = case params['sort']
            when "name" then "network_interfaces.name"
            when "name_reverse" then "network_interfaces.name DESC"
@@ -15,27 +17,33 @@ class NetworkInterfacesController < ApplicationController
     
     # XML doesn't get pagination
     if params[:format] && params[:format] == 'xml'
-      @objects = NetworkInterface.find(:all, :order => sort)
+      @objects = NetworkInterface.find(:all,
+                                       :include => includes,
+                                       :order => sort)
     else
       @objects = NetworkInterface.paginate(:all,
+                                           :include => includes,
                                            :order => sort,
                                            :page => params[:page])
     end
 
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:include => [:ip_addresses], :dasherize => false) }
+      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes), :dasherize => false) }
     end
   end
 
   # GET /network_interfaces/1
   # GET /network_interfaces/1.xml
   def show
-    @network_interface = NetworkInterface.find(params[:id])
+    includes = process_includes(NetworkInterface, params[:include])
+    
+    @network_interface = NetworkInterface.find(params[:id],
+                                               :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
-      format.xml  { render :xml => @network_interface.to_xml(:include => [:ip_addresses], :dasherize => false) }
+      format.xml  { render :xml => @network_interface.to_xml(:include => convert_includes(includes), :dasherize => false) }
     end
   end
 
