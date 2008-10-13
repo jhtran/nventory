@@ -4,11 +4,7 @@ class Node < ActiveRecord::Base
   acts_as_commentable
   
   has_one :rack_node_assignment, :dependent => :destroy
-  # has_one :through support was recently added to Rails
-  # http://dev.rubyonrails.org/ticket/4756
-  # Once that makes it into a version we can run this can get
-  # uncommented and the rack method below can go away.
-  #has_one :rack, :through => :rack_node_assignment
+  has_one :rack, :through => :rack_node_assignment
   
   belongs_to :hardware_profile
   belongs_to :operating_system
@@ -18,29 +14,27 @@ class Node < ActiveRecord::Base
   belongs_to :status
   
   has_many :node_group_node_assignments, :dependent => :destroy
-  has_many :node_groups, :through => :node_group_node_assignments, :conditions => 'node_group_node_assignments.deleted_at IS NULL'
+  has_many :node_groups, :through => :node_group_node_assignments
   
   has_many :node_database_instance_assignments
-  has_many :database_instances, :through => :node_database_instance_assignments, :conditions => 'node_database_instance_assignments.deleted_at IS NULL'
+  has_many :database_instances, :through => :node_database_instance_assignments
   
-  # :dependent => :destroy?
-  has_many :produced_outlets, :class_name => "Outlet", :foreign_key => "producer_id", :order => "name"
+  has_many :produced_outlets, :class_name => "Outlet", :foreign_key => "producer_id", :order => "name", :dependent => :destroy
   has_many :consumed_outlets, :class_name => "Outlet", :foreign_key => "consumer_id", :order => "name"
 
   has_many :network_interfaces, :dependent => :destroy
-  has_many :ip_addresses, :through => :network_interfaces, :conditions => 'network_interfaces.deleted_at IS NULL'
+  has_many :ip_addresses, :through => :network_interfaces
 
   validates_presence_of :name, :hardware_profile_id, :status_id
   
   validates_uniqueness_of :name
-  # Rails 2.0 has an :allow_blank, but we have to make our own with :if for Rails 1.2
-  validates_uniqueness_of :uniqueid, :allow_nil => true, :if => Proc.new { |u| !u.uniqueid.nil? && !u.uniqueid.empty? }
-    
-  validates_numericality_of :processor_socket_count, :only_integer => true, :allow_nil => true
-  validates_numericality_of :processor_count,        :only_integer => true, :allow_nil => true
-  validates_numericality_of :processor_core_count,   :only_integer => true, :allow_nil => true
-  validates_numericality_of :os_processor_count,     :only_integer => true, :allow_nil => true
-  validates_numericality_of :power_supply_count,     :only_integer => true, :allow_nil => true
+  validates_uniqueness_of :uniqueid, :allow_nil => true, :allow_blank => true
+  
+  validates_numericality_of :processor_socket_count, :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
+  validates_numericality_of :processor_count,        :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
+  validates_numericality_of :processor_core_count,   :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
+  validates_numericality_of :os_processor_count,     :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
+  validates_numericality_of :power_supply_count,     :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
 
   CONSOLE_TYPES = ['','Serial','HP iLO','Dell DRAC','Sun RSC','Sun ALOM']
   def self.allowed_console_types
@@ -54,29 +48,6 @@ class Node < ActiveRecord::Base
                          :allow_nil => true,
                          :message => "not one of the allowed console " +
                             "types: #{CONSOLE_TYPES.join(',')}"
-
-  # FIXME: Dry this up.
-  def validate 
-    if !self.processor_socket_count.nil? and self.processor_socket_count < 0
-      errors.add(:processor_socket_count, "can not be negative") 
-    end 
-    
-    if !self.processor_count.nil? and self.processor_count < 0
-      errors.add(:processor_count, "can not be negative") 
-    end 
-    
-    if !self.processor_core_count.nil? and self.processor_core_count < 0
-      errors.add(:processor_core_count, "can not be negative") 
-    end 
-    
-    if !self.os_processor_count.nil? and self.os_processor_count < 0
-      errors.add(:os_processor_count, "can not be negative") 
-    end 
-    
-    if !self.power_supply_count.nil? and self.power_supply_count < 0
-      errors.add(:power_supply_count, "can not be negative") 
-    end
-  end
 
   def self.default_search_attribute
     'name'
@@ -122,26 +93,83 @@ class Node < ActiveRecord::Base
     #end
   end
   
-  def update_outlets
-    # this method will look at our hardware profile and make sure we have the correct number of outlets realized in the database.
-    if !self.hardware_profile.outlet_count.nil? and self.hardware_profile.outlet_count > 0 and self.produced_outlets.length != self.hardware_profile.outlet_count
-      if self.produced_outlets.length < self.hardware_profile.outlet_count
-        # We need to add outlets
-        how_many_to_add = self.hardware_profile.outlet_count - self.produced_outlets.length
-        how_many_to_add.times { self.add_new_outlet }
-      else
-        # We need to remove outlets
-        how_many_to_remove = self.produced_outlets.length - self.hardware_profile.outlet_count
-        how_many_to_remove.times { self.remove_bottom_outlet }
+  def update_outlets(outlet_names=nil)
+    if !self.hardware_profile.outlet_count.nil?
+      # Make sure we have the correct number of outlets realized in the database.
+      how_many_needed = nil
+      if self.hardware_profile.outlet_count > 0
+        how_many_needed = self.hardware_profile.outlet_count
+      elsif outlet_names # self.hardware_profile.outlet_count == 0
+        # If the hardware profile outlet count is 0 we dynamically allocate
+        # outlets based on how many outlet names the user supplied.
+        # Many switches are chassis-based with multiple cards or slots, so
+        # they don't have a fixed number of outlets.
+        how_many_needed = outlet_names.length
+      end
+      if how_many_needed && self.produced_outlets.length != how_many_needed
+        if self.produced_outlets.length < how_many_needed
+          # We need to add outlets
+          how_many_to_add = how_many_needed - self.produced_outlets.length
+          how_many_to_add.times { self.add_new_outlet }
+        else
+          # We need to remove outlets
+          how_many_to_remove = self.produced_outlets.length - how_many_needed
+          # If the user supplied outlet names try to remove outlets with
+          # names that don't match
+          if outlet_names
+            self.produced_outlets.each do |outlet|
+              if !outlet_names.include?(outlet.name)
+                outlet.destroy
+                how_many_to_remove -= 1
+                break if how_many_to_remove == 0
+              end
+            end
+          end
+          how_many_to_remove.times { self.remove_bottom_outlet }
+        end
+      end
+
+      # Set outlet names
+      if outlet_names
+        # It would be a nice improvement if the names were applied as we
+        # created outlets, rather than creating the outlet with a generic
+        # name above and then renaming it here.
+
+        # Try to leave as many outlet names untouched as possible, by
+        # picking out for renaming only the outlets with names that don't
+        # match any of the incoming names.  That should limit any scrambling
+        # of outlet assignments to consumers.
+        available_outlet_names = {}
+        outlet_names.each { |name| available_outlet_names[name] = true }
+        outlet_needs_renaming = []
+        self.produced_outlets.each do |outlet|
+          if available_outlet_names.has_key?(outlet.name)
+            available_outlet_names.delete(outlet.name)
+          else
+            outlet_needs_renaming << outlet
+          end
+        end
+
+        require 'generator'
+        s = SyncEnumerator.new(available_outlet_names.keys.sort, outlet_needs_renaming)
+        s.each do |name, outlet|
+          # The two lists may not be the same length
+          if name && outlet
+            outlet.name = name
+            outlet.save
+          end
+        end
       end
     end
   end
   
-  def add_new_outlet
+  def add_new_outlet(name=nil)
     # Find out how many outlets we currently have
     count = self.produced_outlets(true).length + 1
     o = Outlet.new
-    o.name = count.to_s
+    if !name
+      o.name = count.to_s
+    end
     o.producer = self
     o.save
   end
@@ -175,15 +203,6 @@ class Node < ActiveRecord::Base
     end
   end
 
-  # This can go away eventually, see above
-  def rack
-    if self.rack_node_assignment
-     return self.rack_node_assignment.rack
-    else
-      return nil
-    end
-  end
-  
   def before_destroy
     raise "A node can not be destroyed that has database instances assigned to it." if !self.node_database_instance_assignments.nil? && self.node_database_instance_assignments.count > 0
   end
