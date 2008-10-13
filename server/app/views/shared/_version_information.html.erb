@@ -1,3 +1,6 @@
 <div id="version_information">
-<p><%= link_to_remote 'Fetch Version History', :url => self.send('version_history_' + object.class.to_s.underscore + '_path', object), :method => :get, :update => 'version_information' %></p>
+<p>
+<%- version_url = self.send('version_history_' + object.class.to_s.underscore + '_path', object) -%>
+<%= link_to_remote 'Fetch Version History', { :url => version_url, :method => :get, :update => 'version_information' }, :href => version_url %>
+</p>
 </div>
