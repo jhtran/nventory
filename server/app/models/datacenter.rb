@@ -4,10 +4,10 @@ class Datacenter < ActiveRecord::Base
   acts_as_commentable
   
   has_many :datacenter_rack_assignments
-  has_many :racks, :through => :datacenter_rack_assignments, :conditions => 'datacenter_rack_assignments.deleted_at IS NULL'
+  has_many :racks, :through => :datacenter_rack_assignments
   
   has_many :datacenter_vip_assignments
-  has_many :vips, :through => :datacenter_vip_assignments, :conditions => 'datacenter_vip_assignments.deleted_at IS NULL'
+  has_many :vips, :through => :datacenter_vip_assignments
   
   validates_presence_of :name
   

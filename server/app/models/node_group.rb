@@ -17,8 +17,8 @@ class NodeGroup < ActiveRecord::Base
            :dependent => :destroy
   # Then establish the relationship with the groups on the other end
   # of those assignments
-  has_many :parent_groups, :through => :assignments_as_child, :conditions => 'node_group_node_group_assignments.deleted_at IS NULL'
-  has_many :child_groups,  :through => :assignments_as_parent, :conditions => 'node_group_node_group_assignments.deleted_at IS NULL'
+  has_many :parent_groups, :through => :assignments_as_child
+  has_many :child_groups,  :through => :assignments_as_parent
 
   # This is used by the edit page in the view
   # http://lists.rubyonrails.org/pipermail/rails/2006-August/059801.html
@@ -30,7 +30,7 @@ class NodeGroup < ActiveRecord::Base
   end
 
   has_many :node_group_node_assignments, :dependent => :destroy
-  has_many :nodes, :through => :node_group_node_assignments, :conditions => 'node_group_node_assignments.deleted_at IS NULL'
+  has_many :nodes, :through => :node_group_node_assignments
 
   # These constraints are duplicates of constraints imposed at the
   # database layer (see the relevant migration file for details).

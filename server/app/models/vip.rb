@@ -5,7 +5,7 @@ class Vip < ActiveRecord::Base
 
   belongs_to :node_group
   has_many :datacenter_vip_assignments, :dependent => :destroy
-  has_many :datacenters, :through => :datacenter_vip_assignments, :conditions => 'datacenter_vip_assignments.deleted_at IS NULL'
+  has_many :datacenters, :through => :datacenter_vip_assignments
 
   # These constraints are duplicates of constraints imposed at the
   # database layer (see the relevant migration file for details).
