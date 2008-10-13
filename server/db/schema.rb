@@ -9,7 +9,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 36) do
+ActiveRecord::Schema.define(:version => 55) do
 
   create_table "accounts", :force => true do |t|
     t.string   "name"
@@ -74,7 +74,7 @@ ActiveRecord::Schema.define(:version => 36) do
 
   create_table "database_instances", :force => true do |t|
     t.string   "name"
-    t.text     "description"
+    t.string   "description"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.datetime "deleted_at"
@@ -139,8 +139,6 @@ ActiveRecord::Schema.define(:version => 36) do
     t.string   "disk"
     t.integer  "nics"
     t.string   "processor_model"
-    t.string   "processor_speed"
-    t.integer  "processor_count"
     t.string   "cards"
     t.text     "description"
     t.integer  "outlet_count"
@@ -151,6 +149,8 @@ ActiveRecord::Schema.define(:version => 36) do
     t.string   "visualization_color",     :default => "red"
     t.string   "outlet_type"
     t.integer  "power_supply_count"
+    t.string   "processor_speed"
+    t.integer  "processor_count"
     t.string   "model"
     t.string   "processor_manufacturer"
     t.integer  "processor_socket_count"
@@ -163,14 +163,14 @@ ActiveRecord::Schema.define(:version => 36) do
   add_index "hardware_profiles", ["deleted_at"], :name => "index_hardware_profiles_on_deleted_at"
 
   create_table "ip_addresses", :force => true do |t|
-    t.integer  "network_interface_id"
     t.string   "address",              :default => "", :null => false
-    t.string   "address_type",         :default => "", :null => false
-    t.string   "netmask"
-    t.string   "broadcast"
+    t.integer  "network_interface_id"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.datetime "deleted_at"
+    t.string   "address_type",         :default => "", :null => false
+    t.string   "netmask"
+    t.string   "broadcast"
   end
 
   add_index "ip_addresses", ["address"], :name => "index_ip_addresses_on_address"
@@ -182,7 +182,6 @@ ActiveRecord::Schema.define(:version => 36) do
     t.string   "interface_type"
     t.boolean  "physical"
     t.string   "hardware_address"
-    t.boolean  "up"
     t.boolean  "link"
     t.integer  "speed"
     t.boolean  "full_duplex"
@@ -191,6 +190,7 @@ ActiveRecord::Schema.define(:version => 36) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.datetime "deleted_at"
+    t.boolean  "up"
   end
 
   add_index "network_interfaces", ["name"], :name => "index_network_interfaces_on_name"
@@ -221,10 +221,10 @@ ActiveRecord::Schema.define(:version => 36) do
     t.datetime "deleted_at"
   end
 
-  add_index "node_group_node_assignments", ["node_id", "node_group_id"], :name => "index_node_group_node_assignments_on_node_id_and_node_group_id"
-  add_index "node_group_node_assignments", ["node_group_id"], :name => "index_node_group_node_assignments_on_node_group_id"
-  add_index "node_group_node_assignments", ["assigned_at"], :name => "index_node_group_node_assignments_on_assigned_at"
-  add_index "node_group_node_assignments", ["deleted_at"], :name => "index_node_group_node_assignments_on_deleted_at"
+  add_index "node_group_node_assignments", ["node_id", "node_group_id"], :name => "index_node_group_assignments_on_node_id_and_node_group_id"
+  add_index "node_group_node_assignments", ["node_group_id"], :name => "index_node_group_assignments_on_node_group_id"
+  add_index "node_group_node_assignments", ["assigned_at"], :name => "index_node_group_assignments_on_assigned_at"
+  add_index "node_group_node_assignments", ["deleted_at"], :name => "index_node_group_assignments_on_deleted_at"
 
   create_table "node_group_node_group_assignments", :force => true do |t|
     t.integer  "parent_id",   :null => false
@@ -235,10 +235,10 @@ ActiveRecord::Schema.define(:version => 36) do
     t.datetime "deleted_at"
   end
 
-  add_index "node_group_node_group_assignments", ["parent_id", "child_id"], :name => "parent_child_index"
-  add_index "node_group_node_group_assignments", ["child_id"], :name => "index_node_group_node_group_assignments_on_child_id"
-  add_index "node_group_node_group_assignments", ["assigned_at"], :name => "index_node_group_node_group_assignments_on_assigned_at"
-  add_index "node_group_node_group_assignments", ["deleted_at"], :name => "index_node_group_node_group_assignments_on_deleted_at"
+  add_index "node_group_node_group_assignments", ["parent_id", "child_id"], :name => "index_node_group_connections_on_parent_id_and_child_id"
+  add_index "node_group_node_group_assignments", ["child_id"], :name => "index_node_group_connections_on_child_id"
+  add_index "node_group_node_group_assignments", ["assigned_at"], :name => "index_node_group_connections_on_assigned_at"
+  add_index "node_group_node_group_assignments", ["deleted_at"], :name => "index_node_group_connections_on_deleted_at"
 
   create_table "node_groups", :force => true do |t|
     t.string   "name",        :default => "", :null => false
@@ -263,13 +263,13 @@ ActiveRecord::Schema.define(:version => 36) do
     t.string   "processor_manufacturer"
     t.string   "processor_model"
     t.string   "processor_speed"
-    t.integer  "processor_socket_count"
-    t.integer  "processor_count"
+    t.integer  "processor_socket_count",        :default => 0
+    t.integer  "processor_count",               :default => 0
     t.string   "physical_memory"
     t.string   "physical_memory_sizes"
     t.string   "os_memory"
     t.string   "swap"
-    t.integer  "power_supply_count"
+    t.integer  "power_supply_count",            :default => 0
     t.string   "console_type"
     t.string   "uniqueid"
     t.string   "kernel_version"
@@ -342,7 +342,7 @@ ActiveRecord::Schema.define(:version => 36) do
   create_table "racks", :force => true do |t|
     t.string   "name"
     t.text     "location"
-    t.text     "description"
+    t.string   "description"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.datetime "deleted_at"
@@ -351,6 +351,11 @@ ActiveRecord::Schema.define(:version => 36) do
   add_index "racks", ["id"], :name => "index_racks_on_id"
   add_index "racks", ["name"], :name => "index_racks_on_name"
   add_index "racks", ["deleted_at"], :name => "index_racks_on_deleted_at"
+
+  create_table "schema_migrations", :primary_key => "version", :force => true do |t|
+  end
+
+  add_index "schema_migrations", ["version"], :name => "unique_schema_migrations", :unique => true
 
   create_table "sessions", :force => true do |t|
     t.string   "session_id"
@@ -363,7 +368,7 @@ ActiveRecord::Schema.define(:version => 36) do
 
   create_table "statuses", :force => true do |t|
     t.string   "name"
-    t.text     "description"
+    t.string   "description"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.datetime "deleted_at"
@@ -376,9 +381,8 @@ ActiveRecord::Schema.define(:version => 36) do
   create_table "subnets", :force => true do |t|
     t.string   "network",       :default => "", :null => false
     t.string   "netmask",       :default => "", :null => false
-    t.string   "gateway",       :default => "", :null => false
+    t.string   "gateway",       :default => ""
     t.string   "broadcast",     :default => "", :null => false
-    t.string   "resolvers"
     t.integer  "node_group_id"
     t.text     "description"
     t.datetime "created_at"
