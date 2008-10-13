@@ -1,20 +1,18 @@
-require File.join(File.dirname(__FILE__), 'test_helper')
+require File.expand_path(File.dirname(__FILE__) + '/test_helper')
 
 class ActsAsAuditedTest < Test::Unit::TestCase
   
-  def test_acts_as_authenticated_declaration
-    [:non_audited_columns, :audited_columns, :without_auditing].each do |m|
-      assert User.respond_to?(m), "User class should respond to #{m}."
-    end
-
-    u = User.new
-    [:audits, :save_without_auditing, :without_auditing, :audited_attributes, :changed?].each do |m|
-      assert u.respond_to?(m), "User object should respond to #{m}."
-    end
+  def test_acts_as_authenticated_declaration_includes_instance_methods
+    assert_kind_of CollectiveIdea::Acts::Audited::InstanceMethods, User.new
   end
   
+  def test_acts_as_authenticated_declaration_extends_singleton_methods
+    assert_kind_of CollectiveIdea::Acts::Audited::SingletonMethods, User
+  end
+
   def test_audited_attributes
-    assert_equal ['name', 'username', 'logins', 'activated'].sort, User.new.audited_attributes.sort
+    attrs = {'name' => nil, 'username' => nil, 'logins' => 0, 'activated' => nil}
+    assert_equal attrs, User.new.audited_attributes
   end
   
   def test_non_audited_columns
@@ -38,6 +36,33 @@ class ActsAsAuditedTest < Test::Unit::TestCase
     assert_difference(Audit, :count)    { assert u.destroy }
   end
   
+  def test_create
+    u = User.create! :name => 'Brandon'
+    assert_equal 1, u.audits.count
+    audit = u.audits.first
+    assert_equal 'create', audit.action
+    assert_equal u.audited_attributes, audit.changes
+  end
+  
+  def test_update
+    u = create_user
+    u.update_attributes :name => 'Changed'
+    assert_equal 2, u.audits.count
+    u.reload
+    audit = u.audits.first
+    assert_equal 'update', audit.action
+    assert_equal({'name' => 'Changed'}, audit.changes)
+  end
+
+  def test_destroy
+    u = create_user
+    u.destroy
+    assert_equal 2, u.audits.count
+    audit = u.audits.first
+    assert_equal 'destroy', audit.action
+    assert_nil audit.changes
+  end
+  
   def test_save_without_auditing
     assert_no_difference Audit, :count do
       u = User.new(:name => 'Brandon')
@@ -56,8 +81,8 @@ class ActsAsAuditedTest < Test::Unit::TestCase
     assert !u.changed?
     u.name = "Bobby"
     assert u.changed?
-    assert u.changed?(:name)
-    assert !u.changed?(:username)
+    assert u.name_changed?
+    assert !u.username_changed?
   end
   
   def test_clears_changed_attributes_after_save
@@ -76,8 +101,8 @@ class ActsAsAuditedTest < Test::Unit::TestCase
   end
   
   def test_that_changes_is_a_hash
-    u = create_user
-    audit = Audit.find(u.audits.first.id)
+    audit = create_user.audits.first
+    audit.reload
     assert audit.changes.is_a?(Hash)
   end
   
@@ -99,12 +124,12 @@ class ActsAsAuditedTest < Test::Unit::TestCase
   def test_latest_revision_first
     u = User.create(:name => 'Brandon')
     assert_equal 1, u.revisions.size
-    assert_equal nil, u.revisions[0].name
+    assert_equal 'Brandon', u.revisions[0].name
     
     u.update_attribute :name, 'Foobar'
     assert_equal 2, u.revisions.size
-    assert_equal 'Brandon', u.revisions[0].name
-    assert_equal nil, u.revisions[1].name
+    assert_equal 'Foobar', u.revisions[0].name
+    assert_equal 'Brandon', u.revisions[1].name
   end
   
   def test_revisions_without_changes
@@ -132,7 +157,7 @@ class ActsAsAuditedTest < Test::Unit::TestCase
     revision = u.revision(3)
     assert_kind_of User, revision
     assert_equal 3, revision.version
-    assert_equal 'Foobar 2', revision.name
+    assert_equal 'Foobar 3', revision.name
   end
   
   def test_get_previous_revision
@@ -144,7 +169,7 @@ class ActsAsAuditedTest < Test::Unit::TestCase
   
   def test_revision_marks_attributes_changed
     u = create_versions(2)
-    assert u.revision(1).changed?(:name)
+    assert u.revision(1).name_changed?
   end
 
   def test_save_revision_records_audit
@@ -154,20 +179,59 @@ class ActsAsAuditedTest < Test::Unit::TestCase
     end
   end
   
-private
-
-  def create_user(attrs = {})
-    User.create({:name => 'Brandon', :username => 'brandon', :password => 'password'}.merge(attrs))
+  def test_without_previous_audits
+    user = create_user
+    user.audits.destroy_all
+    assert_nothing_raised(NoMethodError) { user.revision(:previous) }
   end
   
-  def create_versions(n = 2)
-    returning User.create(:name => 'Foobar 1') do |u|
-      (n - 1).times do |i|
-        u.update_attribute :name, "Foobar #{i + 2}"
+  def test_without_auditing
+    u = create_user
+    assert_no_difference Audit, :count do
+      User.without_auditing do
+        u.update_attribute :name, 'Changed'
       end
-      u.reload
     end
-    
+    assert_difference Audit, :count do
+      u.update_attribute :name, 'Changed Again'
+    end
   end
-
+  
+  def test_disable_auditing_callbacks
+    User.disable_auditing_callbacks
+    assert_no_difference Audit, :count do
+      create_user
+    end
+  ensure
+    User.enable_auditing_callbacks
+  end
+  
+  class InaccessibleUser < ActiveRecord::Base
+    set_table_name :users
+    acts_as_audited
+    attr_accessible :name, :username, :password
+  end
+  def test_attr_accessible_breaks
+    assert_raises(RuntimeError) { InaccessibleUser.new(:name => 'FAIL!') }
+  end
+  
+  class UnprotectedUser < ActiveRecord::Base
+    set_table_name :users
+    acts_as_audited :protect => false
+    attr_accessible :name, :username, :password
+  end
+  def test_attr_accessible_without_protection
+    assert_nothing_raised { UnprotectedUser.new(:name => 'NO FAIL!') }
+  end
+  
+  # declare attr_accessible before calling aaa
+  class AccessibleUser < ActiveRecord::Base
+    set_table_name :users
+    attr_accessible :name, :username, :password
+    acts_as_audited
+  end
+  def test_attr_accessible_without_protection
+    assert_nothing_raised { AccessibleUser.new(:name => 'NO FAIL!') }
+  end
+  
 end
