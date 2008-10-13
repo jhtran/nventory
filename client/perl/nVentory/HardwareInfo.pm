@@ -26,6 +26,7 @@ my @physical_memory_sizes;
 my $uniqueid;
 my $power_supply_count;
 my $first_nic_hwaddr;
+my %dmidata;
 my %nicdata;
 
 sub get_host_manufacturer
@@ -36,7 +37,8 @@ sub get_host_manufacturer
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			%dmidata = _getdmidata();
+			$host_manufacturer = $dmidata{'System Information'}[0]->{'Manufacturer'};
 		}
 		elsif ($os eq 'SunOS' &&
 			(nVentory::OSInfo::getosarch() eq 'i386' || nVentory::OSInfo::getosarch() eq 'amd64'))
@@ -49,6 +51,7 @@ sub get_host_manufacturer
 			{
 				warn "Running 'uname -s'" if ($debug);
 				my $unamei=`uname -i`;
+				chomp $unamei;
 				warn "Running '/usr/platform/$unamei/sbin/prtdiag'" if ($debug);
 				open my $prtdiagfh, '-|', "/usr/platform/$unamei/sbin/prtdiag"
 					or die "open prtdiag: $!";
@@ -96,7 +99,8 @@ sub get_host_model
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			%dmidata = _getdmidata();
+			$host_model = $dmidata{'System Information'}[0]->{'Product Name'};
 		}
 		elsif ($os eq 'SunOS')
 		{
@@ -138,7 +142,8 @@ sub get_host_serial
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			%dmidata = _getdmidata();
+			$host_serial = $dmidata{'System Information'}[0]->{'Serial Number'};
 		}
 		elsif ($os eq 'SunOS' &&
 			(nVentory::OSInfo::getosarch() eq 'i386' || nVentory::OSInfo::getosarch() eq 'amd64') &&
@@ -199,7 +204,8 @@ sub get_cpu_manufacturer
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			%dmidata = _getdmidata();
+			$cpu_manufacturer = $dmidata{'Processor Information'}[0]->{'Manufacturer'};
 		}
 		elsif ($os eq 'SunOS' &&
 			(nVentory::OSInfo::getosarch() eq 'i386' || nVentory::OSInfo::getosarch() eq 'amd64'))
@@ -307,7 +313,18 @@ sub get_cpu_model
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			%dmidata = _getdmidata();
+			$cpu_model = $dmidata{'Processor Information'}[0]->{'Family'};
+			my $cpu_version = $dmidata{'Processor Information'}[0]->{'Version'};
+			# Some processors seem to put the model information into the
+			# "Version" field.  So if the "Family" field doesn't have
+			# anything interesting and "Version" does then use it.
+			if ($cpu_version ne 'Not Specified' &&
+				(!$cpu_model ||
+					$cpu_model eq 'Other'))
+			{
+				$cpu_model = $cpu_version;
+			}
 		}
 		elsif ($os eq 'SunOS' || $os eq 'Mac OS X')
 		{
@@ -332,7 +349,8 @@ sub get_cpu_speed
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			%dmidata = _getdmidata();
+			$cpu_speed = $dmidata{'Processor Information'}[0]->{'Current Speed'};
 		}
 		elsif ($os eq 'SunOS')
 		{
@@ -387,7 +405,16 @@ sub get_cpu_count
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			my $temp_cpu_count;
+			%dmidata = _getdmidata();
+			foreach my $socket (@{$dmidata{'Processor Information'}})
+			{
+				if ($socket->{'Status'} =~ /Populated/)
+				{
+					$temp_cpu_count++;
+				}
+			}
+			$cpu_count = $temp_cpu_count;
 		}
 		elsif ($os eq 'SunOS' &&
 			(nVentory::OSInfo::getosarch() eq 'i386' || nVentory::OSInfo::getosarch() eq 'amd64') &&
@@ -472,7 +499,7 @@ sub get_cpu_core_count
 					$coreid = $1;
 				}
 				
-				if ($physicalid && $coreid)
+				if (defined $physicalid && defined $coreid)
 				{
 					$cores{"$physicalid:$coreid"} = 1;
 				}
@@ -548,7 +575,13 @@ sub get_cpu_socket_count
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			my $temp_cpu_socket_count;
+			%dmidata = _getdmidata();
+			foreach my $socket (@{$dmidata{'Processor Information'}})
+			{
+				$temp_cpu_socket_count++;
+			}
+			$cpu_socket_count = $temp_cpu_socket_count;
 		}
 		elsif ($os eq 'SunOS' &&
 			(nVentory::OSInfo::getosarch() eq 'i386' || nVentory::OSInfo::getosarch() eq 'amd64') &&
@@ -582,7 +615,28 @@ sub get_physical_memory
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			my $temp_physical_memory;
+			my @temp_physical_memory_sizes;
+			%dmidata = _getdmidata();
+			foreach my $memdevice (@{$dmidata{'Memory Device'}})
+			{
+				my $size = $memdevice->{'Size'};
+				my $form_factor = $memdevice->{'Form Factor'};
+				# Some systems report little chunks of memory other than main system
+				# memory as Memory Devices, the 'DIMM' as form factor seems to
+				# indicate main system memory.
+				if ($size ne 'No Module Installed' && $form_factor eq 'DIMM')
+				{
+					my ($megs, $units) = split(' ', $size);
+					die if ($units ne 'MB');
+					# We keep both a running total of memory size and an
+					# array of the sizes of the individual sticks.
+					$temp_physical_memory += $megs;
+					push(@temp_physical_memory_sizes, $megs);
+				}
+			}
+			$physical_memory = $temp_physical_memory;
+			@physical_memory_sizes = @temp_physical_memory_sizes;
 		}
 		elsif ($os eq 'SunOS' &&
 			(nVentory::OSInfo::getosarch() eq 'i386' || nVentory::OSInfo::getosarch() eq 'amd64') &&
@@ -642,7 +696,8 @@ sub get_physical_memory_sizes
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			# The memory sizes are gathered as a side-effect on these platforms
+			get_physical_memory();
 		}
 		elsif ($os eq 'SunOS' &&
 			(nVentory::OSInfo::getosarch() eq 'i386' || nVentory::OSInfo::getosarch() eq 'amd64') &&
@@ -712,7 +767,8 @@ sub get_uniqueid
 
 		if ($os =~ /Linux/ || $os eq 'FreeBSD')
 		{
-			_getdmidata();
+			%dmidata = _getdmidata();
+			$uniqueid = $dmidata{'System Information'}[0]->{'UUID'};
 			if (!$uniqueid)
 			{
 				getnicdata();
@@ -774,7 +830,7 @@ sub get_power_supply_count
 					$temp_power_supply_count++;
 				}
 			}
-			close(HPASM);			
+			close(HPASM);
 		}
 		# Check for Dell's OMSA
 		elsif (-x '/opt/dell/srvadmin/oma/bin/omreport')
@@ -794,6 +850,7 @@ sub get_power_supply_count
 		{
 			warn "Running 'uname -s'" if ($debug);
 			my $unamei=`uname -i`;
+			chomp $unamei;
 			warn "Running '/usr/platform/$unamei/sbin/prtdiag -v'" if ($debug);
 			open my $prtdiagfh, '-|', "/usr/platform/$unamei/sbin/prtdiag -v"
 				or die "open prtdiag: $!";
@@ -826,150 +883,73 @@ sub get_power_supply_count
 # on Linux and FreeBSD
 sub _getdmidata
 {
-	my $temp_cpu_manufacturer;
-	my $temp_cpu_model;
-	my $temp_cpu_speed;
-	my $temp_cpu_socket_count;
-	my $temp_cpu_count;
-	my $temp_physical_memory;
-	my @temp_physical_memory_sizes;
-
-	# dmidecode will fail if not run as root
-	if ($> != 0)
+	if (!%dmidata)
 	{
-		die "This must be run as root";
+		# dmidecode will fail if not run as root
+		if ($> != 0)
+		{
+			die "This must be run as root";
+		}
+
+		my $look_for_section_name;
+		my $dmi_section;
+		my %dmi_section_data;
+		my $dmi_section_array;
+		warn "Running 'dmidecode'" if ($debug);
+		open my $dmifh, '-|', 'dmidecode' or die "open dmidecode: $!";
+		while (<$dmifh>)
+		{
+			if (/^Handle/)
+			{
+				if ($dmi_section && %dmi_section_data)
+				{
+					# We need to store the data in a new hash so that we
+					# can store a reference to that hash in our larger
+					# data structure, and reuse %dmi_section_data for the
+					# next section.  It is escaping me how to just assign
+					# %dmi_section_data a new hash.  The assignment to ()
+					# below just clears out the current hash.
+					my %tmp = %dmi_section_data;
+					push(@{$dmidata{$dmi_section}}, \%tmp)
+				}
+				# New section of the dmidecode output, reset any state variables
+				undef $dmi_section;
+				%dmi_section_data = ();
+				undef $dmi_section_array;
+				# And flag that we should now look for the section name
+				$look_for_section_name = 1;
+			}
+			elsif ($look_for_section_name)
+			{
+				if (/^\s*DMI type/)
+				{
+					next;
+				}
+				elsif (/^\s*(.*)/)
+				{
+					$dmi_section = $1;
+					$look_for_section_name = 0;
+				}
+			}
+			elsif ($dmi_section && /^\s*([^:]+):\s*(\S.*)/)
+			{
+				$dmi_section_data{$1} = $2;
+				undef $dmi_section_array;
+			}
+			elsif ($dmi_section && /^\s*([^:]+):$/)
+			{
+				$dmi_section_array = $1;
+			}
+			elsif ($dmi_section && $dmi_section_array && /^\s*(\S.+)$/)
+			{
+				push(@{$dmi_section_data{$dmi_section_array}}, $1);
+			}
+		}
+		
+		warn "_getdmidata returning ", Dumper(\%dmidata) if ($debug);
 	}
 
-	my $look_for_section_name;
-	my $dmi_section;
-	warn "Running 'dmidecode'" if ($debug);
-	open my $dmifh, '-|', 'dmidecode' or die "open dmidecode: $!";
-	while (<$dmifh>)
-	{
-		if (/^Handle/)
-		{
-			# New section of the dmidecode output, reset any state variables
-			undef $dmi_section;
-			# And flag that we should now look for the section name
-			$look_for_section_name = 1;
-		}
-		elsif ($look_for_section_name)
-		{
-			if (/^\s*DMI type/)
-			{
-				next;
-			}
-			elsif (/^\s*(.*)/)
-			{
-				$dmi_section = $1;
-				$look_for_section_name = 0;
-			}
-		}
-		elsif ($dmi_section && $dmi_section eq 'System Information')
-		{
-			if (/^\s+Manufacturer: (.+\b)/)
-			{
-				$host_manufacturer = $1;
-			}
-			elsif (/^\s+Product Name: (.+\b)/)
-			{
-				$host_model = $1;
-			}
-			elsif (/^\s+Serial Number: (.+\b)/)
-			{
-				$host_serial = $1;
-			}
-			elsif (/^\s+UUID: (.+\b)/)
-			{
-				$uniqueid = $1;
-			}
-		}
-		elsif ($dmi_section && $dmi_section eq 'Processor Information')
-		{
-			if (/^\s+Manufacturer: (.+\b)/)
-			{
-				$temp_cpu_manufacturer = $1;
-			}
-			elsif (/^\s+Family: (.+\b)/)
-			{
-				$temp_cpu_model = $1;
-			}
-			elsif (/^\s+Version: (.+\b)/)
-			{
-				my $version = $1;
-
-				# Some processors seem to put the model information into the
-				# "Version" field.  So if the "Family" field doesn't have
-				# anything interesting and "Version" does then use it.
-				if ($version ne 'Not Specified' &&
-					(!$cpu_model ||
-						$cpu_model eq 'Other'))
-				{
-					$temp_cpu_model = $version;
-				}
-			}
-			elsif (/^\s+Current Speed: (.+\b)/)
-			{
-				$temp_cpu_speed = $1;
-			}
-			elsif (/^\s+Status: (.+\b)/)
-			{
-				my $status = $1;
-
-				$temp_cpu_socket_count++;
-
-				if ($status =~ /Populated/)
-				{
-					$temp_cpu_count++;
-
-					$cpu_manufacturer =
-						$temp_cpu_manufacturer;
-					undef $temp_cpu_manufacturer;
-					$cpu_model = $temp_cpu_model;
-					undef $temp_cpu_model;
-					$cpu_speed = $temp_cpu_speed;
-					undef $temp_cpu_speed;
-				}
-			}
-		}
-		elsif ($dmi_section && $dmi_section eq 'Memory Device')
-		{
-			if (/^\s+Size: (.+\b)/)
-			{
-				my $size = $1;
-				if ($size ne 'No Module Installed')
-				{
-					my ($megs, $units) = split(' ', $size);
-					die if ($units ne 'MB');
-					# We keep both a running total of memory size and an
-					# array of the sizes of the individual sticks.
-					$temp_physical_memory += $megs;
-					push(@temp_physical_memory_sizes, $megs);
-				}
-			}
-			elsif (/^\s+Form Factor: (.+\b)/)
-			{
-				my $form_factor = $1;
-				
-				if ($form_factor ne 'DIMM')
-				{
-					# Whoops, this isn't a DIMM.  I've seen small
-					# flash modules reported in dmidecode.
-					pop @temp_physical_memory_sizes;
-				}
-			}
-		}
-	}
-	close $dmifh;
-
-	# For each of these counter/collector-type variables we use a temporary
-	# variable to collect the data and then update the real variable in
-	# an atomic operation, so that there isn't a period where the real
-	# variable has only partial data.
-	$cpu_socket_count = $temp_cpu_socket_count;
-	$cpu_count = $temp_cpu_count;
-	$physical_memory = $temp_physical_memory;
-	@physical_memory_sizes = @temp_physical_memory_sizes;
+	return %dmidata;
 }
 
 # Gather a variety of info from smbios, which is available on Solaris x86

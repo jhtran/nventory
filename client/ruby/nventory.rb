@@ -1,8 +1,19 @@
 require 'facter'
 require 'net/http'
 require 'net/https'
+require 'cgi'
 require 'rexml/document'
 require 'yaml'
+
+# clean up "using default DH parameters" warning for https
+# http://blog.zenspider.com/2008/05/httpsssl-warning-cleanup.html
+class Net::HTTP
+  alias :old_use_ssl= :use_ssl=
+  def use_ssl= flag
+    self.old_use_ssl = flag
+    @ssl_context.tmp_dh_callback = proc {}
+  end
+end
 
 # Module and class names are constants, and thus have to start with a
 # capital letter.
@@ -53,13 +64,13 @@ class NVentory::Client
       get.each_pair do |key,values|
         if values.length > 1
           values.each do |value|
-            metaget << "#{key}[]=#{value}"
+            metaget << "#{key}[]=#{CGI.escape(value)}"
           end
         else
           # This isn't strictly necessary, specifying a single value via
           # 'key[]=[value]' would work fine, but this makes for a cleaner URL
           # and slightly reduced processing on the backend
-          metaget << "#{key}=#{values[0]}"
+          metaget << "#{key}=#{CGI.escape(values[0])}"
         end
       end
     end
@@ -67,18 +78,33 @@ class NVentory::Client
       exactget.each_pair do |key,values|
         if values.length > 1
           values.each do |value|
-            metaget << "exact_#{key}[]=#{value}"
+            metaget << "exact_#{key}[]=#{CGI.escape(value)}"
           end
         else
           # This isn't strictly necessary, specifying a single value via
           # 'key[]=[value]' would work fine, but this makes for a cleaner URL
           # and slightly reduced processing on the backend
-          metaget << "exact_#{key}=#{values[0]}"
+          metaget << "exact_#{key}=#{CGI.escape(values[0])}"
         end
       end
     end
     if includes
-      includes.each { |inc| metaget << "include[]=#{inc}" }
+      # includes = ['status', 'rack:datacenter']
+      # maps to
+      # include[status]=&include[rack]=datacenter
+      includes.each do |inc|
+        incstring = ''
+        if inc.include?(':')
+          incparts = inc.split(':')
+          lastpart = incparts.pop
+          incstring = 'include'
+          incparts.each { |part| incstring << "[#{part}]" }
+          incstring << "=#{lastpart}"
+        else
+          incstring = "include[#{inc}]="
+        end
+        metaget << incstring
+      end
     end
 
     querystring = metaget.join('&')
@@ -637,9 +663,11 @@ class NVentory::Client
         https.use_ssl = true
         if @ca_file && File.exist?(@ca_file)
           https.ca_file = @ca_file
+          https.verify_mode = OpenSSL::SSL::VERIFY_PEER
         end
         if @ca_path && File.directory?(@ca_path)
           https.ca_path = @ca_path
+          https.verify_mode = OpenSSL::SSL::VERIFY_PEER
         end
         https.verify_depth = 5
         req = Net::HTTP::Post.new('/login/login', @headers)

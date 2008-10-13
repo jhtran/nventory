@@ -12,6 +12,8 @@ use HTTP::Status;          # RC_* constants
 use File::stat;            # Improved stat
 use XML::LibXML;
 
+my $debug;
+
 my $SERVER = 'http://nventory';
 CONFIGFILE: foreach my $configfile ('/etc/nventory.conf', $ENV{HOME}.'/.nventory.conf')
 {
@@ -33,12 +35,24 @@ CONFIGFILE: foreach my $configfile ('/etc/nventory.conf', $ENV{HOME}.'/.nventory
 				# around
 				warn "Using server $SERVER from $configfile\n";
 			}
+			elsif ($key eq 'ca_file' && -f $value)
+			{
+				# This currently executes before anyone could call setdebug,
+				# so the debug message is never printed.
+				warn "Using CA file $value from $configfile\n" if ($debug);
+				$ENV{HTTPS_CA_FILE} = $value;
+			}
+			elsif ($key eq 'ca_path' && -d $value)
+			{
+				# This currently executes before anyone could call setdebug,
+				# so the debug message is never printed.
+				warn "Using CA directory $value from $configfile\n" if ($debug);
+				$ENV{HTTPS_CA_DIR} = $value;
+			}
 		}
 		close $configfh;
 	}
 }
-
-my $debug;
 
 my $_read_ua;
 my $_write_ua;
@@ -367,7 +381,7 @@ sub set_objects
 	if ($debug)
 	{
 		use Data::Dumper;
-		print Dumper(\%cleandata);		
+		print Dumper(\%cleandata);
 	}
 
 	if (%results)
@@ -566,6 +580,12 @@ sub register
 	if (!$dryrun)
 	{
 		set_objects('nodes', \%results, \%data, 'autoreg');
+	}
+	else
+	{
+		use Data::Dumper;
+		print "Registration data:";
+		print Dumper(\%data);
 	}
 }
 
