@@ -15,7 +15,7 @@ class ApplicationController < ActionController::Base
   # The login controller uses it to ensure that authentication occurs
   # over SSL.  All other activity that comes in on the SSL side (https)
   # will be redirected to the non-SSL (http) side.
-  include SslRequirement
+  #include SslRequirement
 
   # Turn on the acts_as_audited plugin for appropriate models
   audit Account, DatabaseInstance, DatabaseInstanceRelationship,
