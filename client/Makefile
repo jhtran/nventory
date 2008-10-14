@@ -18,7 +18,10 @@ rpm: nventory-client.spec
 	# The 3rdparty utils are currently used only on Solaris, and as at
 	# least one of them is written in Perl and requires Solaris-specific
 	# modules it throws off RPM's automatic dependency checking
-	find perl ruby | grep -v '\.svn' | grep -v 3rdparty | cpio -pdum $(BUILDROOT)/usr/nventory
+	# The cisco_scanner script requires a CPAN module, and folks are
+	# generally only going to need to run that script on a small number
+	# of systems, so leave it out of the client.
+	find perl ruby | grep -v '\.svn' | grep -v 3rdparty | grep -v cisco_scanner | cpio -pdum $(BUILDROOT)/usr/nventory
 	chmod 555 $(BUILDROOT)/usr/nventory/perl/nv
 	chmod 555 $(BUILDROOT)/usr/nventory/ruby/nv
 	mkdir -p $(BUILDROOT)/usr/bin
@@ -69,7 +72,6 @@ solaris: pkginfo depend
 	rm $(BUILDROOT)/usr/nventory/perl/nv.tmp
 	chmod 555 $(BUILDROOT)/usr/nventory/perl/nv
 	mv $(BUILDROOT)/usr/nventory/ruby/nv $(BUILDROOT)/usr/nventory/ruby/nv.tmp
-	# FIXME: Need to express dependency on CSW ruby package
 	cat $(BUILDROOT)/usr/nventory/ruby/nv.tmp | sed 's,/usr/bin/ruby,/opt/csw/bin/ruby,' > $(BUILDROOT)/usr/nventory/ruby/nv
 	rm $(BUILDROOT)/usr/nventory/ruby/nv.tmp
 	chmod 555 $(BUILDROOT)/usr/nventory/ruby/nv
