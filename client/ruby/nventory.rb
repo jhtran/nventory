@@ -27,6 +27,8 @@ class NVentory::Client
     @write_http = nil
     @read_http = nil
     @server = 'http://nventory'
+    @ca_file = nil
+    @ca_path = nil
 
     ['/etc/nventory.conf', "#{ENV['HOME']}/.nventory.conf"].each do |configfile|
       if File.exist?(configfile)
@@ -51,6 +53,12 @@ class NVentory::Client
           end
         end
       end
+    end
+
+	# Make sure the server URL ends in a / so that we can append paths
+	# to it
+    if @server !~ %r{/$}
+      @server << '/'
     end
   end
 
@@ -114,10 +122,12 @@ class NVentory::Client
     #
 
     http = get_http(login)
-    req = Net::HTTP::Get.new("/#{objecttype}.xml?#{querystring}", @headers)
-    warn "GET URL: #{req.path}" if (@debug)
+	uri = URI::join(@server, "#{objecttype}.xml?#{querystring}")
+    req = Net::HTTP::Get.new(uri.path, @headers)
+    warn "GET URL: #{uri.path}" if (@debug)
     response = http.request(req)
     if !response.kind_of?(Net::HTTPOK)
+      puts response.body
       response.error!
     end
 
@@ -148,10 +158,12 @@ class NVentory::Client
 
   def get_field_names(objecttype, login=nil)
     http = get_http(login)
-    req = Net::HTTP::Get.new("/#{objecttype}/field_names.xml", @headers)
-    warn "GET URL: #{req.path}" if (@debug)
+	uri = URI::join(@server, "#{objecttype}/field_names.xml")
+    req = Net::HTTP::Get.new(uri.path, @headers)
+    warn "GET URL: #{uri.path}" if (@debug)
     response = http.request(req)
     if !response.kind_of?(Net::HTTPOK)
+      puts response.body
       response.error!
     end
 
@@ -205,14 +217,16 @@ class NVentory::Client
         # PUT to update an existing object
         if result['id']
           http = get_http(login, password_callback)
-          req = Net::HTTP::Put.new("/#{objecttypes}/#{result['id']}.xml", @headers)
+          uri = URI::join(@server, "#{objecttypes}/#{result['id']}.xml")
+          req = Net::HTTP::Put.new(uri.path, @headers)
           req.set_form_data(cleandata)
-          warn "PUT to URL: #{@server}/#{objecttypes}/#{result['id']}.xml" if (@debug)
+          warn "PUT to URL: #{uri.path}" if (@debug)
           if !@dryrun
             response = http.request(req)
             # FIXME: Aborting partway through a multi-node action is probably
             # not ideal behavior
             if !response.kind_of?(Net::HTTPOK)
+              puts response.body
               response.error!
             end
           end
@@ -222,12 +236,14 @@ class NVentory::Client
       end
     else
       http = get_http(login, password_callback)
-      req = Net::HTTP::Post.new("/#{objecttypes}.xml", @headers)
+      uri = URI::join(@server, "#{objecttypes}.xml")
+      req = Net::HTTP::Post.new(uri.path, @headers)
       req.set_form_data(cleandata)
-      warn "POST to URL: #{@server}/#{objecttypes}.xml" if (@debug)
+      warn "POST to URL: #{uri.path}" if (@debug)
       if !@dryrun
         response = http.request(req)
         if !response.kind_of?(Net::HTTPCreated)
+          puts response.body
           response.error!
         end
       end
@@ -567,7 +583,7 @@ class NVentory::Client
       return @read_http if (@read_http)
     end
 
-    serveruri = URI.parse(@server)
+    uri = URI.parse(@server)
 
     cookiefile = nil
     password = nil
@@ -611,12 +627,12 @@ class NVentory::Client
         rest.split('; ').each do |crumb|
           if crumb =~ /^domain=(.*)/
             domain = $1
-            if serveruri.host !~ Regexp.new("#{domain}$")
+            if uri.host !~ Regexp.new("#{domain}$")
               use = false
             end
           elsif crumb =~ /^path="(.*)"/
             path = $1
-            if serveruri.path !~ Regexp.new("^#{path}")
+            if uri.path !~ Regexp.new("^#{path}")
               use = false
             end
           end
@@ -628,7 +644,25 @@ class NVentory::Client
     end
     @headers = { 'Cookie' => cookies.join('; ') }
 
-    http = Net::HTTP.new(serveruri.host)
+    http = Net::HTTP.new(uri.host, uri.port)
+    https = nil
+    if uri.scheme == "https"
+      https = http
+    else
+      # FIXME: Need to provide a way for users to specify a non-standard
+      # HTTPS port when they aren't using HTTPS for all activity
+      https = Net::HTTP.new(uri.host, 443)
+    end
+    https.use_ssl = true
+    if @ca_file && File.exist?(@ca_file)
+      https.ca_file = @ca_file
+      https.verify_mode = OpenSSL::SSL::VERIFY_PEER
+    end 
+    if @ca_path && File.directory?(@ca_path)
+      https.ca_path = @ca_path
+      https.verify_mode = OpenSSL::SSL::VERIFY_PEER
+    end
+
     if login
       # User wants to be able to write to the server
 
@@ -637,9 +671,10 @@ class NVentory::Client
       # back a 302 redirect if we need to authenticate.  There's
       # nothing special about accounts, we could use any controller,
       # accounts just seemed appropriate.
-      response = http.post('/accounts.xml', '', @headers)
+      uri = URI::join(@server, 'accounts.xml')
+      response = http.post(uri.path, '', @headers)
       if response.kind_of?(Net::HTTPFound)
-        warn "POST to #{@server}/accounts.xml was redirected, authenticating" if (@debug)
+        warn "POST to #{uri.path} was redirected, authenticating" if (@debug)
         # Extract cookie
         newcookieentry = response['Set-Cookie']
         # Some cookie fields are optional, and should default to the
@@ -647,7 +682,7 @@ class NVentory::Client
         # save them properly.
         # http://cgi.netscape.com/newsref/std/cookie_spec.html
         if !newcookieentry.include?('domain=')
-          newcookieentry << "; domain=#{serveruri.host}"
+          newcookieentry << "; domain=#{uri.host}"
         end
         newcookie, rest = newcookieentry.split('; ', 2)
         if !cookies.include?(newcookie)
@@ -659,18 +694,8 @@ class NVentory::Client
           File.open(cookiefile, 'a') { |file| file.puts("Set-Cookie: #{newcookieentry}") }
         end
         # Logins need to go to HTTPS
-        https = Net::HTTP.new(serveruri.host, 443)
-        https.use_ssl = true
-        if @ca_file && File.exist?(@ca_file)
-          https.ca_file = @ca_file
-          https.verify_mode = OpenSSL::SSL::VERIFY_PEER
-        end
-        if @ca_path && File.directory?(@ca_path)
-          https.ca_path = @ca_path
-          https.verify_mode = OpenSSL::SSL::VERIFY_PEER
-        end
-        https.verify_depth = 5
-        req = Net::HTTP::Post.new('/login/login', @headers)
+		uri = URI::join(@server, 'login/login')
+        req = Net::HTTP::Post.new(uri.path, @headers)
         password = password_callback.get_password if (!password)
         req.set_form_data({'login' => login, 'password' => password})
         response = https.request(req)
@@ -683,9 +708,10 @@ class NVentory::Client
         if response['Location']
           locurl = URI.parse(response['Location'])
         end
-        if (!response.kind_of?(Net::HTTPFound) || locurl.path == '/login/login')
+        if (!response.kind_of?(Net::HTTPFound) || locurl.path == uri.path)
           warn "Authentication failed"
           if @debug
+            puts response.body
             response.error!
           else
             abort
