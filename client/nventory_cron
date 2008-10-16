@@ -1,4 +1,4 @@
 # Run the nventory client in registration mode every three hours
 MAILTO=""
-0 */3 * * * root /usr/nventory/nventory_cron_wrapper 
+0 */3 * * * root /usr/sbin/nventory_cron_wrapper 
 

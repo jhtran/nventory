@@ -34,6 +34,7 @@ nVentory client
 /usr/lib/perl5/site_perl/nVentory
 /usr/lib/ruby/site_ruby/1.8/nventory.rb
 /etc/cron.d/nventory
+/usr/sbin/nventory_cron_wrapper
 %config /etc/nventory.conf
 
 %post

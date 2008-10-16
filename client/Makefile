@@ -31,8 +31,9 @@ rpm: nventory-client.spec
 	# Cron job for registration
 	mkdir -p $(BUILDROOT)/etc/cron.d
 	cp nventory_cron $(BUILDROOT)/etc/cron.d/nventory
-	cp nventory_cron_wrapper $(BUILDROOT)/usr/nventory
-	chmod 555 $(BUILDROOT)/usr/nventory/nventory_cron_wrapper
+	mkdir -p $(BUILDROOT)/usr/sbin
+	cp nventory_cron_wrapper $(BUILDROOT)/usr/sbin
+	chmod 555 $(BUILDROOT)/usr/sbin/nventory_cron_wrapper
 	#
 	# Now build the package
 	#
@@ -96,8 +97,9 @@ solaris: pkginfo depend
 	cp -p nventory.conf $(BUILDROOT)/etc
 	#cp -p ca.pem $(BUILDROOT)/etc/nventory
 	# Cron job for registration
-	cat nventory_cron_wrapper | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/nventory/nventory_cron_wrapper
-	chmod 555 $(BUILDROOT)/usr/nventory/nventory_cron_wrapper
+	mkdir -p $(BUILDROOT)/usr/sbin
+	cat nventory_cron_wrapper | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/sbin/nventory_cron_wrapper
+	chmod 555 $(BUILDROOT)/usr/sbin/nventory_cron_wrapper
 	#
 	# Now build the package
 	#
@@ -110,7 +112,7 @@ solaris: pkginfo depend
 	# The first sed just cleans up the directory names
 	# The second and third seds tell pkgadd to not force our permissions
 	# on /usr and /usr/bin
-	find $(BUILDROOT) | pkgproto | tail +2 | sed "s,$(BUILDROOT),," | sed 's,/usr .*,/usr ? ? ?,' | sed 's,/usr/bin .*,/usr/bin ? ? ?,' >> prototype
+	find $(BUILDROOT) | pkgproto | tail +2 | sed "s,$(BUILDROOT),," | sed 's,/usr .*,/usr ? ? ?,' | sed 's,/usr/bin .*,/usr/bin ? ? ?,' | sed 's,/usr/sbin .*,/usr/sbin ? ? ?,' >> prototype
 	pkgmk -r $(BUILDROOT) -d $(PWD)
 	pkgtrans . OSSnventory-$(VER).pkg OSSnventory
 	rm -rf OSSnventory
