@@ -184,9 +184,13 @@ class NVentory::Client
     results = get_objects('node_groups', {}, {'name' => [nodegroup]}, ['nodes', 'child_groups'])
     nodes = {}
     if results.has_key?(nodegroup)
-      results[nodegroup]['nodes'].each { |node| nodes[node['name']] = true }
-      results[nodegroup]['child_groups'].each do |child_group|
-        get_expanded_nodegroup(child_group['name']).each { |child_group_node| nodes[child_group_node] = true }
+      if results[nodegroup].has_key?('nodes')
+        results[nodegroup]['nodes'].each { |node| nodes[node['name']] = true }
+      end
+      if results[nodegroup].has_key?('child_groups')
+        results[nodegroup]['child_groups'].each do |child_group|
+          get_expanded_nodegroup(child_group['name']).each { |child_group_node| nodes[child_group_node] = true }
+        end
       end
     end
     nodes.keys.sort
