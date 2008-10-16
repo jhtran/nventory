@@ -14,19 +14,20 @@ rpm: nventory-client.spec
 	# Create package file structure in build root
 	#
 	rm -rf $(BUILDROOT)
-	mkdir -p $(BUILDROOT)/usr/nventory
-	# The 3rdparty utils are currently used only on Solaris, and as at
-	# least one of them is written in Perl and requires Solaris-specific
-	# modules it throws off RPM's automatic dependency checking
-	# The cisco_scanner script requires a CPAN module, and folks are
-	# generally only going to need to run that script on a small number
-	# of systems, so leave it out of the client.
-	find perl ruby | grep -v '\.svn' | grep -v 3rdparty | grep -v cisco_scanner | cpio -pdum $(BUILDROOT)/usr/nventory
-	chmod 555 $(BUILDROOT)/usr/nventory/perl/nv
-	chmod 555 $(BUILDROOT)/usr/nventory/ruby/nv
 	mkdir -p $(BUILDROOT)/usr/bin
+	cp -p perl/nv $(BUILDROOT)/usr/bin/nv.perl
+	chmod 555 $(BUILDROOT)/usr/bin/nv.perl
+	cp -p ruby/nv $(BUILDROOT)/usr/bin/nv.ruby
+	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
 	# Make the perl client the default client for now
-	ln -s /usr/nventory/perl/nv $(BUILDROOT)/usr/bin/nv
+	ln -s nv.perl $(BUILDROOT)/usr/bin/nv
+	mkdir -p $(BUILDROOT)/usr/lib/perl5/site_perl
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/lib/perl5/site_perl)
+	mkdir -p $(BUILDROOT)/usr/lib/ruby/site_ruby/1.8
+	cp -p ruby/nventory.rb $(BUILDROOT)/usr/lib/ruby/site_ruby/1.8
+	mkdir -p $(BUILDROOT)/etc/nventory
+	cp -p nventory.conf $(BUILDROOT)/etc
+	#cp -p ca.pem $(BUILDROOT)/etc/nventory
 	# Cron job for registration
 	mkdir -p $(BUILDROOT)/etc/cron.d
 	cp nventory_cron $(BUILDROOT)/etc/cron.d/nventory
@@ -49,13 +50,20 @@ debian: control
 	rm -rf debtmp
 	mkdir -p debtmp/DEBIAN
 	grep -v '^#' control > debtmp/DEBIAN/control
-	mkdir -p debtmp/usr/nventory
-	find perl ruby | grep -v '\.svn' | cpio -pdum debtmp
-	chmod 555 debtmp/usr/nventory/perl/nv
-	chmod 555 debtmp/usr/nventory/ruby/nv
 	mkdir -p debtmp/usr/bin
+	cp -p perl/nv debtmp/usr/bin/nv.perl
+	chmod 555 debtmp/usr/bin/nv.perl
+	cp -p ruby/nv debtmp/usr/bin/nv.ruby
+	chmod 555 debtmp/usr/bin/nv.ruby
 	# Make the perl client the default client for now
-	ln -s /usr/nventory/perl/nv debtmp/usr/bin/nv
+	ln -s nv.perl debtmp/usr/bin/nv
+	mkdir -p debtmp/usr/lib/perl5/site_perl
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum debtmp/usr/lib/perl5/site_perl)
+	mkdir -p debtmp/usr/lib/ruby/site_ruby/1.8
+	cp -p ruby/nventory.rb debtmp/usr/lib/ruby/site_ruby/1.8
+	mkdir -p debtmp/etc/nventory
+	cp -p nventory.conf debtmp/etc
+	#cp -p ca.pem debtmp/etc/nventory
 	sudo chown -R 0:0 debtmp
 	dpkg --build debtmp nventory-client-$(VER).deb
 	rm -rf debtmp
@@ -65,19 +73,28 @@ solaris: pkginfo depend
 	# Create package file structure in build root
 	#
 	rm -rf $(BUILDROOT)
-	mkdir -p $(BUILDROOT)/usr/nventory
-	find perl ruby | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/nventory
-	mv $(BUILDROOT)/usr/nventory/perl/nv $(BUILDROOT)/usr/nventory/perl/nv.tmp
-	cat $(BUILDROOT)/usr/nventory/perl/nv.tmp | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/nventory/perl/nv
-	rm $(BUILDROOT)/usr/nventory/perl/nv.tmp
-	chmod 555 $(BUILDROOT)/usr/nventory/perl/nv
-	mv $(BUILDROOT)/usr/nventory/ruby/nv $(BUILDROOT)/usr/nventory/ruby/nv.tmp
-	cat $(BUILDROOT)/usr/nventory/ruby/nv.tmp | sed 's,/usr/bin/ruby,/opt/csw/bin/ruby,' > $(BUILDROOT)/usr/nventory/ruby/nv
-	rm $(BUILDROOT)/usr/nventory/ruby/nv.tmp
-	chmod 555 $(BUILDROOT)/usr/nventory/ruby/nv
 	mkdir -p $(BUILDROOT)/usr/bin
+	cp -p perl/nv $(BUILDROOT)/usr/bin/nv.perl
+	mv $(BUILDROOT)/usr/bin/nv.perl $(BUILDROOT)/usr/bin/nv.perl.tmp
+	cat $(BUILDROOT)/usr/bin/nv.perl.tmp | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/bin/nv.perl
+	rm $(BUILDROOT)/usr/bin/nv.perl.tmp
+	chmod 555 $(BUILDROOT)/usr/bin/nv.perl
+	cp -p ruby/nv $(BUILDROOT)/usr/bin/nv.ruby
+	mv $(BUILDROOT)/usr/bin/nv.ruby $(BUILDROOT)/usr/bin/nv.ruby.tmp
+	cat $(BUILDROOT)/usr/bin/nv.ruby.tmp | sed 's,/usr/bin/ruby,/opt/csw/bin/ruby,' > $(BUILDROOT)/usr/bin/nv.ruby
+	rm $(BUILDROOT)/usr/bin/nv.ruby.tmp
+	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
 	# Make the perl client the default client for now
-	ln -s /usr/nventory/perl/nv $(BUILDROOT)/usr/bin/nv
+	ln -s nv.perl $(BUILDROOT)/usr/bin/nv
+	mkdir -p $(BUILDROOT)/usr/lib/perl5/site_perl
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/lib/perl5/site_perl)
+	mkdir -p $(BUILDROOT)/usr/nventory
+	(cd perl && find 3rdparty | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/nventory)
+	mkdir -p $(BUILDROOT)/usr/lib/ruby/site_ruby/1.8
+	cp -p ruby/nventory.rb $(BUILDROOT)/usr/lib/ruby/site_ruby/1.8
+	mkdir -p $(BUILDROOT)/etc/nventory
+	cp -p nventory.conf $(BUILDROOT)/etc
+	#cp -p ca.pem $(BUILDROOT)/etc/nventory
 	# Cron job for registration
 	cat nventory_cron_wrapper | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/nventory/nventory_cron_wrapper
 	chmod 555 $(BUILDROOT)/usr/nventory/nventory_cron_wrapper

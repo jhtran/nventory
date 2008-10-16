@@ -707,15 +707,9 @@ sub get_physical_memory_sizes
 		}
 		elsif ($os eq 'SunOS')
 		{
-			# This is vaguely hacky, but seems better than
-			# hardcoding a full path here
-			my $myshortpath = 'nVentory/HardwareInfo.pm';
-			my $mypath = $INC{$myshortpath};
-			my $mydir = $mypath;
-			$mydir =~ s/$myshortpath//;
-			warn "Running '$mydir/3rdparty/memconf'" if ($debug);
-			open my $memconffh, '-|', "$mydir/3rdparty/memconf"
-				or die "open $mydir/3rdparty/memconf: $!";
+			warn "Running '/usr/nventory/3rdparty/memconf'" if ($debug);
+			open my $memconffh, '-|', "/usr/nventory/3rdparty/memconf"
+				or die "open /usr/nventory/3rdparty/memconf: $!";
 			while (<$memconffh>)
 			{
 				if (/(\d+)MB/ && !/total/)
@@ -1358,15 +1352,9 @@ sub getnicdata
 		# Gather Solaris NIC speed and duplex
 		if ($os eq 'SunOS')
 		{
-			# This is vaguely hacky, but seems better than
-			# hardcoding a full path here
-			my $myshortpath = 'nVentory/HardwareInfo.pm';
-			my $mypath = $INC{$myshortpath};
-			my $mydir = $mypath;
-			$mydir =~ s/$myshortpath//;
-			warn "Running '$mydir/3rdparty/checkcable'" if ($debug);
-			open my $checkfh, '-|', "$mydir/3rdparty/checkcable"
-				or die "open $mydir/3rdparty/checkcable: $!";
+			warn "Running '/usr/nventory/3rdparty/checkcable'" if ($debug);
+			open my $checkfh, '-|', "/usr/nventory/3rdparty/checkcable"
+				or die "open /usr/nventory/3rdparty/checkcable: $!";
 			while (<$checkfh>)
 			{
 				# Skip the header line

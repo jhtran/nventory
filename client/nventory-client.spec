@@ -28,9 +28,13 @@ nVentory client
 
 %files
 %defattr(-,root,root)
-/usr/nventory
 /usr/bin/nv
+/usr/bin/nv.perl
+/usr/bin/nv.ruby
+/usr/lib/perl5/site_perl/nVentory
+/usr/lib/ruby/site_ruby/1.8/nventory.rb
 /etc/cron.d/nventory
+%config /etc/nventory.conf
 
 %post
 # Run a one-time registration right away
