@@ -122,9 +122,9 @@ class NVentory::Client
     #
 
     http = get_http(login)
-	uri = URI::join(@server, "#{objecttype}.xml?#{querystring}")
-    req = Net::HTTP::Get.new(uri.path, @headers)
-    warn "GET URL: #{uri.path}" if (@debug)
+    uri = URI::join(@server, "#{objecttype}.xml?#{querystring}")
+    req = Net::HTTP::Get.new(uri.request_uri, @headers)
+    warn "GET URL: #{uri}" if (@debug)
     response = http.request(req)
     if !response.kind_of?(Net::HTTPOK)
       puts response.body
@@ -158,9 +158,9 @@ class NVentory::Client
 
   def get_field_names(objecttype, login=nil)
     http = get_http(login)
-	uri = URI::join(@server, "#{objecttype}/field_names.xml")
-    req = Net::HTTP::Get.new(uri.path, @headers)
-    warn "GET URL: #{uri.path}" if (@debug)
+    uri = URI::join(@server, "#{objecttype}/field_names.xml")
+    req = Net::HTTP::Get.new(uri.request_uri, @headers)
+    warn "GET URL: #{uri}" if (@debug)
     response = http.request(req)
     if !response.kind_of?(Net::HTTPOK)
       puts response.body
@@ -222,9 +222,9 @@ class NVentory::Client
         if result['id']
           http = get_http(login, password_callback)
           uri = URI::join(@server, "#{objecttypes}/#{result['id']}.xml")
-          req = Net::HTTP::Put.new(uri.path, @headers)
+          req = Net::HTTP::Put.new(uri.request_uri, @headers)
           req.set_form_data(cleandata)
-          warn "PUT to URL: #{uri.path}" if (@debug)
+          warn "PUT to URL: #{uri}" if (@debug)
           if !@dryrun
             response = http.request(req)
             # FIXME: Aborting partway through a multi-node action is probably
@@ -241,9 +241,9 @@ class NVentory::Client
     else
       http = get_http(login, password_callback)
       uri = URI::join(@server, "#{objecttypes}.xml")
-      req = Net::HTTP::Post.new(uri.path, @headers)
+      req = Net::HTTP::Post.new(uri.request_uri, @headers)
       req.set_form_data(cleandata)
-      warn "POST to URL: #{uri.path}" if (@debug)
+      warn "POST to URL: #{uri}" if (@debug)
       if !@dryrun
         response = http.request(req)
         if !response.kind_of?(Net::HTTPCreated)
@@ -676,9 +676,9 @@ class NVentory::Client
       # nothing special about accounts, we could use any controller,
       # accounts just seemed appropriate.
       uri = URI::join(@server, 'accounts.xml')
-      response = http.post(uri.path, '', @headers)
+      response = http.post(uri.request_uri, '', @headers)
       if response.kind_of?(Net::HTTPFound)
-        warn "POST to #{uri.path} was redirected, authenticating" if (@debug)
+        warn "POST to #{uri} was redirected, authenticating" if (@debug)
         # Extract cookie
         newcookieentry = response['Set-Cookie']
         # Some cookie fields are optional, and should default to the
@@ -698,8 +698,8 @@ class NVentory::Client
           File.open(cookiefile, 'a') { |file| file.puts("Set-Cookie: #{newcookieentry}") }
         end
         # Logins need to go to HTTPS
-		uri = URI::join(@server, 'login/login')
-        req = Net::HTTP::Post.new(uri.path, @headers)
+        uri = URI::join(@server, 'login/login')
+        req = Net::HTTP::Post.new(uri.request_uri, @headers)
         password = password_callback.get_password if (!password)
         req.set_form_data({'login' => login, 'password' => password})
         response = https.request(req)
