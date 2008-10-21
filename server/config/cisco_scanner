@@ -242,17 +242,6 @@ while (@todo)
 				{
 					$value = $NODE_INFO_MAP{$field}->{$value};
 				}
-				elsif ($field eq 'name')
-				{
-					# Pat wants FQDNs
-					if ($value =~ /^IRV/i || $value =~ /^DAL/i)
-					{
-						if ($value !~ /\./)
-						{
-							$value .= '.flight.yellowpages.com';
-						}
-					}
-				}
 				elsif ($field eq 'hardware_profile[manufacturer]')
 				{
 					# Normalize all forms of Cisco's name to just 'Cisco'
