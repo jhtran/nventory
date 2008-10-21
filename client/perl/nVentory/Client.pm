@@ -356,10 +356,6 @@ sub set_objects
 	{
 		%results = %$resultsref;
 	}
-	else
-	{
-		%results = undef;
-	}
 	my %data = %$dataref;
 	
 	# Convert any keys which don't already specify a model
