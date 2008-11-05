@@ -1,15 +1,11 @@
 #!/bin/sh
 
 # Everything about this makes me feel dirty
-crontab -l | /usr/xpg4/bin/grep -qs nventory
-if [ $? != 0 ]
-then
-	crontab -l > /tmp/root_crontab || exit 1
-	echo "0 0,3,6,9,12,15,18,21 * * * /usr/nventory/nventory_cron_wrapper" >> /tmp/root_crontab || exit 1
-	echo "0 0 * * * /opt/csw/bin/pkg-get -U; /opt/csw/bin/pkg-get -u YPCnventory" >> /tmp/root_crontab || exit 1
-	crontab /tmp/root_crontab
-	rm /tmp/root_crontab
-fi
+crontab -l | grep -v nventory > /tmp/root_crontab || exit 1
+echo "0 0,3,6,9,12,15,18,21 * * * /usr/sbin/nventory_cron_wrapper" >> /tmp/root_crontab || exit 1
+echo "0 0 * * * /opt/csw/bin/pkg-get -U; /opt/csw/bin/pkg-get -u YPCnventory" >> /tmp/root_crontab || exit 1
+crontab /tmp/root_crontab
+rm /tmp/root_crontab
 
 # Run a one-time registration right away
 nventory --register
