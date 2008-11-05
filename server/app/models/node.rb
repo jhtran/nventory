@@ -53,6 +53,19 @@ class Node < ActiveRecord::Base
     'name'
   end
  
+  def real_node_group_node_assignments
+    node_group_node_assignments.reject { |ngna| ngna.virtual_assignment? }
+  end
+  def real_node_groups
+    real_node_group_node_assignments.collect { |ngna| ngna.node_group }
+  end
+  def virtual_node_group_node_assignments
+    node_group_node_assignments.select { |ngna| ngna.virtual_assignment? }
+  end
+  def virtual_node_groups
+    virtual_ngnas.collect { |ngna| ngna.node_group }
+  end
+
   after_save :update_outlets
   
   def consumed_network_outlets

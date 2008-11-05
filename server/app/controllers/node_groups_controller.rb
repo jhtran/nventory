@@ -83,14 +83,17 @@ class NodeGroupsController < ApplicationController
   # POST /node_groups.xml
   def create
     @node_group = NodeGroup.new(params[:node_group])
-
+    
     node_save_successful = @node_group.save
+    logger.debug "node_save_successful: #{node_save_successful}"
     
     if node_save_successful
       # Process any node group -> node group assignment creations
       node_group_assignment_save_successful = process_node_group_assignments()
+      logger.debug "node_group_assignment_save_successful: #{node_group_assignment_save_successful}"
       # Process any node -> node group assignment creations
       node_assignment_save_successful = process_node_assignments()
+      logger.debug "node_assignment_save_successful: #{node_assignment_save_successful}"
     end
 
     respond_to do |format|
@@ -157,76 +160,26 @@ class NodeGroupsController < ApplicationController
   end
   
   def process_node_group_assignments
-    new_assignments = []
+    r = true
     if params.include?(:node_group_node_group_assignments)
       if params[:node_group_node_group_assignments].include?(:child_groups)
-        params[:node_group_node_group_assignments][:child_groups].each do |cgid|
-          # First ensure that all of the specified assignments exist
-          cg = NodeGroup.find(cgid)
-          if !cg.nil? && !@node_group.child_groups.include?(cg)
-            assignment = NodeGroupNodeGroupAssignment.new(:parent_id => @node_group.id,
-                                                          :child_id  => cgid)
-            new_assignments << assignment
-          end
-        end
-
-        # Now remove any existing assignments that weren't specified
-        @node_group.assignments_as_parent.each do |assignment|
-          if !params[:node_group_node_group_assignments][:child_groups].include?(assignment.child_id.to_s)
-            assignment.destroy
-          end
-        end
+        groupids = params[:node_group_node_group_assignments][:child_groups].collect { |g| g.to_i }
+        r = @node_group.set_child_groups(groupids)
       end
     end
-
-    node_group_assignment_save_successful = true
-    new_assignments.each do |assignment|
-      if !assignment.save
-        node_group_assignment_save_successful = false    
-        # Propagate the error from the assignment through to @node_group
-        # so that the user gets some feedback as to the problem
-        assignment.errors.each_full { |msg| @node_group.errors.add(:child_group_ids, msg) }
-      end
-    end
-
-    node_group_assignment_save_successful
+    r
   end
   private :process_node_group_assignments
 
   def process_node_assignments
-    new_assignments = []
+    r = true
     if params.include?(:node_group_node_assignments)
       if params[:node_group_node_assignments].include?(:nodes)
-        params[:node_group_node_assignments][:nodes].each do |nodeid|
-          # First ensure that all of the specified assignments exist
-          node = Node.find(nodeid)
-          if !node.nil? && !@node_group.nodes.include?(node)
-            assignment = NodeGroupNodeAssignment.new(:node_group_id => @node_group.id,
-                                                     :node_id       => nodeid)
-            new_assignments << assignment
-          end
-        end
-
-        # Now remove any existing assignments that weren't specified
-        @node_group.node_group_node_assignments.each do |assignment|
-          if !params[:node_group_node_assignments][:nodes].include?(assignment.node_id.to_s)
-            assignment.destroy
-          end
-        end
+        nodeids = params[:node_group_node_assignments][:nodes].collect { |n| n.to_i }
+        r = @node_group.set_nodes(nodeids)
       end
     end
-
-    node_assignment_save_successful = true
-    new_assignments.each do |assignment|
-      if !assignment.save
-        node_assignment_save_successful = false
-        # Propagate the error from the assignment through to @node_group
-        # so that the user gets some feedback as to the problem
-        assignment.errors.each_full { |msg| @node_group.errors.add(:node_ids, msg) }
-      end
-    end
-
-    node_assignment_save_successful
+    r
   end
   private :process_node_assignments
 

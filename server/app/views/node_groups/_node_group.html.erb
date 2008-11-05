@@ -18,7 +18,7 @@
   <% # FIXME: This belongs in the CSS %>
   <font size="-1">
   <%- Node.find(:all, :order => Node.default_search_attribute).each do |node| -%>
-    <%= check_box_tag('node_group_node_assignments[nodes][]', node.id, object.nodes.include?(node)) %> <%= node.name %><br/>
+    <%= check_box_tag('node_group_node_assignments[nodes][]', node.id, object.real_nodes.include?(node)) %> <%= node.name %><br/>
   <%- end -%>
   </font>
 </p>

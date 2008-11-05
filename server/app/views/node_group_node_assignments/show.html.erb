@@ -8,6 +8,7 @@
 
 <p><strong>Node:</strong> <%= h(@node_group_node_assignment.node.name) %><br />
 <strong>Node Group:</strong> <%= h(@node_group_node_assignment.node_group.name) %><br />
+<strong>Virtual Assignment:</strong> <%= h(@node_group_node_assignment.virtual_assignment) %><br />
 <strong>Assigned at:</strong> <%= h(@node_group_node_assignment.assigned_at.to_formatted_s(:long)) %></p>
 
 <p class="metadata"><strong>Created at:</strong> <%= h(@node_group_node_assignment.created_at) %><br />
@@ -17,7 +18,11 @@
 
 <%- if !@node_group_node_assignment.deleted_at -%>
 <p><%= link_to 'Edit', edit_node_group_node_assignment_path(@node_group_node_assignment) %> | 
-<%= link_to 'Delete', node_group_node_assignment_path(@node_group_node_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
+<%- confirm_message = 'Are you sure?' -%>
+<%- if @node_group_node_assignment.virtual_assignment? -%>
+  <%- confirm_message = 'Virtual assignments should not be manually deleted, are you REALLY sure?' -%>
+<%- end -%>
+<%= link_to 'Delete', node_group_node_assignment_path(@node_group_node_assignment), :confirm => confirm_message, :method => :delete %></p>
 <%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @node_group_node_assignment} %>

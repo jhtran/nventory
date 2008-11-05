@@ -21,7 +21,16 @@
 <p>
 <strong>Nodes:</strong>
 <ul>
-<%- @node_group.nodes.sort{|a,b| a.name <=> b.name}.each do |node| -%>
+<%- @node_group.real_nodes.sort{|a,b| a.name <=> b.name}.each do |node| -%>
+  <li><%= link_to node.name, node_url(node) %></li>
+<%- end -%>
+</ul>
+</p>
+
+<p>
+<strong>Virtual Nodes: (from child groups)</strong>
+<ul>
+<%- @node_group.virtual_nodes.sort{|a,b| a.name <=> b.name}.each do |node| -%>
   <li><%= link_to node.name, node_url(node) %></li>
 <%- end -%>
 </ul>

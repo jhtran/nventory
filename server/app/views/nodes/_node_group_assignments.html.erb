@@ -9,7 +9,7 @@
   </tr>
   </thead>
   <tbody>
-  <%- for assignment in node.node_group_node_assignments %>
+  <%- for assignment in node.real_node_group_node_assignments %>
   <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
       <td><%= link_to assignment.node_group.name, node_group_path(assignment.node_group) %></td>
       <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), node_group_node_assignment_path(assignment) %></td>
@@ -17,6 +17,25 @@
                               :url => node_group_node_assignment_path(assignment),
                               :confirm => 'Are you sure?',
                               :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+
+  <table cellspacing="0" class="styled" summary="A list of the node groups virtually assigned to this node.">
+  <caption>Virtual Node Groups</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>Assigned at</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in node.virtual_node_group_node_assignments %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.node_group.name, node_group_path(assignment.node_group) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), node_group_node_assignment_path(assignment) %></td>
   </tr>
   <%- end %>
   </tbody>
