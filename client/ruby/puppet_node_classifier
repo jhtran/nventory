@@ -5,7 +5,6 @@
 ##############################################################################
 
 require 'yaml'
-$: << '/usr/nventory/ruby'
 require 'nventory'
 
 name = ARGV[0] or abort "No hostname passed"

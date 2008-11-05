@@ -10,7 +10,6 @@ use Getopt::Long;
 use Net::SNMP;
 use Socket;
 use Data::Dumper;
-use lib '/usr/nventory/perl';
 use nVentory::Client;
 
 #

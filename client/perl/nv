@@ -6,7 +6,6 @@
 use strict;
 use warnings;
 use Getopt::Long;
-use lib '/usr/nventory/perl';
 use nVentory::Client;
 
 # Ensure we have a sane path, particularly since we might be run from

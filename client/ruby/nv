@@ -4,7 +4,6 @@
 ##############################################################################
 
 require 'optparse'
-$: << '/usr/nventory/ruby'
 require 'nventory'
 
 # Ensure we have a sane path, particularly since we might be run from
