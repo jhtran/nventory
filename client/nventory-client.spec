@@ -36,6 +36,7 @@ nVentory client
 /etc/cron.d/nventory
 /usr/sbin/nventory_cron_wrapper
 %config /etc/nventory.conf
+#%config /etc/nventory/ca.pem
 
 %post
 # Run a one-time registration right away
