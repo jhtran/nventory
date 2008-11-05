@@ -87,12 +87,12 @@ solaris: pkginfo depend
 	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
 	# Make the perl client the default client for now
 	ln -s nv.perl $(BUILDROOT)/usr/bin/nv
-	mkdir -p $(BUILDROOT)/usr/lib/perl5/site_perl
-	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/lib/perl5/site_perl)
+	mkdir -p $(BUILDROOT)/opt/csw/lib/perl/site_perl
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/opt/csw/lib/perl/site_perl)
 	mkdir -p $(BUILDROOT)/usr/nventory
 	(cd perl && find 3rdparty | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/nventory)
-	mkdir -p $(BUILDROOT)/usr/lib/ruby/site_ruby/1.8
-	cp -p ruby/nventory.rb $(BUILDROOT)/usr/lib/ruby/site_ruby/1.8
+	mkdir -p $(BUILDROOT)/opt/csw/lib/ruby/site_ruby/1.8
+	cp -p ruby/nventory.rb $(BUILDROOT)/opt/csw/lib/ruby/site_ruby/1.8
 	mkdir -p $(BUILDROOT)/etc/nventory
 	cp -p nventory.conf $(BUILDROOT)/etc
 	#cp -p ca.pem $(BUILDROOT)/etc/nventory
