@@ -20,6 +20,7 @@
 <p id="account_links">
 <%- if session[:account_id] -%>
 Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account) %>! 
+ | <%= link_to "Help", "http://nventory.wiki.sourceforge.net/UsingNventory" %> 
  | <%= link_to "Logout", :controller => 'login', :action => 'logout' %>
 <%- else -%>
 <%= link_to "Login", :controller => 'login', :action => 'login' %>
