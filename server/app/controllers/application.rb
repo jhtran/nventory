@@ -160,10 +160,20 @@ class ApplicationController < ActionController::Base
           logger.info "Ignored invalid include #{include_request}"
           next
         else
-          if !value.empty?
-            value = process_includes(assoc.klass, value)
+          # Rails appears to have a bug as of 2.1.1 such that including a
+          # has_one, through association causes an exception.  The exception
+          # looks like this for future reference:
+          # NoMethodError (undefined method `to_ary' for #<Datacenter:0x3aaa1b0>)
+          if assoc.macro == :has_one && assoc.options.has_key?(:through)
+            # FIXME: Need better error handling for XML users
+            flash[:error] = "Ignored has_one, through include #{include_request}"
+            logger.info "Ignored has_one, through include #{include_request}"
+          else
+            if !value.empty?
+              value = process_includes(assoc.klass, value)
+            end
+            includes[include_request.to_sym] = value
           end
-          includes[include_request.to_sym] = value
         end
       end
     end
