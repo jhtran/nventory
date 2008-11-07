@@ -208,7 +208,14 @@ SEARCH_SHORTCUTS = {
   'hw' => 'hardware_profile[name]',
   'hwmanuf' => 'hardware_profile[manufacturer]',
   'hwmodel' => 'hardware_profile[model]',
+  'ip' => 'ip_addresses',
+  'ips' => 'ip_addresses',
   'mac' => 'network_interfaces[hardware_address]',
+  'macs' => 'network_interfaces[hardware_address]',
+  'nic' => 'network_interfaces',
+  'nics' => 'network_interfaces',
+  'node_group' => 'node_groups[name]',
+  'node_groups' => 'node_groups[name]',
   'os' => 'operating_system[name]',
   'osvendor' => 'operating_system[vendor]',
   'osvariant' => 'operating_system[variant]',
@@ -355,7 +362,7 @@ elsif $allfields
   includes_hash = {}
   field_names = nvclient.get_field_names($objecttype)
   field_names.each do |field_name_entry|
-    field_name = field_name_entry.split(' ')
+    field_name, rest = field_name_entry.split(' ')
     if field_name =~ /([^\[]+)\[.+\]/
       includes_hash[$1] = true
     end
@@ -404,24 +411,7 @@ def fieldprint(fields, value)
     end
   elsif value.kind_of?(Array)
     value.each do |entry|
-      # Try to insert a relevant bit of data from the
-      # entry into the field list if we can find one,
-      # provides the user with a way to differentiate
-      # the members of the array.  I imagine this might
-      # be controversial as the resulting field name that
-      # is printed out doesn't really match up to anything
-      # meaningful on the server.  I.e. you couldn't
-      # turn around and perform a search on that field
-      # name.  It's a trade-off between usability when
-      # searching and ease of understanding for users.
-      # Suggestions for better ways to handle this welcome.
-      if entry.class == Hash && entry.has_key?('name')
-        fieldprint([fields, entry['name']].flatten, entry)
-      elsif entry.class == Hash && entry.has_key?('id')
-        fieldprint([fields, entry['id']].flatten, entry)
-      else
-        fieldprint(fields, entry)
-      end
+      fieldprint(fields, entry)
     end
   elsif ($allfields && !$allfields.any?{|all| fieldname.include?(all)}) || ($fields && $fields.any?{|field| fieldname.include?(field)})
     puts "#{fieldname}: #{value}"
