@@ -6,7 +6,6 @@ class DashboardController < ApplicationController
   def setup_sample_data
     if Datacenter.find(:all).length < 1
       
-      # Some System Install Defaults
       hp1 = HardwareProfile.new
       hp1.name = 'Sun Microsystems Sun Fire X4100'
       hp1.manufacturer = 'Sun Microsystems'
@@ -24,9 +23,10 @@ class DashboardController < ApplicationController
       hp1.power_supply_count = 1
       hp1.cards = ''
       hp1.description = 'Test Node Type'
+      hp1.visualization_color = 'purple'
+      hp1.estimated_cost = 8561
       hp1.save
-      
-      # Some System Install Defaults
+
       hp2 = HardwareProfile.new
       hp2.name = 'Dell PowerEdge 1950'
       hp2.manufacturer = 'Dell'
@@ -46,7 +46,6 @@ class DashboardController < ApplicationController
       hp2.description = 'Test Node Type 2'
       hp2.save
       
-      # Some System Install Defaults
       os1 = OperatingSystem.new
       os1.name = 'Red Hat Enterprise Linux Server 5.2 x86_64'
       os1.vendor = 'Red Hat'
@@ -82,14 +81,6 @@ class DashboardController < ApplicationController
       ng10 = NodeGroup.new(:name => 'network-switch', :description => 'Network Switch')
       ng10.save
 
-      # Set the color and U height
-      sunny = HardwareProfile.find_by_name('Sun Microsystems Sun Fire X4100')
-      sunny.visualization_color = 'purple'
-      sunny.rack_size = 2
-      sunny.estimated_cost = 8561
-      sunny.save
-      
-    
       ny = Datacenter.new
       ny.name = "New York"
       ny.save
