@@ -64,19 +64,24 @@ class DashboardController < ApplicationController
       ng4.save
       ng5 = NodeGroup.new(:name => 'firewall-primary', :description => 'Primary Firewall')
       ng5.save
+      ngnga1 = NodeGroupNodeGroupAssignment.new(:parent_group => ng4, :child_group => ng5)
+      ngnga1.save
       ng6 = NodeGroup.new(:name => 'db', :description => 'DB Server')
       ng6.save
       ng7 = NodeGroup.new(:name => 'db-mysql', :description => 'MySQL DB Server')
       ng7.save
+      ngnga2 = NodeGroupNodeGroupAssignment.new(:parent_group => ng6, :child_group => ng7)
+      ngnga2.save
       ng8 = NodeGroup.new(:name => 'db-mysql-master', :description => 'MySQL Master DB Server')
       ng8.save
+      ngnga3 = NodeGroupNodeGroupAssignment.new(:parent_group => ng7, :child_group => ng8)
+      ngnga3.save
       ng9 = NodeGroup.new(:name => 'pdu', :description => 'Power Distribution Unit')
       ng9.save
       ng10 = NodeGroup.new(:name => 'network-switch', :description => 'Network Switch')
       ng10.save
-      # FIXME: Should create node_group_node_group_assignements to demonstrate hierarchy
 
-      # Set the color and U height of PDU
+      # Set the color and U height
       sunny = HardwareProfile.find_by_name('SunFireX4100')
       sunny.visualization_color = 'purple'
       sunny.rack_size = 2
@@ -97,43 +102,42 @@ class DashboardController < ApplicationController
       dra = DatacenterRackAssignment.new(:datacenter => ny, :rack => rack)
       dra.save
       
-      (1..42).to_a.each { |i|
+      [1..42].each do |i|
         node_count = node_count + 1
         node = Node.new(:name => "cc" + node_count.to_s)
-        status = Status.find_by_name('Active')
+        status = Status.find_by_name('inservice')
         node.status = status
         node.serial_number = rand(999999)
-        node.ipaddresses = rand(255).to_s + '.' + rand(255).to_s + '.' + rand(255).to_s + '.' + rand(255).to_s
         node.hardware_profile = HardwareProfile.find_by_name('SunFireX4100')
         node.operating_system = OperatingSystem.find(:first)
         node.save
         rna = RackNodeAssignment.new(:rack => rack, :node => node)
         rna.save
-      }      
+      end
       
-      (2..9).to_a.each { |n|
+      [2..9].each do |n|
         rack = Rack.new(:name => "NY-Rack 00"+n.to_s)
         rack.save
         dra = DatacenterRackAssignment.new(:datacenter => ny, :rack => rack)
         dra.save
         
-        (1..9).to_a.each { |i|
+        [1..9].each do |i|
           node_count = node_count + 1
           node = Node.new(:name => "host" + node_count.to_s)
-          status = Status.find_by_name('Active')
+          status = Status.find_by_name('setup')
           node.status = status
           node.serial_number = rand(999999)
-          node.ipaddresses = rand(255).to_s + '.' + rand(255).to_s + '.' + rand(255).to_s + '.' + rand(255).to_s
           node.hardware_profile = hardware_profiles[rand(hardware_profiles.length)]
           node.operating_system = OperatingSystem.find(:first)
           node.save
           rna = RackNodeAssignment.new(:rack => rack, :node => node)
           rna.save
-        }
+        end
         
-      }
+      end
       
     end
   end
 
 end
+
