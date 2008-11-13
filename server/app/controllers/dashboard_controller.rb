@@ -83,7 +83,7 @@ class DashboardController < ApplicationController
       ng10.save
 
       # Set the color and U height
-      sunny = HardwareProfile.find_by_name('SunFireX4100')
+      sunny = HardwareProfile.find_by_name('Sun Microsystems Sun Fire X4100')
       sunny.visualization_color = 'purple'
       sunny.rack_size = 2
       sunny.estimated_cost = 8561
