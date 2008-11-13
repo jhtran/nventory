@@ -4,7 +4,7 @@
 
 <h3>Nodes</h3>
 <ul>
-  Search by name: <% form_tag '/' + 'nodes', :method => :get do -%>
+  Search by name: <% form_tag nodes_path, :method => :get do -%>
     <%= text_field_tag 'name' -%>
   <% end %>
   <li><%= link_to 'Add New Node', new_node_path %></li>
