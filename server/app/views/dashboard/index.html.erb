@@ -40,10 +40,10 @@
 <tbody>
 <tr>
     <td valign="top">
-      Datacenters: <%= Datacenter.find(:all).length %><br/>
-      Racks: <%= Rack.find(:all).length %><br/>
-      Nodes: <%= Node.find(:all).length %><br/>
-      VIPs: <%= Vip.find(:all).length %><br/>
+      Datacenters: <%= Datacenter.count %><br/>
+      Racks: <%= Rack.count %><br/>
+      Nodes: <%= Node.count %><br/>
+      VIPs: <%= Vip.count %><br/>
     </td>
 </tr>
 </tbody>
@@ -53,7 +53,7 @@
 </div>
 
 <%- # Don't show the sample data link if the database already has some data -%>
-<%- if !Datacenter.find(:first) && !Racks.find(:first) && !Nodes.find(:first) -%>
+<%- if !Datacenter.find(:first) && !Rack.find(:first) && !Node.find(:first) -%>
   <p><%= link_to "Setup Sample Data", { :action => "setup_sample_data" } %></p>
 <%- end -%>
 

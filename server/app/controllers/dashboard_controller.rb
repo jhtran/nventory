@@ -4,7 +4,7 @@ class DashboardController < ApplicationController
   end
   
   def setup_sample_data
-	if !Datacenter.find(:first) && !Racks.find(:first) && !Nodes.find(:first)
+	if !Datacenter.find(:first) && !Rack.find(:first) && !Node.find(:first)
       
       hp1 = HardwareProfile.new
       hp1.name = 'Sun Microsystems Sun Fire X4100'
