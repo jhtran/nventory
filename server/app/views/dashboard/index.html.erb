@@ -52,4 +52,8 @@
 
 </div>
 
-<p><%= link_to "Setup Sample Data", { :action => "setup_sample_data" } %></p>
+<%- # Don't show the sample data link if the database already has some data -%>
+<%- if !Datacenter.find(:first) && !Racks.find(:first) && !Nodes.find(:first) -%>
+  <p><%= link_to "Setup Sample Data", { :action => "setup_sample_data" } %></p>
+<%- end -%>
+
