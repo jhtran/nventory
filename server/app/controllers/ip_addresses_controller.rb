@@ -23,7 +23,8 @@ class IpAddressesController < ApplicationController
     # include those associations then N SQL calls result as that data is
     # looked up row by row.
     if !params[:format] || params[:format] == 'html'
-      includes[[:network_interface => :node]] = {}
+      # FIXME: not sure why this stopped working
+      #includes[[:network_interface => :node]] = {}
     end
     
     # XML doesn't get pagination

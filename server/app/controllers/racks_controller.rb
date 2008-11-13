@@ -19,10 +19,13 @@ class RacksController < ApplicationController
     # include those associations then N SQL calls result as that data is
     # looked up row by row.
     if !params[:format] || params[:format] == 'html'
-      includes[:datacenter] = {}
+      # FIXME: Including has_one, through is not supported, see note in
+      # process_includes for more details
+      #includes[:datacenter] = {}
       # Need to include the node's hardware profile as that is used
       # in calculating the free/used space columns
-      includes[[:nodes => :hardware_profile]] = {}
+      # FIXME: not sure why this stopped working
+      #includes[[:nodes => :hardware_profile]] = {}
     end
 
     # XML doesn't get pagination
