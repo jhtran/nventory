@@ -8,7 +8,7 @@ class DashboardController < ApplicationController
       
       # Some System Install Defaults
       hp1 = HardwareProfile.new
-      hp1.name = 'SunFireX4100'
+      hp1.name = 'Sun Microsystems Sun Fire X4100'
       hp1.manufacturer = 'Sun Microsystems'
       hp1.model = 'Sun Fire X4100'
       hp1.rack_size = 1
@@ -28,7 +28,7 @@ class DashboardController < ApplicationController
       
       # Some System Install Defaults
       hp2 = HardwareProfile.new
-      hp2.name = 'PowerEdge1950'
+      hp2.name = 'Dell PowerEdge 1950'
       hp2.manufacturer = 'Dell'
       hp2.model = 'PowerEdge 1950'
       hp2.rack_size = 1
@@ -48,10 +48,11 @@ class DashboardController < ApplicationController
       
       # Some System Install Defaults
       os1 = OperatingSystem.new
-      os1.name = 'Linux: FC5'
-      os1.vendor = 'Fedora'
-      os1.variant = 'Fedora Core'
-      os1.version_number = '5'
+      os1.name = 'Red Hat Enterprise Linux Server 5.2 x86_64'
+      os1.vendor = 'Red Hat'
+      os1.variant = 'Enterprise Linux Server'
+      os1.version_number = '5.2'
+      os1.architecture = 'x86_64'
       os1.save
 
       ng1 = NodeGroup.new(:name => 'web-server', :description => 'All Types of Web Servers')
@@ -95,14 +96,13 @@ class DashboardController < ApplicationController
       
       hardware_profiles = HardwareProfile.find(:all)
       
-      node_count = 0
-      
       rack = Rack.new(:name => "NY-Rack 001")
       rack.save
       dra = DatacenterRackAssignment.new(:datacenter => ny, :rack => rack)
       dra.save
       
-      [1..42].each do |i|
+      node_count = 0
+      (1..42).to_a.each do |i|
         node_count = node_count + 1
         node = Node.new(:name => "cc" + node_count.to_s)
         status = Status.find_by_name('inservice')
@@ -115,13 +115,13 @@ class DashboardController < ApplicationController
         rna.save
       end
       
-      [2..9].each do |n|
+      (2..9).to_a.each do |n|
         rack = Rack.new(:name => "NY-Rack 00"+n.to_s)
         rack.save
         dra = DatacenterRackAssignment.new(:datacenter => ny, :rack => rack)
         dra.save
         
-        [1..9].each do |i|
+        (1..9).to_a.each do |i|
           node_count = node_count + 1
           node = Node.new(:name => "host" + node_count.to_s)
           status = Status.find_by_name('setup')
