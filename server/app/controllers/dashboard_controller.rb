@@ -58,28 +58,35 @@ class DashboardController < ApplicationController
       ng1.save
       ng2 = NodeGroup.new(:name => 'apache-server', :description => 'Apache Web Server')
       ng2.save
+      ngnga1 = NodeGroupNodeGroupAssignment.new(:parent_group => ng1, :child_group => ng2)
+      ngnga1.save
       ng3 = NodeGroup.new(:name => 'nginx-server', :description => 'nginx Web Server')
       ng3.save
+      ngnga2 = NodeGroupNodeGroupAssignment.new(:parent_group => ng1, :child_group => ng3)
+      ngnga2.save
       ng4 = NodeGroup.new(:name => 'firewall', :description => 'Firewall')
       ng4.save
       ng5 = NodeGroup.new(:name => 'firewall-primary', :description => 'Primary Firewall')
       ng5.save
-      ngnga1 = NodeGroupNodeGroupAssignment.new(:parent_group => ng4, :child_group => ng5)
-      ngnga1.save
+      ngnga3 = NodeGroupNodeGroupAssignment.new(:parent_group => ng4, :child_group => ng5)
+      ngnga3.save
       ng6 = NodeGroup.new(:name => 'db', :description => 'DB Server')
       ng6.save
       ng7 = NodeGroup.new(:name => 'db-mysql', :description => 'MySQL DB Server')
       ng7.save
-      ngnga2 = NodeGroupNodeGroupAssignment.new(:parent_group => ng6, :child_group => ng7)
-      ngnga2.save
+      ngnga4 = NodeGroupNodeGroupAssignment.new(:parent_group => ng6, :child_group => ng7)
+      ngnga4.save
       ng8 = NodeGroup.new(:name => 'db-mysql-master', :description => 'MySQL Master DB Server')
       ng8.save
-      ngnga3 = NodeGroupNodeGroupAssignment.new(:parent_group => ng7, :child_group => ng8)
-      ngnga3.save
-      ng9 = NodeGroup.new(:name => 'pdu', :description => 'Power Distribution Unit')
+      ngnga5 = NodeGroupNodeGroupAssignment.new(:parent_group => ng7, :child_group => ng8)
+      ng9 = NodeGroup.new(:name => 'db-mysql-slave', :description => 'MySQL Slave DB Server')
       ng9.save
-      ng10 = NodeGroup.new(:name => 'network-switch', :description => 'Network Switch')
+      ngnga6 = NodeGroupNodeGroupAssignment.new(:parent_group => ng7, :child_group => ng9)
+      ngnga6.save
+      ng10 = NodeGroup.new(:name => 'pdu', :description => 'Power Distribution Unit')
       ng10.save
+      ng11 = NodeGroup.new(:name => 'network-switch', :description => 'Network Switch')
+      ng11.save
 
       ny = Datacenter.new
       ny.name = "New York"
@@ -104,6 +111,8 @@ class DashboardController < ApplicationController
         node.save
         rna = RackNodeAssignment.new(:rack => rack, :node => node)
         rna.save
+        ngna = NodeGroupNodeAssignment.new(:node_group => ng2, :node => node)
+        ngna.save
       end
       
       (2..9).to_a.each do |n|
@@ -123,6 +132,8 @@ class DashboardController < ApplicationController
           node.save
           rna = RackNodeAssignment.new(:rack => rack, :node => node)
           rna.save
+		  ngna = NodeGroupNodeAssignment.new(:node_group => ng3, :node => node)
+		  ngna.save
         end
         
       end
