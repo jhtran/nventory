@@ -108,7 +108,7 @@ class DashboardController < ApplicationController
         status = Status.find_by_name('inservice')
         node.status = status
         node.serial_number = rand(999999)
-        node.hardware_profile = HardwareProfile.find_by_name('SunFireX4100')
+        node.hardware_profile = HardwareProfile.find_by_name('Sun Microsystems Sun Fire X4100')
         node.operating_system = OperatingSystem.find(:first)
         node.save
         rna = RackNodeAssignment.new(:rack => rack, :node => node)
