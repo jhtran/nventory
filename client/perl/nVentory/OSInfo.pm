@@ -13,6 +13,9 @@ use File::Find;     # find
 my $debug;
 
 my $hostname;
+my $shortname;
+my $domainname;
+my $fqdn;
 my $os;
 my $osversion;
 my $osarch;
@@ -23,6 +26,8 @@ my $os_cpu_count;
 my $timezone;
 my $virtual_client_ids;
 
+# Hostname as configured on the system, may or may not be fully
+# qualified
 sub gethostname
 {
 	if (!$hostname)
@@ -32,6 +37,112 @@ sub gethostname
 
 	warn "gethostname returning '$hostname'" if ($debug);
 	return $hostname;
+}
+
+# System hostname with any domain component removed
+sub getshortname
+{
+	if (!$shortname)
+	{
+		gethostname();
+		($shortname) = split(/\./, $hostname);
+	}
+
+	warn "getshortname returning '$shortname'" if ($debug);
+	return $shortname;
+}
+
+sub getdomainname
+{
+	if (!$domainname)
+	{
+		# Check the system hostname
+		gethostname();
+		if ($hostname && $hostname =~ /\./)
+		{
+			(undef, $domainname) = split(/\./, $hostname, 2);
+		}
+
+		# The next couple of commands might not exist, we don't want the
+		# user to have to see output to that effect, since that doesn't
+		# necessarily contitute a problem.  So we dump stderr to
+		# /dev/null.  Solaris being Solaris, /bin/sh will throw an error
+		# out to stderr about the command not being found, but doesn't
+		# consider that something that should obey your redirect.  So we
+		# wrap the command in () so that it is executed in a subshell,
+		# then Solaris /bin/sh redirects the output from the subshell
+		# like you'd expect.
+		# http://groups.google.com/group/comp.unix.solaris/browse_thread/thread/4a53aea1629b715
+
+		# Try the dnsdomainname command
+		if (!$domainname)
+		{
+			warn "Running 'dnsdomainname'" if ($debug);
+			chomp(my $output = `(dnsdomainname) 2> /dev/null`);
+			if ($output && $output =~ /\./)
+			{
+				$domainname = $output;
+			}
+		}
+
+		# Try the domainname command
+		if (!$domainname)
+		{
+			warn "Running 'domainname'" if ($debug);
+			chomp(my $output = `(domainname) 2> /dev/null`);
+			if ($output && $output =~ /\./)
+			{
+				$domainname = $output;
+			}
+		}
+
+		# Try resolv.conf
+		if (!$domainname && -f '/etc/resolv.conf')
+		{
+			warn "Reading '/etc/resolv.conf'" if ($debug);
+			open(my $resconf, '<', '/etc/resolv.conf') or
+				die "open /etc/resolv.conf: $!\n";
+			my @resconflines = <$resconf>;
+			close($resconf);
+
+			# Look for a domain line
+			my @domainlines = grep(/^domain\s+\S+/, @resconflines);
+			if (@domainlines)
+			{
+				$domainlines[0] =~ /^domain\s+(\S+)/;
+				$domainname = $1;
+			}
+			if (!$domainname)
+			{
+				# Look for a search line
+				my @searchlines = grep(/^search\s+\S+/, @resconflines);
+				if (@searchlines)
+				{
+					$searchlines[0] =~ /^search\s+(\S+)/;
+					$domainname = $1;
+				}
+			}
+		}
+	}
+
+	warn "getdomainname returning '$domainname'" if ($debug);
+	return $domainname;
+}
+
+sub getfqdn
+{
+	if (!$fqdn)
+	{
+		getshortname();
+		getdomainname();
+		if ($shortname && $domainname)
+		{
+			$fqdn = join('.', $shortname, $domainname);
+		}
+	}
+
+	warn "getfqdn returning '$fqdn'" if ($debug);
+	return $fqdn;
 }
 
 sub getos
@@ -92,7 +203,7 @@ sub getos
 						$osversion = "$majorver.$minorver";
 					}
 				}
-				elsif ($rr =~ /(Fedora Core) release ([\d\.]+)/)
+				elsif ($rr =~ /(Fedora(?: Core)?) release ([\d\.]+)/)
 				{
 					# Expand the OS name to include some extra terms
 					# that will make pattern matching for Linux or Red

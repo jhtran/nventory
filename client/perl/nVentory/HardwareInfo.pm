@@ -622,10 +622,17 @@ sub get_physical_memory
 			{
 				my $size = $memdevice->{'Size'};
 				my $form_factor = $memdevice->{'Form Factor'};
-				# Some systems report little chunks of memory other than main system
-				# memory as Memory Devices, the 'DIMM' as form factor seems to
-				# indicate main system memory.
-				if ($size ne 'No Module Installed' && $form_factor eq 'DIMM')
+				my $locator = $memdevice->{'Locator'};
+				# Some systems report little chunks of memory other than
+				# main system memory as Memory Devices, the 'DIMM' as
+				# form factor seems to indicate main system memory.
+				# Unfortunately some DIMMs are reported with a form
+				# factor of '<OUT OF SPEC>'.  In that case fall back to
+				# checking for signs of it being a DIMM in the locator
+				# field.
+				if ($size ne 'No Module Installed' &&
+				   ($form_factor eq 'DIMM' ||
+				    ($form_factor eq '<OUT OF SPEC>' && $locator =~ /DIMM/)))
 				{
 					my ($megs, $units) = split(' ', $size);
 					die if ($units ne 'MB');
@@ -816,15 +823,26 @@ sub get_power_supply_count
 		if (-x '/sbin/hpasmcli')
 		{
 			warn "Running \"/sbin/hpasmcli -s 'show powersupply'\"" if ($debug);
-			open(HPASM, '-|', "/sbin/hpasmcli -s 'show powersupply'") or die "open: $!";
-			while(<HPASM>)
-			{
-				if (/Present\s*:\s*Yes/)
+			# This seems to get stuck on some systems, so wrap it in an
+			# alarm timeout
+			eval {
+				local $SIG{ALRM} = sub { die "alarm\n" };
+				alarm 15;
+				open(HPASM, '-|', "/sbin/hpasmcli -s 'show powersupply'") or die "open: $!";
+				while(<HPASM>)
 				{
-					$temp_power_supply_count++;
+					if (/Present\s*:\s*Yes/)
+					{
+						$temp_power_supply_count++;
+					}
 				}
+				close(HPASM);
+				alarm 0;
+			};
+			if ($@) {
+				die unless $@ eq "alarm\n";   # propagate unexpected errors
+				warn "hpasmcli timed out" if ($debug);
 			}
-			close(HPASM);
 		}
 		# Check for Dell's OMSA
 		elsif (-x '/opt/dell/srvadmin/oma/bin/omreport')
@@ -1443,7 +1461,7 @@ sub getnicdata
 		# ifconfig reports interface statistics (TX/RX bytes,
 		# errors, etc.)  On Linux this seems to correlate with whether
 		# or not the interface is represented in /proc/net/dev.
-		if ($os eq 'Linux' || $os eq 'SunOS')
+		if ($os =~ /Linux/ || $os eq 'SunOS')
 		{
 			foreach my $nic (keys %nicdata)
 			{

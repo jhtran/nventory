@@ -13,6 +13,7 @@ use File::stat;            # Improved stat
 use XML::LibXML;
 
 my $debug;
+my $dryrun;
 
 my $SERVER = 'http://nventory';
 CONFIGFILE: foreach my $configfile ('/etc/nventory.conf', $ENV{HOME}.'/.nventory.conf')
@@ -142,6 +143,10 @@ sub _get_ua
 			my $locurl = URI->new($response->header('Location'));
 			if ($response->code != RC_FOUND || $locurl->path eq '/login/login')
 			{
+				if ($response->content =~ /Can't connect .* Invalid argument/)
+				{
+					warn "Looks like you're missing Crypt::SSLeay"
+				}
 				die "Authentication failed:\n", $response->content, "\n";
 			}
 		}
@@ -193,10 +198,12 @@ sub _xml_to_perl
 
 sub get_objects
 {
-	my ($objecttype, $getref, $exactgetref, $includesref, $login) = @_;
+	my ($objecttype, $getref, $exactgetref, $regexgetref, $excluderef, $includesref, $login) = @_;
 	my %get = %$getref;
 	my %exactget = %$exactgetref;
-	
+        my %regexget = %$regexgetref;
+        my %excludeget = %$excluderef;
+        
 	#
 	# Package up the search parameters in the format the server expects
 	#
@@ -232,6 +239,37 @@ sub get_objects
 			$metaget{'exact_' . $key} = $value;
 		}
 	}
+	while (my ($key, $values) = each %regexget)
+	{
+		if (scalar @$values > 1)
+		{
+			$metaget{'regex_' . $key . '[]'} = $values;
+		}
+		else
+		{
+			# This isn't strictly necessary, specifying a single value via
+			# 'key[]=[value]' would work fine, but this makes for a cleaner URL
+			# and slightly reduced processing on the backend
+			my $value = @{$values}[0];
+			$metaget{'regex_' . $key} = $value;
+		}
+	}
+	while (my ($key, $values) = each %excludeget)
+	{
+		if (scalar @$values > 1)
+		{
+			$metaget{'exclude_' . $key . '[]'} = $values;
+		}
+		else
+		{
+			# This isn't strictly necessary, specifying a single value via
+			# 'key[]=[value]' would work fine, but this makes for a cleaner URL
+			# and slightly reduced processing on the backend
+			my $value = @{$values}[0];
+			$metaget{'exclude_' . $key} = $value;
+		}
+	}
+
 	if ($includesref)
 	{
 		$metaget{'include[]'} = $includesref;
@@ -240,7 +278,6 @@ sub get_objects
 	#
 	# Send the query to the server
 	#
-
 	my $url = URI->new("$SERVER/$objecttype.xml");
 	$url->query_form(%metaget);
 	my $ua = _get_ua($login);
@@ -304,7 +341,7 @@ sub get_expanded_nodegroup
 {
 	my ($nodegroup) = @_;
 
-	my %results = get_objects('node_groups', {}, {'name' => [$nodegroup]}, ['nodes', 'child_groups']);
+	my %results = get_objects('node_groups', {}, {'name' => [$nodegroup]}, {}, {}, ['nodes', 'child_groups']);
 	my %nodes;
 	foreach my $node (@{$results{$nodegroup}->{nodes}})
 	{
@@ -362,6 +399,13 @@ sub set_objects
 	# from 'foo' to 'objecttype[foo]'
 	my %cleandata;
 	my $objecttype = singularize($objecttypes);
+
+	if ($dryrun) {
+        	use Data::Dumper;
+        	print Dumper(\%data);
+        	exit;
+        }
+
 	while (my ($key, $value) = each %data)
 	{
 		if ($key !~ /\[.+\]/)
@@ -436,15 +480,13 @@ sub set_objects
 
 sub register
 {
-	my ($dryrun) = @_;
-
 	my %data;
 
 	#
 	# Gather software-related information
 	#
 
-	$data{name} = nVentory::OSInfo::gethostname();
+	$data{name} = nVentory::OSInfo::getfqdn();
 	$data{'operating_system[variant]'} = nVentory::OSInfo::getos();
 	$data{'operating_system[version_number]'} = nVentory::OSInfo::getosversion();
 	$data{'operating_system[architecture]'} = nVentory::OSInfo::getosarch();
@@ -538,7 +580,7 @@ sub register
 
 	if ($data{'hardware_profile[model]'} eq 'VMware Virtual Platform')
 	{
-		my %results = get_objects('nodes', {'virtual_client_ids' => [$data{uniqueid}]}, {}, [], 'autoreg');
+		my %results = get_objects('nodes', {'virtual_client_ids' => [$data{uniqueid}]}, {}, {}, {}, [], 'autoreg');
 		if (scalar keys %results == 1)
 		{
 			$data{virtual_parent_node_id} = $results{(keys(%results))[0]}->{id};
@@ -560,7 +602,7 @@ sub register
 	my %results;
 	if ($data{uniqueid})
 	{
-		%results = get_objects('nodes', {}, {'uniqueid' => [$data{uniqueid}]}, [], 'autoreg');
+		%results = get_objects('nodes', {}, {'uniqueid' => [$data{uniqueid}]}, {}, {}, [], 'autoreg');
 	}
 
 	# If we failed to find an existing entry based on the unique id
@@ -570,19 +612,10 @@ sub register
 	# server.
 	if (!%results && $data{name})
 	{
-		%results = get_objects('nodes', {}, {'name' => [$data{name}]}, [], 'autoreg');
+		%results = get_objects('nodes', {}, {'name' => [$data{name}]}, {}, {}, [], 'autoreg');
 	}
 
-	if (!$dryrun)
-	{
-		set_objects('nodes', \%results, \%data, 'autoreg');
-	}
-	else
-	{
-		use Data::Dumper;
-		print "Registration data:";
-		print Dumper(\%data);
-	}
+	set_objects('nodes', \%results, \%data, 'autoreg');
 }
 
 # The first argument is a reference to a hash returned by a 'nodes' call
@@ -789,6 +822,12 @@ sub setdebug
 	$debug = $newdebug;
 	nVentory::HardwareInfo::setdebug($newdebug);
 	nVentory::OSInfo::setdebug($newdebug);
+}
+
+sub setdryrun
+{
+        ($dryrun) = @_;
+	warn "Enabling dry-run mode\n";
 }
 
 1;
