@@ -13,7 +13,10 @@ class Outlet < ActiveRecord::Base
   def validate 
     if !self.consumer_id.nil? and self.consumer_id > 0
       
-      # if this outlet has a consumer node, make sure said node isn't already over it's limit for this producer's service type
+      # If this outlet has a consumer node, make sure said node isn't
+      # already over its limit for this producer's service type.
+      # I.e. if the consumer node has two power supplies don't allow a
+      # connection to a third PDU port.
       
       outlet_type = self.producer.hardware_profile.outlet_type
       current_outlets_in_use_by_consumer = Outlet.find_all_by_consumer_id(self.consumer_id)
@@ -33,12 +36,18 @@ class Outlet < ActiveRecord::Base
       end
       
       if outlet_type == 'Network'
-        errors.add(:consumer_id, "does not have any available network ports") if current_network_outlets_in_use_by_consumer.length >= Node.find(self.consumer_id).number_of_physical_nics
+        if current_network_outlets_in_use_by_consumer.length >= Node.find(self.consumer_id).number_of_physical_nics
+          errors.add(:consumer_id, "does not have any available network ports")
+        end
       elsif outlet_type == 'Power'
-        errors.add(:consumer_id, "does not have any available power plugs") if current_power_outlets_in_use_by_consumer.length >= Node.find(self.consumer_id).power_supply_count
+        if current_power_outlets_in_use_by_consumer.length >= Node.find(self.consumer_id).number_of_power_supplies
+          errors.add(:consumer_id, "does not have any available power plugs")
+        end
       elsif outlet_type == 'Console'
         # Assume all nodes have one serial console port
-        errors.add(:consumer_id, "does not have any available console ports") if current_console_outlets_in_use_by_consumer.length >= 1
+        if current_console_outlets_in_use_by_consumer.length >= 1
+          errors.add(:consumer_id, "does not have any available console ports")
+        end
       end
       
     end
