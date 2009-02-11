@@ -57,7 +57,7 @@ class ApplicationController < ActionController::Base
   def check_authorization
     if !request.get?
       acct = Account.find(session[:account_id])
-      if acct.nil? || !acct.admin
+      if acct.nil? || !acct.admin?
         logger.info "Rejecting user for lack of admin privs"
         if params[:format] && params[:format] == 'xml'
           # Seems like there ought to be a slightly easier way to do this
