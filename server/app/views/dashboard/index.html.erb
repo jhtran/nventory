@@ -21,7 +21,7 @@
   <li><%= link_to 'View All Datacenters', datacenters_path %></li>
   <li>
     <form action="" method="get">
-      &nbsp;&nbsp;&nbsp;<select style="width:20em;" id="datacenter" name="" onchange="if (this.value != '') { window.location = 'datacenters/' + $('datacenter').value; }">
+      &nbsp;&nbsp;&nbsp;<select style="width:20em;" id="datacenter" name="" onchange="if (this.value != '') { window.location = '<%= datacenters_path %>/' + $('datacenter').value; }">
         <option value="">View Datacenter:</option>
         <%= options_from_collection_for_select(Datacenter.find(:all), 'id', 'name') %>
       </select>
