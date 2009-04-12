@@ -9,7 +9,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 56) do
+ActiveRecord::Schema.define(:version => 37) do
 
 # Could not dump table "accounts" because of following StandardError
 #   Unknown type 'bool' for column 'admin'
@@ -364,8 +364,9 @@ ActiveRecord::Schema.define(:version => 56) do
   create_table "subnets", :force => true do |t|
     t.string   "network",       :null => false
     t.string   "netmask",       :null => false
-    t.string   "gateway"
+    t.string   "gateway",       :null => false
     t.string   "broadcast",     :null => false
+    t.string   "resolvers"
     t.integer  "node_group_id"
     t.text     "description"
     t.datetime "created_at"
