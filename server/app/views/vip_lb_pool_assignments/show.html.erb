@@ -1,0 +1,20 @@
+<%- @page_title = "Vip LbPool Assignment: " + h(@vip_lb_pool_assignment.lb_pool.name) + '<->' + h(@vip_lb_pool_assignment.vip.name) %>
+
+<div class="record_view">
+
+<h1>Vip LbPool Assignment</h1>
+
+<p><strong>LbPool:</strong> <%= link_to @vip_lb_pool_assignment.lb_pool.name, lb_pool_path(@vip_lb_pool_assignment.lb_pool) %><br />
+<strong>Vip:</strong> <%= link_to @vip_lb_pool_assignment.vip.name, vip_path(@vip_lb_pool_assignment.vip) %><br />
+<strong>Assigned at:</strong> <%= h(@vip_lb_pool_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@vip_lb_pool_assignment.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@vip_lb_pool_assignment.updated_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_vip_lb_pool_assignment_path(@vip_lb_pool_assignment) %> | 
+<%- confirm_message = 'Are you sure?' -%>
+<%= link_to 'Delete', vip_lb_pool_assignment_path(@vip_lb_pool_assignment), :confirm => confirm_message, :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @vip_lb_pool_assignment} %>

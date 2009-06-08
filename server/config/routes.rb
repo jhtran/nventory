@@ -1,5 +1,6 @@
 ActionController::Routing::Routes.draw do |map|
   map.resources :accounts,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :audits  ,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :comments
   map.resources :database_instance_relationships,                                                             :member => { :version_history => :get }
   map.resources :database_instances,                :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
@@ -12,6 +13,10 @@ ActionController::Routing::Routes.draw do |map|
   map.resources :node_database_instance_assignments,                                                          :member => { :version_history => :get }
   map.resources :node_group_node_assignments,                                                                 :member => { :version_history => :get }
   map.resources :node_group_node_group_assignments,                                                           :member => { :version_history => :get }
+  map.resources :service_service_assignments,                                                                 :member => { :version_history => :get }
+  map.resources :virtual_assignments,                                                                         :member => { :version_history => :get }
+  map.resources :vip_lb_pool_assignments,                                                                     :member => { :version_history => :get }
+  map.resources :lb_pool_node_assignments,                                                                    :member => { :version_history => :get }
   map.resources :node_groups,                       :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :nodes,                             :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :operating_systems,                 :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
@@ -21,6 +26,8 @@ ActionController::Routing::Routes.draw do |map|
   map.resources :statuses,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :subnets,                           :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :vips,                              :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :lb_pools,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :lb_profiles,                       :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
 
   # add get method that will return the consumer on this outlet (used in AJAX on Node page)
   map.resources :outlets, :member => { :consumer => :get } 

@@ -121,7 +121,6 @@ class NodeGroupNodeAssignmentsController < ApplicationController
       format.html { redirect_to node_group_node_assignments_url }
       format.js {
         render(:update) { |page|
-          
           page.replace_html 'node_group_node_assignments', {:partial => 'nodes/node_group_assignments', :locals => { :node => @node} }
         }
       }
@@ -131,7 +130,7 @@ class NodeGroupNodeAssignmentsController < ApplicationController
   
   # GET /node_group_node_assignments/1/version_history
   def version_history
-    @node_group_node_assignment = NodeGroupNodeAssignment.find_with_deleted(params[:id])
+    @node_group_node_assignment = NodeGroupNodeAssignment.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

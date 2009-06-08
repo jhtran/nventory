@@ -1,7 +1,5 @@
 <%- @page_title = "Rack: " + h(@rack.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @rack} %>
-
 <div class="record_view">
 
 <h1>Rack: <%=h @rack.name %></h1>
@@ -65,10 +63,8 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@rack.deleted_at -%>
 <p><%= link_to 'Edit', edit_rack_path(@rack) %> | 
 <%= link_to 'Delete', rack_path(@rack), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @rack} %>
 

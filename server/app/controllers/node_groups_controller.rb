@@ -2,54 +2,26 @@ class NodeGroupsController < ApplicationController
   # GET /node_groups
   # GET /node_groups.xml
   def index
-    includes = process_includes(NodeGroup, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "node_groups.name"
-           when "name_reverse" then "node_groups.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = NodeGroup.default_search_attribute
-      sort = 'node_groups.' + NodeGroup.default_search_attribute
-    end
-    
-    # This implements a very limited subset of the search functionality
-    # supported by the nodes controller.  We should abstract the nodes
-    # search functionality and support it in all controllers.  (Most of
-    # the other controllers don't support searching at all, they always
-    # return all entries.)
+    # The default display index_row columns (node_groups model only displays local table name)
+    default_includes = []
+    special_joins = {}
 
-    if params[:exact_name]
-      # XML doesn't get pagination
-      if params[:format] && params[:format] == 'xml'
-        @objects = NodeGroup.find(:all,
-                                  :conditions => { :name => params[:exact_name] },
-                                  :order => sort)
-      else
-        @objects = NodeGroup.paginate(:all,
-                                      :conditions => { :name => params[:exact_name] },
-                                      :order => sort,
-                                      :page => params[:page])
-      end
-    else
-      # XML doesn't get pagination
-      if params[:format] && params[:format] == 'xml'
-        @objects = NodeGroup.find(:all,
-                                  :include => includes,
-                                  :order => sort)
-      else
-        @objects = NodeGroup.paginate(:all,
-                                      :include => includes,
-                                      :order => sort,
-                                      :page => params[:page])
-      end
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = NodeGroup
+    allparams[:webparams] = params
+    allparams[:default_includes] = default_includes
+    allparams[:special_joins] = special_joins
+
+    results = SearchController.new.search(allparams)
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    @objects = results[:search_results]
     
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
+						   :methods => [:virtual_nodes_names, :real_nodes_names],
                                                    :dasherize => false) }
     end
   end
@@ -58,9 +30,7 @@ class NodeGroupsController < ApplicationController
   # GET /node_groups/1.xml
   def show
     includes = process_includes(NodeGroup, params[:include])
-    
-    @node_group = NodeGroup.find(params[:id],
-                                 :include => includes)
+    @node_group = NodeGroup.find(params[:id], :include => includes)
 
     respond_to do |format|
       format.html # show.html.erb
@@ -112,9 +82,13 @@ class NodeGroupsController < ApplicationController
   # PUT /node_groups/1.xml
   def update
     @node_group = NodeGroup.find(params[:id])
+    if (defined?(params[:node_group_node_group_assignments][:child_groups]) && params[:node_group_node_group_assignments][:child_groups].include?('nil'))
+      params[:node_group_node_group_assignments][:child_groups] = []
+    end
 
     # Process any node group -> node group assignment updates
     node_group_assignment_save_successful = process_node_group_assignments()
+
     # Process any node -> node group assignment updates
     node_assignment_save_successful = process_node_assignments()
 
@@ -144,7 +118,7 @@ class NodeGroupsController < ApplicationController
   
   # GET /node_groups/1/version_history
   def version_history
-    @node_group = NodeGroup.find_with_deleted(params[:id])
+    @node_group = NodeGroup.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

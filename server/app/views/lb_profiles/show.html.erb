@@ -1,0 +1,53 @@
+<%- @page_title = "LB Pool Profile: " + "[#{ @lb_profile.port}:#{@lb_profile.protocol} / #{@lb_profile.lbmethod} #{ '/ ' + @lb_profile.healthcheck unless @lb_profile.healthcheck.nil? }]" %>
+
+<div class="record_view">
+
+<h1>LB Pool Profile: <font color='blue'> <%= " #{ @lb_profile.port}:#{@lb_profile.protocol} , #{@lb_profile.lbmethod} #{ (@lb_profile.healthcheck.blank? || @lb_profile.healthcheck.nil?) ? ', no healthcheck ' : (', ' + @lb_profile.healthcheck) }"  %></font></h1>
+<p><strong>Port: </strong><%= @lb_profile.port%><br />
+<strong>Protocol: </strong><%= @lb_profile.protocol%><br />
+<strong>LBMethod: </strong><%= @lb_profile.lbmethod%><br />
+<strong>Health Check: </strong><%= @lb_profile.healthcheck%><br /></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@lb_profile.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@lb_profile.updated_at) %></p>
+
+</div>
+
+<!-- to be finished -->
+<%- if false -%>
+  <div id="lb_profile_lb_profile_assignments">
+    <%= render :partial => 'lb_profile_assignments', :locals => {:lb_profile => @lb_profile} %>
+  </div>
+  
+  </div>
+  
+  <div class="relationship">
+    <div id="vip_lb_profile_assignments">
+      <%= render :partial => 'vip_assignments', :locals => { :lb_profile => @lb_profile} %>
+    </div>
+    
+    <%- if false -%>
+      <div id="create_vip_assignments">
+      <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'vip', :to => 'lb_profile'} %>
+      </div>
+      
+      <p id="new_vip">
+      
+      </p>
+      
+      <p id="add_vip_assignment_link">
+      <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'vip', :to => 'lb_profile'} %>
+      </p>
+    <%- end -%>
+  </div>
+<%- end -%>
+
+<div class="relationship">
+  <%= render :partial => 'shared/comments', :locals => { :object => @lb_profile} %>
+</div> <!-- end relationship -->
+
+<p><%= link_to 'Edit', edit_lb_profile_path(@lb_profile) %> | 
+<%= link_to 'Delete', lb_profile_path(@lb_profile), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @lb_profile} %>
+

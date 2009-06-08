@@ -1,7 +1,5 @@
 <%- @page_title = "Node: " + h(@node.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @node} %>
-
 <div class="record_view">
 
 <h1>Node: <%=h @node.name %></h1>
@@ -9,8 +7,37 @@
 <strong>Alternate Names:</strong> <%= h(@node.alternate_names) %><br />
 
 <p><strong>Status:</strong> <%= link_to h(@node.status.name), status_url(@node.status) %><br />
+<strong>Contacts:</strong> 
+<ul>
+<%- unless @node.contact.nil? %>
+  <%- @node.contact.split(',').each do |login| -%>
+    <%= "<li>" %>
+    <%= link_to login,Account.find_by_login(login) %>
+    <%= "</li>" %>
+  <%- end -%>
+<%- end -%>
+</ul>
+</br>
+<p><strong>Expiration:</strong> <%= @node.expiration %><br />
 
 <strong>Hardware Profile:</strong> <%= link_to h(@node.hardware_profile.name), hardware_profile_url(@node.hardware_profile) %><br />
+<%- if ( @node.virtual_guest? || @node.virtual_host? || (!@node.virtualarch.nil? && !@node.virtualarch.empty?) ) -%>
+  <%- if @node.virtualarch.nil? -%>
+    <%= "<strong><font color=purple>Virtual Architecture: Unknown</font></strong><br />" %>
+  <%- else -%>
+    <%= "<strong><font color=purple>Virtual Architecture: #{@node.virtualarch.capitalize}</font></strong><br />" %>
+  <%- end -%>
+  <%- unless (@node.virtual_guest? || @node.virtual_host?) -%>
+    <%= "<strong><font color=purple>Virtual Mode: Unknown</strong></font><br />" %>
+  <%- else -%>
+    <%= "<strong><font color=purple>Virtual Mode: " %>
+    <%- if (@node.virtual_guest?) -%>
+      <%= "Guest<br />Virtual Host: #{link_to @node.virtual_host.name,@node.virtual_host}</strong></font><br />" %>
+    <%- elsif (@node.virtual_host?) -%>
+      <%= "Host</strong></font><br />" %>
+    <%- end -%>
+  <%- end -%>
+<%- end -%>
 
 <strong>Serial Number:</strong> <%= h(@node.serial_number) %><br />
 <strong>Asset Tag:</strong> <%= h(@node.asset_tag) %><br />
@@ -76,6 +103,62 @@
 
 </div> <!-- end relationship -->
 
+<!-- List Guest VMs if this is a VM host -->
+<%- if @node.virtual_host? -%>
+  <div class="relationship">
+    <div id="virtual_assignments">
+      <%= render :partial => 'virtual_assignments', :locals => { :node => @node} %>
+    </div> <!-- end virtual_assignments -->
+  </div> <!-- end relationship -->
+<%- end -%>
+
+<!-- BEGIN SERVICES RELATIONSHIOPS -->
+<div class="relationship">
+  <%- if @node.services? %>
+    <strong>Services Tree</strong><br /><br />
+    <%= link_to 'View Diagram', :action => "graph_services", :id => @node %><br /><br />
+    <strong>Services Clients (depend on this node):</strong>
+    <%- if @child_services.size > 0 -%>
+      <ul>
+      <%- @node.node_groups.each do |ng| -%>
+        <%- if ng.child_services.size > 0 -%>
+          <%= link_to ng.name, node_group_path(ng) %>
+          <ul>
+          <div id="child_service_assignments">
+            <%= render :partial => 'shared/child_service_assignment', :collection => ng.service_assignments_as_parent %>
+          </div>
+          </ul>
+        <%- end -%>
+      <%- end -%>
+      </ul>
+    <%- else -%>
+      <p>There are no child services for this node </p>
+    <%- end -%>
+    <strong>Services Dependencies (this node depends upon):</strong>
+    <%- if @parent_services.size > 0 -%>
+      <ul>
+      <%- @node.node_groups.each do |ng| -%>
+        <%- if ng.parent_services.size > 0 -%>
+          <%= link_to ng.name, node_group_path(ng) %>
+          <ul>
+          <div id="parent_service_assignments">
+            <%= render :partial => 'shared/parent_service_assignment', :collection => ng.service_assignments_as_child %>
+          </div>
+          </ul>
+        <%- end -%>
+      <%- end -%>
+      </ul>
+    <%- else -%>
+      <p>There are no parent service dependencies for this node </p>
+    <%- end -%>
+  <%- else -%>
+    <strong>Service Dependencies</strong><br /><br />
+    <p>This node does not have any service dependencies</p>
+  <%- end -%>
+</div>
+<!-- END SERVICES RELATIONSHIPS -->
+
+
 <div class="relationship">
 
 <%= render :partial => 'shared/comments', :locals => { :object => @node} %>
@@ -89,7 +172,13 @@
 <%- if @node.network_interfaces.length > 0 -%>
   <ul>
   <%- @node.network_interfaces.each do |nic| -%>
-    <li><%= link_to nic.name, network_interface_url(nic) %></li>
+    <li>
+      <%= link_to nic.name, network_interface_url(nic) %>
+      <%- if nic.interface_type.to_s == "Ethernet" && nic.switch_port %>
+        <%= "=>" %>
+        <%= link_to "port: #{nic.switch_port.name} (#{nic.switch_port.producer.name})" , nic.switch_port %>
+      <% end %>
+    </li>
     <ul>
     <%- nic.ip_addresses.each do |ip| -%>
       <li><%= link_to ip.address, ip_address_url(ip) %></li>
@@ -105,108 +194,59 @@
 </div> <!-- end relationship -->
 
 <div class="relationship">
+  <div id="rack_node_assignments">
+    <%= render :partial => 'rack_assignment', :locals => { :node => @node} %>
+  </div> <!-- end rack_node_assignments -->
 
-<div id="rack_node_assignments">
-<%= render :partial => 'rack_assignment', :locals => { :node => @node} %>
-</div> <!-- end rack_node_assignments -->
-
-<div id="create_rack_assignment">
-<%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'rack', :to => 'node'} %>
-</div>
-
-<p id="new_rack">
-
-</p>
-
-<p id="add_rack_assignment_link">
-<%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'rack', :to => 'node'} %>
-</p>
-
+  <div id="create_rack_assignment">
+    <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'rack', :to => 'node'} %>
+  </div>
+  
+  <p id="new_rack">
+  
+  </p>
+  
+  <p id="add_rack_assignment_link">
+    <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'rack', :to => 'node'} %>
+  </p>
 </div> <!-- end relationship -->
 
 
+<!-- This displays all the "outlets" whether network or console ports or power outlets that this node serves to other nodes -->
+<%- unless @node.hardware_profile.outlet_type.nil? || @node.hardware_profile.outlet_type.blank? -%>
+  <div class="relationship">
+    <div id="outlets">
+      <%= render :partial => 'outlets', :locals => { :node => @node } %>
+    </div>
 
-<%- if !@node.hardware_profile.outlet_count.nil? && @node.produced_outlets.count > 0 -%>
+    <div id="create_outlet">
+      <%= render :partial => 'shared/create_outlet', :locals => { :node => @node } %>
+    </div>
+    <p id="new_outlet">
+
+    </p>
+    <p id="add_outlet_link">
+      <%= render :partial => 'shared/add_node_outlet_link' %>
+    </p>   
+
+  </div> <!-- end relationship -->
+<%- end -%>
+
 <div class="relationship">
-  <table cellspacing="0" class="styled" summary="A list of the outlets supplied by this node.">
-  <caption><%= @node.hardware_profile.outlet_type %> Outlets</caption>
-  <thead>
-  <tr>
-      <th>Name</th>
-      <th>Consumer</th>
-      <th>&nbsp;</th>
-  </tr>
-  </thead>
-  <tbody>
-  <%- for outlet in @node.produced_outlets %>
-  <tr class="<%= cycle('odd', 'even') -%>">
-      <td><%= h(outlet.name) %></td>
-      <td id="<%= dom_id(outlet) %>"><%- if outlet.consumer.nil? -%>
-        n/a
-      <%- else -%>
-        <%= link_to outlet.consumer.name, node_path(outlet.consumer) %>
-      <%- end -%>
-      </td>
-      <td><%= link_to_remote "Assign", :url => edit_outlet_path(outlet), :method => :get, :update => dom_id(outlet) %></td>
-  </tr>
-  <%- end %>
-  </tbody>
-  </table>
-</div> <!-- end relationship -->
-<%- end -%>
-
-<div class="smartrelationship">
 <h3>Smart Relationships</h3>
-
-<%- if @node.number_of_physical_nics > 0 -%>
-<p>This node has <%= h(@node.number_of_physical_nics.to_s) %> NICS that consume bandwidth. Connected producers are:</p>
-<ul>
-<%- i = 0 -%>
-<%- @node.number_of_physical_nics.times do -%>
-<li>#<%= i.to_s %>: <%= !@node.consumed_network_outlets.at(i).nil? ? link_to(@node.consumed_network_outlets.at(i).producer.name, node_path(@node.consumed_network_outlets.at(i).producer)) : 'n/a' %></li>
-<%- i = i + 1 -%>
-<%- end -%>
-</ul>
-<%- else -%>
-<p>This node is does not have any NICS that consume bandwidth.</p>
-<%- end -%>
-
-<%- if @node.number_of_power_supplies > 0 -%>
-<p>This node has <%= h(@node.number_of_power_supplies.to_s) %> power supplies that consume electricity. Connected producers are:</p>
-
-<ul>
-<%- i = 0 -%>
-<%- @node.number_of_power_supplies.times do -%>
-<li>#<%= i.to_s %>: <%= !@node.consumed_power_outlets.at(i).nil? ? link_to(@node.consumed_power_outlets.at(i).producer.name, node_path(@node.consumed_power_outlets.at(i).producer)) : 'n/a' %></li>
-<%- i = i + 1 -%>
-<%- end -%>
-</ul>
-
-
-<%- else -%>
-<p>This node is does not have any power supplies that consume power.</p>
-<%- end -%>
-
-<p>Serial console connected to:</p>
-
-<ul>
-<%- i = 0 -%>
-<%- 1.times do -%>
-<li>#<%= i.to_s %>: <%= !@node.consumed_console_outlets.at(i).nil? ?  link_to(@node.consumed_console_outlets.at(i).producer.name, node_path(@node.consumed_console_outlets.at(i).producer)) : 'n/a' %></li>
-<%- i = i + 1 -%>
-<%- end -%>
-</ul>
-
+  <div id="smart_relationships">
+    <%= render :partial => 'smart_relationships', :locals => { :node => @node } %>
+  </div>
 </div> <!-- end smartrelationship -->
 
-<%- if !@node.deleted_at -%>
+
 <p><%= link_to 'Edit', edit_node_path(@node) %> | 
 <%= link_to 'Delete', node_path(@node), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @node} %>
 
 <%= javascript_tag "Element.hide('create_node_group_assignment')" %>
+<%= javascript_tag "Element.hide('create_outlet')" %>
 <%= javascript_tag "Element.hide('create_rack_assignment')" %>
 <% if @node.rack %>
   <%= javascript_tag "Element.hide('add_rack_assignment_link')" %>

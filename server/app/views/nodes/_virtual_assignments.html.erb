@@ -1,0 +1,26 @@
+<%- if node.virtual_assignments_as_host.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the virtual machines running on this node.">
+  <caption>Guest Virtual Machines</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>Assigned at</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in node.virtual_assignments_as_host.sort{|a,b| a.virtual_guest.name <=> b.virtual_guest.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.virtual_guest.name, assignment.virtual_guest %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), virtual_assignment_path(assignment) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => virtual_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p>This node is not running any guest virtual machines.</p>
+<%- end -%>

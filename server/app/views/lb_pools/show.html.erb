@@ -1,0 +1,70 @@
+<%- @page_title = "Load Balancer Pool: " + h(@lb_pool.name) %>
+
+<div class="record_view">
+
+<h1>LB Pool: <%=h @lb_pool.name %></h1>
+<p><strong>Owner:</strong><%= @lb_pool.owner %><br />
+<strong>Description:</strong><br />
+<%= textilize_without_paragraph(h(@lb_pool.description)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@lb_pool.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@lb_pool.updated_at) %></p>
+
+<div id="lb_profile">
+  <%= render :partial => 'lb_profile', :locals => {:lb_pool => @lb_pool} %>
+</div>
+
+</div>
+
+<!-- assign LbPool to VIP -->
+<div class="relationship">
+  <div id="vip_lb_pool_assignments">
+    <%= render :partial => 'vip_assignment', :locals => { :lb_pool => @lb_pool} %>
+  </div>
+  
+  <div id="create_vip_assignment">
+    <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'vip', :to => 'lb_pool'} %>
+  </div>
+    
+  <p id="new_vip">
+    
+  </p>
+    
+  <p id="add_vip_assignment_link">
+    <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'vip', :to => 'lb_pool'} %>
+  </p>
+</div>
+
+<!-- assign Node to LBPool -->
+<div class="relationship">
+  <div id="node_assignments">
+    <%= render :partial => 'node_assignments', :locals => { :lb_pool => @lb_pool} %>
+  </div>
+
+  <div id="create_node_assignment">
+    <!-- reminder:  lb_pool model is just an alias of node_group model -->
+    <%= render :partial => 'shared/create_lb_pool_node_assignment', :locals => { :from => 'lb_pool', :to => 'node'} %>
+  </div>
+
+  <p id="new_node">
+
+  </p>
+
+  <p id="add_node_assignment_link">
+    <%= render :partial => 'shared/add_lb_pool_node_inline_link', :locals => { :from => 'lb_pool', :to => 'node'} %>
+  </p>
+</div>
+
+<!-- Comments -->
+<div class="relationship">
+  <%= render :partial => 'shared/comments', :locals => { :object => @lb_pool} %>
+</div> <!-- end relationship -->
+
+<p><%= link_to 'Edit', edit_lb_pool_path(@lb_pool) %> | 
+<%= link_to 'Delete', lb_pool_path(@lb_pool), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @lb_pool} %>
+
+<%= javascript_tag "Element.hide('create_vip_assignment')" %>
+<%= javascript_tag "Element.hide('create_node_assignment')" %>
+<%= javascript_tag "_lb_pool_id = "+@lb_pool.id.to_s %>

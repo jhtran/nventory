@@ -31,7 +31,7 @@ class DatacenterRackAssignmentsController < ApplicationController
   # GET /datacenter_rack_assignments/1
   # GET /datacenter_rack_assignments/1.xml
   def show
-    @datacenter_rack_assignment = DatacenterRackAssignment.find_with_deleted(params[:id])
+    @datacenter_rack_assignment = DatacenterRackAssignment.find(params[:id])
 
     respond_to do |format|
       format.html # show.html.erb
@@ -119,7 +119,7 @@ class DatacenterRackAssignmentsController < ApplicationController
   
   # GET /datacenter_rack_assignments/1/version_history
   def version_history
-    @datacenter_rack_assignment = DatacenterRackAssignment.find_with_deleted(params[:id])
+    @datacenter_rack_assignment = DatacenterRackAssignment.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

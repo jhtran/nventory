@@ -119,7 +119,7 @@ class IpAddressesController < ApplicationController
   
   # GET /ip_addresses/1/version_history
   def version_history
-    @ip_address = IpAddress.find_with_deleted(params[:id])
+    @ip_address = IpAddress.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

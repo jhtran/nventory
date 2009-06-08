@@ -1,7 +1,5 @@
 <%- @page_title = "Hardware Profile: " + h(@hardware_profile.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @hardware_profile} %>
-
 <div class="record_view">
 
 <h1>Hardware Profile: <%=h @hardware_profile.name %></h1>
@@ -46,9 +44,7 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@hardware_profile.deleted_at -%>
 <p><%= link_to 'Edit', edit_hardware_profile_path(@hardware_profile) %> | 
 <%= link_to 'Delete', hardware_profile_path(@hardware_profile), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @hardware_profile} %>

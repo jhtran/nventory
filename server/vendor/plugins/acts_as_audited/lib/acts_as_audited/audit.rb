@@ -9,6 +9,7 @@ require 'set'
 # * <tt>created_at</tt>: Time that the change was performed
 #
 class Audit < ActiveRecord::Base
+  named_scope :def_scope
   belongs_to :auditable, :polymorphic => true
   belongs_to :user, :polymorphic => true
   
@@ -18,6 +19,10 @@ class Audit < ActiveRecord::Base
   
   cattr_accessor :audited_classes
   self.audited_classes = Set.new
+
+  def self.default_search_attribute
+    'created_at'
+  end
   
   # Allows user to be set to either a string or an ActiveRecord object
   def user_as_string=(user) #:nodoc:

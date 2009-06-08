@@ -1,0 +1,5 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(unused_operating_systems.class.to_s.underscore + '_path', unused_operating_systems) %> / <%= link_to 'Edit', self.send('edit_' + unused_operating_systems.class.to_s.underscore + '_path', unused_operating_systems) %>
+  <td><%= link_to unused_operating_systems.name, self.send(unused_operating_systems.class.to_s.underscore + '_path', unused_operating_systems) %></td>
+  <td><%= unused_operating_systems.nodes.size %></td>
+</tr>

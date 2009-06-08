@@ -1,4 +1,14 @@
 <tr class="<%= cycle('odd', 'even') -%>">
   <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
   <td><%= link_to index_row.name, self.send(index_row.class.to_s.underscore + '_path', index_row) %></td>
+  <td><%= link_to index_row.producer.name, index_row.producer %></td>
+  <td><%= index_row.producer.hardware_profile.outlet_type %>
+  <td>
+    <%- if index_row.consumer_type == 'NetworkInterface' -%>
+      <%= link_to "#{index_row.consumer.node.name} [ #{index_row.consumer.name} ]", index_row.consumer unless index_row.consumer.nil? %>
+    <%- else -%>
+      <%= link_to index_row.consumer.name, index_row.consumer unless index_row.consumer.nil? %>
+    <%- end -%>
+  </td>
+  <td><%= index_row.consumer_type.nil? ? "Unknown" : index_row.consumer_type %></td>
 </tr>

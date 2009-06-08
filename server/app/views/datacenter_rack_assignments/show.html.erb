@@ -1,7 +1,5 @@
 <%- @page_title = "Datacenter Rack Assignment: " + h(@datacenter_rack_assignment.datacenter.name) + '<->' + h(@datacenter_rack_assignment.rack.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @datacenter_rack_assignment} %>
-
 <div class="record_view">
 
 <h1>Datacenter Rack Assignment</h1>
@@ -15,9 +13,7 @@
 
 </div>
 
-<%- if !@datacenter_rack_assignment.deleted_at -%>
 <p><%= link_to 'Edit', edit_datacenter_rack_assignment_path(@datacenter_rack_assignment) %> | 
 <%= link_to 'Delete', datacenter_rack_assignment_path(@datacenter_rack_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @datacenter_rack_assignment} %>

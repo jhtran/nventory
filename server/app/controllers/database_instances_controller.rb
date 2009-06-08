@@ -125,7 +125,7 @@ class DatabaseInstancesController < ApplicationController
   
   # GET /database_instances/1/version_history
   def version_history
-    @database_instance = DatabaseInstance.find_with_deleted(params[:id])
+    @database_instance = DatabaseInstance.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

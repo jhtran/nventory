@@ -1,16 +1,28 @@
 <%- @page_title = "Outlet: " + h(@outlet.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @outlet} %>
-
 <div class="record_view">
 
-<h1>Outlet: <%= h(@outlet.name) %></h1>
-
-<p><strong>Producer:</strong> <%= link_to @outlet.producer.name, @outlet.producer %><br />
-<strong>Consumer:</strong> <%= link_to @outlet.consumer.name, @outlet.consumer unless @outlet.consumer.nil? %></p>
-
-<p class="metadata"><strong>Created at:</strong> <%= h(@outlet.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@outlet.updated_at) %></p>
+  <h1>Outlet: <%= h(@outlet.name) %></h1>
+  
+  <p>
+    <strong>Producer:</strong> <%= link_to @outlet.producer.name, @outlet.producer %><br />
+    <strong>Producer Type:</strong> <%= @outlet.producer.hardware_profile.outlet_type %><br />
+  </p>
+  
+  <p>
+    <strong>Consumer:</strong> 
+      <%- if @outlet.consumer_type == 'NetworkInterface' %>
+        <%= link_to "#{@outlet.consumer.node.name} [#{@outlet.consumer.name}]", @outlet.consumer unless @outlet.consumer.nil? %>
+      <%- else -%>
+        <%= link_to "#{@outlet.consumer.name}", @outlet.consumer unless @outlet.consumer.nil? %>
+      <%- end -%>
+    <br />
+    <strong>Consumer Type:</strong> <%= @outlet.consumer_type %>
+  </p>
+  
+  <p class="metadata"><strong>Created at:</strong> <%= h(@outlet.created_at) %><br />
+    <strong>Updated at:</strong> <%= h(@outlet.updated_at) %>
+  </p>
 
 </div>
 
@@ -20,9 +32,7 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@outlet.deleted_at -%>
 <p><%= link_to 'Edit', edit_outlet_path(@outlet) %> | 
 <%= link_to 'Delete', outlet_path(@outlet), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @outlet} %>

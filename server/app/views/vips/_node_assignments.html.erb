@@ -1,0 +1,33 @@
+<%- if vip.lb_pools.collect{|pool| pool.nodes }.size > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of all vips this lb_pool belongs to">
+  <caption>Nodes</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>LB Pool</th>
+      <th>IP Address</th>
+      <th>Status</th>
+      <th>Hardware Profile</th>
+      <th>OS</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- vip.lb_pools.each do |lb_pool| -%>
+    <%- lb_pool.nodes.sort{|a,b| a.name <=> b.name}.each do |node| %>
+    <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(node) %>">
+        <td><%= link_to node.name, node %></td>
+        <td><%= link_to lb_pool.name, lb_pool %></td>
+        <td><%= node.ips.join('; ') %></td>
+        <td><%= node.status.name %></td>
+        <td><%= node.hardware_profile.name %></td>
+        <td><%= node.operating_system.nil? ? '&nbsp;' : node.operating_system.name %></td>
+    </tr>
+    <%- end -%>
+  <%- end -%>
+  </tbody>
+  </table>
+
+<%- else -%>
+  <p>No Nodes belong to this VIP.</p>
+<%- end -%>

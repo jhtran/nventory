@@ -2,30 +2,21 @@ class StatusesController < ApplicationController
   # GET /statuses
   # GET /statuses.xml
   def index
-    includes = process_includes(Status, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "statuses.name"
-           when "name_reverse" then "statuses.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = Status.default_search_attribute
-      sort = 'statuses.' + Status.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = Status.find(:all,
-                             :include => includes,
-                             :order => sort)
-    else
-      @objects = Status.paginate(:all,
-                                 :include => includes,
-                                 :order => sort,
-                                 :page => params[:page])
-    end
+    # The default display index_row columns (node_groups model only displays local table name)
+    default_includes = []
+    special_joins = {}
+
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = Status
+    allparams[:webparams] = params
+    allparams[:default_includes] = default_includes
+    allparams[:special_joins] = special_joins
+
+    results = SearchController.new.search(allparams)
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -107,7 +98,7 @@ class StatusesController < ApplicationController
   
   # GET /statuses/1/version_history
   def version_history
-    @status = Status.find_with_deleted(params[:id])
+    @status = Status.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

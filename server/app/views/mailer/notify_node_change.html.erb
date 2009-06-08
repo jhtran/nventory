@@ -1,0 +1,8 @@
+NODENAME:
+* <%= @nodename %>
+
+OLD_<%= @changetype.to_s.upcase %>:
+* <%= @oldvalue %>
+
+<%= @changetype.to_s.upcase %>:
+* <%= "#{@time} (#{@username}): #{@changevalue}" %>

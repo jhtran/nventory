@@ -1,11 +1,14 @@
 class NetworkInterface < ActiveRecord::Base
-
-  acts_as_paranoid
+  named_scope :def_scope
+  
+  acts_as_reportable
   acts_as_commentable
 
   belongs_to :node
 
   has_many :ip_addresses, :dependent => :destroy
+  # This creates a polymorphic association to Outlet model which can be shared by other interface types such as power or console
+  has_one :switch_port, :class_name => "Outlet", :as => :consumer, :dependent => :destroy
 
   # These constraints are duplicates of constraints imposed at the
   # database layer (see the relevant migration file for details).

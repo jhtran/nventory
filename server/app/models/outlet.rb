@@ -1,22 +1,20 @@
 class Outlet < ActiveRecord::Base
+  named_scope :def_scope
   
-  acts_as_paranoid
+  acts_as_reportable
   acts_as_commentable
   
   # FIXME: Network outlets should really be consumed by a NIC, not a
   # node, but that screws up the genericness of this model
   belongs_to :producer, :class_name => "Node", :foreign_key => "producer_id"
-  belongs_to :consumer, :class_name => "Node", :foreign_key => "consumer_id"
-  
+  belongs_to :consumer, :polymorphic => true
+  validates_uniqueness_of :name, :scope => :producer_id
+  validates_uniqueness_of :producer_id, :scope => [:consumer_id, :consumer_type]
   validates_presence_of :name, :producer_id
-  
+
   def validate 
     if !self.consumer_id.nil? and self.consumer_id > 0
-      
-      # If this outlet has a consumer node, make sure said node isn't
-      # already over its limit for this producer's service type.
-      # I.e. if the consumer node has two power supplies don't allow a
-      # connection to a third PDU port.
+      # if this outlet has a consumer node, make sure said node isn't already over it's limit for this producer's service type
       
       outlet_type = self.producer.hardware_profile.outlet_type
       current_outlets_in_use_by_consumer = Outlet.find_all_by_consumer_id(self.consumer_id)
@@ -36,20 +34,23 @@ class Outlet < ActiveRecord::Base
       end
       
       if outlet_type == 'Network'
-        if current_network_outlets_in_use_by_consumer.length >= Node.find(self.consumer_id).number_of_physical_nics
-          errors.add(:consumer_id, "does not have any available network ports")
+        consumer = NetworkInterface.find(self.consumer_id)
+        unless current_network_outlets_in_use_by_consumer.empty?
+          if current_network_outlets_in_use_by_consumer.length >= consumer.node.number_of_physical_nics
+            errors.add(:consumer_id, "does not have any available network ports")
+          end
         end
       elsif outlet_type == 'Power'
-        if current_power_outlets_in_use_by_consumer.length >= Node.find(self.consumer_id).number_of_power_supplies
-          errors.add(:consumer_id, "does not have any available power plugs")
+        consumer = Node.find(self.consumer_id)
+        unless consumer.power_supply_count.nil? || current_power_outlets_in_use_by_consumer.empty?
+          if current_power_outlets_in_use_by_consumer.length >= Node.find(self.consumer_id).power_supply_count
+            errors.add(:consumer_id, "does not have any available power plugs")
+          end
         end
       elsif outlet_type == 'Console'
         # Assume all nodes have one serial console port
-        if current_console_outlets_in_use_by_consumer.length >= 1
-          errors.add(:consumer_id, "does not have any available console ports")
-        end
+        errors.add(:consumer_id, "does not have any available console ports") if current_console_outlets_in_use_by_consumer.length >= 1
       end
-      
     end
   end
   

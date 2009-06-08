@@ -1,0 +1,16 @@
+<p>
+  <strong>Port</strong> <em>*</em> <br />
+  <%= f.text_field :port %>
+</p>
+<p>
+  <strong>Protocol</strong> <em>*</em> <br />
+  <%= f.select :protocol, $protocols %>
+</p>
+<p>
+  <strong>Load Balancer Method</strong> <em>*</em> <br />
+  <%= f.select :lbmethod, $lbmethods %>
+</p>
+<p>
+  <strong>Health Check (Monitor)</strong><br />
+  <%= f.text_field :healthcheck %>
+</p>

@@ -2,30 +2,21 @@ class HardwareProfilesController < ApplicationController
   # GET /hardware_profiles
   # GET /hardware_profiles.xml
   def index
-    includes = process_includes(HardwareProfile, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "hardware_profiles.name"
-           when "name_reverse" then "hardware_profiles.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = HardwareProfile.default_search_attribute
-      sort = 'hardware_profiles.' + HardwareProfile.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = HardwareProfile.find(:all,
-                                      :include => includes,
-                                      :order => sort)
-    else
-      @objects = HardwareProfile.paginate(:all,
-                                          :include => includes,
-                                          :order => sort,
-                                          :page => params[:page])
-    end
+    # The default display index_row columns (node_groups model only displays local table name)
+    default_includes = []
+    special_joins = {}
+
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = HardwareProfile
+    allparams[:webparams] = params
+    allparams[:default_includes] = default_includes
+    allparams[:special_joins] = special_joins
+
+    results = SearchController.new.search(allparams)
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -107,7 +98,7 @@ class HardwareProfilesController < ApplicationController
   
   # GET /hardware_profiles/1/version_history
   def version_history
-    @hardware_profile = HardwareProfile.find_with_deleted(params[:id])
+    @hardware_profile = HardwareProfile.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

@@ -1,0 +1,66 @@
+<%- @page_title = "Audit" %>
+
+<div class="record_view">
+
+<h1>Audit:</h1>
+
+<p>
+<strong>ID:</strong> <%= @audit.id.to_s %><br />
+<strong>Version:</strong> <%= @audit.version.to_s %><br />
+<strong>Object:</strong> 
+    <%- def_attr = @audit.auditable_type.constantize.default_search_attribute -%>
+    <%- if !@audit.auditable.nil? -%>
+      <%- descript = " : #{@audit.auditable.send(def_attr)}" -%>
+      <%= link_to @audit.auditable_type + (descript unless descript.nil?), @audit.auditable %>
+    <%- else -%>
+      <%- if !@audit.changes.nil? && @audit.changes[def_attr.to_s] -%>
+          <%- descript = " : #{@audit.changes[def_attr.to_s]}" -%>
+          <%= @audit.auditable_type + "#{descript} (no longer exists)" %>
+      <%- else -%>
+        <%= @audit.auditable_type + " no longer exists" %>
+      <%- end -%>
+    <%- end -%>
+    <br />
+<strong>Who:</strong>
+    <%= link_to @audit.user.login, self.send('account_path', @audit.user) unless @audit.user.nil? %><br />
+<strong>Type:</strong>
+    <%= @audit.action %><br />
+<strong>Attributes:</strong>
+    <table cellspacing="0" class="arattributes" summary="Changes in this version of the model.">
+      <%- unless @audit.changes.nil? -%>
+        <%- @audit.changes.each do |attribute, oldnew| -%>
+          <%- oldvalue = nil -%>
+          <%- newvalue = nil -%>
+          <%- if oldnew.kind_of?(Array) -%>
+            <%- oldvalue = oldnew[0] -%>
+            <%- newvalue = oldnew[1] -%>
+          <%- else -%>
+            <%- newvalue = oldnew -%>
+            <%- previous_audit = @audit.ancestors[-2] -%>
+            <%- if !previous_audit.nil? -%>
+              <%- oldvalue = previous_audit.revision.send(attribute) -%>
+            <%- end -%>
+          <%- end -%>
+          <%- # Treat nil and '' as the same -%>
+          <%- if oldvalue == '' then oldvalue = nil end -%>
+          <%- if newvalue == '' then newvalue = nil end -%>
+          <%- if oldvalue != newvalue -%>
+            <tr>
+              <th><%= h(attribute) %></th>
+              <td>
+                <%- if oldvalue.nil? -%>
+                  <ins><%= h(newvalue) %></ins>
+                <%- else -%>
+                  <del><%= h(oldvalue) %></del><ins><%= h(newvalue) %></ins>
+                <%- end -%>
+              </td>
+            </tr>
+          <%- end -%>
+        <%- end -%>
+      <%- end -%>
+    </table><br/>
+</p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@audit.created_at) %></p>
+
+</div>

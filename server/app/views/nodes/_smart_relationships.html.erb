@@ -1,0 +1,56 @@
+<%- if @node.number_of_physical_nics > 0 -%>
+  <p>This node has <%= h(@node.number_of_physical_nics.to_s) %> NICS that consume bandwidth. Connected producers are:</p>
+  <ul>
+    <%- i = 0 -%>
+    <%- @node.number_of_physical_nics.times do -%>
+      <li>
+        <%= '#' + i.to_s + ': ' %> 
+        <%- if !@node.consumed_network_outlets.at(i).nil? -%>
+          <%= link_to(@node.consumed_network_outlets.at(i).producer.name, node_path(@node.consumed_network_outlets.at(i).producer)) %>
+        <%- else -%>
+          <%= 'n/a' %>
+        <%- end -%> 
+      </li>
+      <%- i = i + 1 -%>
+    <%- end -%>
+  </ul>
+<%- else -%>
+  <p>This node is does not have any NICS that consume bandwidth.</p>
+<%- end -%> <!-- if @node.number_of_physical_nics -->
+  
+<%- if @node.number_of_power_supplies > 0 -%>
+  <p>This node has <%= h(@node.number_of_power_supplies.to_s) %> power supplies that consume electricity. Connected producers are:</p>
+    <ul>
+      <%- i = 0 -%>
+      <%- @node.number_of_power_supplies.times do -%>
+        <li>
+          <%= '#' + i.to_s + ': ' %>
+          <%- if !@node.consumed_power_outlets.at(i).nil? -%> 
+            <%= link_to(@node.consumed_power_outlets.at(i).producer.name, node_path(@node.consumed_power_outlets.at(i).producer)) %>
+          <%- else -%>
+            <%= 'n/a' %>
+          <%- end -%>
+        </li>
+        <%- i = i + 1 -%>
+      <%- end -%>
+    </ul>
+<%- else -%>
+  <p>This node is does not have any power supplies that consume power.</p>
+<%- end -%>
+
+<p>Serial console connected to:</p>
+
+<ul>
+<%- i = 0 -%>
+<%- 1.times do -%>
+  <li>
+    <%= '#' + i.to_s + ': ' %> 
+    <%- if !@node.consumed_console_outlets.at(i).nil? %>
+      <%= link_to(@node.consumed_console_outlets.at(i).producer.name, node_path(@node.consumed_console_outlets.at(i).producer)) %>
+    <%- else -%>
+      <%= 'n/a' %>
+    <%- end -%>
+  </li>
+  <%- i = i + 1 -%>
+<%- end -%>
+</ul>

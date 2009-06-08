@@ -1,6 +1,7 @@
 class Rack < ActiveRecord::Base
+  named_scope :def_scope
   
-  acts_as_paranoid
+  acts_as_reportable
   acts_as_commentable
   
   has_one :datacenter_rack_assignment, :dependent => :destroy
@@ -10,6 +11,7 @@ class Rack < ActiveRecord::Base
   has_many :nodes, :through => :rack_node_assignments
   
   validates_presence_of :name
+  validates_uniqueness_of :name
   
   def self.default_search_attribute
     'name'

@@ -1,7 +1,5 @@
 <%- @page_title = "Datacenter VIP Assignment: " + h(@datacenter_vip_assignment.datacenter.name) + '<->' + h(@datacenter_vip_assignment.vip.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @datacenter_vip_assignment} %>
-
 <div class="record_view">
 
 <h1>Datacenter VIP Assignment</h1>
@@ -17,9 +15,7 @@
 
 </div>
 
-<%- if !@datacenter_vip_assignment.deleted_at -%>
 <p><%= link_to 'Edit', edit_datacenter_vip_assignment_path(@datacenter_vip_assignment) %> | 
 <%= link_to 'Delete', datacenter_vip_assignment_path(@datacenter_vip_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @datacenter_vip_assignment} %>

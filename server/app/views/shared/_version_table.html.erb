@@ -29,33 +29,36 @@
         </td>
         <td>
           <table cellspacing="0" class="arattributes" summary="Changes in this version of the model.">
-            <%- audit.changes.each do |attribute, oldnew| -%>
-              <%- oldvalue = nil -%>
-              <%- newvalue = nil -%>
-              <%- if oldnew.kind_of?(Array) -%>
-                <%- oldvalue = oldnew[0] -%>
-                <%- newvalue = oldnew[1] -%>
-              <%- else -%>
-                <%- newvalue = oldnew -%>
-                <%- previous_audit = audit.ancestors[-2] -%>
-                <%- if !previous_audit.nil? -%>
-                  <%- oldvalue = previous_audit.revision.send(attribute) -%>
+            <%- # audit.changes is nil in a destroy entry -%>
+            <%- if !audit.changes.nil? -%>
+              <%- audit.changes.each do |attribute, oldnew| -%>
+                <%- oldvalue = nil -%>
+                <%- newvalue = nil -%>
+                <%- if oldnew.kind_of?(Array) -%>
+                  <%- oldvalue = oldnew[0] -%>
+                  <%- newvalue = oldnew[1] -%>
+                <%- else -%>
+                  <%- newvalue = oldnew -%>
+                  <%- previous_audit = audit.ancestors[-2] -%>
+                  <%- if !previous_audit.nil? -%>
+                    <%- oldvalue = previous_audit.revision.send(attribute) -%>
+                  <%- end -%>
                 <%- end -%>
-              <%- end -%>
-              <%- # Treat nil and '' as the same -%>
-              <%- if oldvalue == '' then oldvalue = nil end -%>
-              <%- if newvalue == '' then newvalue = nil end -%>
-              <%- if oldvalue != newvalue -%>
-                <tr>
-                  <th><%= h(attribute) %></th>
-                  <td>
-                    <%- if oldvalue.nil? -%>
-                      <ins><%= h(newvalue) %></ins>
-                    <%- else -%>
-                      <del><%= h(oldvalue) %></del><ins><%= h(newvalue) %></ins>
-                    <%- end -%>
-                  </td>
-                </tr>
+                <%- # Treat nil and '' as the same -%>
+                <%- if oldvalue == '' then oldvalue = nil end -%>
+                <%- if newvalue == '' then newvalue = nil end -%>
+                <%- if oldvalue != newvalue -%>
+                  <tr>
+                    <th><%= h(attribute) %></th>
+                    <td>
+                      <%- if oldvalue.nil? -%>
+                        <ins><%= h(newvalue) %></ins>
+                      <%- else -%>
+                        <del><%= h(oldvalue) %></del><ins><%= h(newvalue) %></ins>
+                      <%- end -%>
+                    </td>
+                  </tr>
+                <%- end -%>
               <%- end -%>
             <%- end -%>
           </table>

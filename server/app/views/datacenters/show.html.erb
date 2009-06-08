@@ -1,7 +1,5 @@
 <%- @page_title = "Datacenter: " + h(@datacenter.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @datacenter} %>
-
 <div class="record_view">
 
 <h1>Datacenter: <%=h @datacenter.name %></h1>
@@ -44,25 +42,29 @@
 
 </div> <!-- end relationship -->
 
-<div class="relationship">
 
-<div id="datacenter_vip_assignments">
-<%= render :partial => 'vip_assignments', :locals => { :datacenter => @datacenter} %>
-</div> <!-- end datacenter_vip_assignments -->
-
-<div id="create_vip_assignment">
-<%= render :partial => 'shared/create_assignment', :locals => { :from => 'datacenter', :to => 'vip'} %>
-</div>
-
-<p id="new_vip">
-
-</p>
-
-<p id="add_vip_assignment_link">
-<%= render :partial => 'shared/add_inline_link', :locals => { :from => 'datacenter', :to => 'vip'} %>
-</p>
-
-</div> <!-- end relationship -->
+<!-- vip no longer directly associated to datacenter.  VIP info can be received by looking at which load balancer, may implement into this view later -->
+<%- if false -%>
+  <div class="relationship">
+  
+  <div id="datacenter_vip_assignments">
+  <%= render :partial => 'vip_assignments', :locals => { :datacenter => @datacenter} %>
+  </div> <!-- end datacenter_vip_assignments -->
+  
+  <div id="create_vip_assignment">
+  <%= render :partial => 'shared/create_assignment', :locals => { :from => 'datacenter', :to => 'vip'} %>
+  </div>
+  
+  <p id="new_vip">
+  
+  </p>
+  
+  <p id="add_vip_assignment_link">
+  <%= render :partial => 'shared/add_inline_link', :locals => { :from => 'datacenter', :to => 'vip'} %>
+  </p>
+  
+  </div> <!-- end relationship -->
+<%- end -%>
 
 <div class="relationship">
 
@@ -70,10 +72,14 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@datacenter.deleted_at -%>
+<div class="relationship">
+
+<%= link_to 'Search', "#{nodes_path}?exact_datacenter=#{CGI.escape(@datacenter.name)}" %> for nodes located at this datacenter.
+
+</div> <!-- end relationship -->
+
 <p><%= link_to 'Edit', edit_datacenter_path(@datacenter) %> | 
 <%= link_to 'Delete', datacenter_path(@datacenter), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @datacenter} %>
 

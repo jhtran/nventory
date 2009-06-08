@@ -3,9 +3,8 @@ require 'resolv'
 #require 'net/ldap'
 
 class Account < ActiveRecord::Base
+  named_scope :def_scope
   
-  acts_as_paranoid
-    
   validates_presence_of   :login, :email_address, :name
   validates_uniqueness_of :login, :email_address
  
@@ -21,6 +20,9 @@ class Account < ActiveRecord::Base
   end
  
   def self.authenticate(login, password)
+    if password.blank?
+      return nil
+    end
     account = self.find_by_login(login)
     if account
       authentication_successful = false

@@ -1,8 +1,10 @@
 class Node < ActiveRecord::Base
+  named_scope :def_scope
   
-  acts_as_paranoid
+  acts_as_reportable
   acts_as_commentable
-  
+
+  has_many :hosted_vips, :foreign_key => "load_balancer_id", :class_name => "Vip"
   has_one :rack_node_assignment, :dependent => :destroy
   has_one :rack, :through => :rack_node_assignment
   
@@ -20,10 +22,22 @@ class Node < ActiveRecord::Base
   has_many :database_instances, :through => :node_database_instance_assignments
   
   has_many :produced_outlets, :class_name => "Outlet", :foreign_key => "producer_id", :order => "name", :dependent => :destroy
-  has_many :consumed_outlets, :class_name => "Outlet", :foreign_key => "consumer_id", :order => "name"
 
   has_many :network_interfaces, :dependent => :destroy
   has_many :ip_addresses, :through => :network_interfaces
+  has_many :consumed_outlets, :class_name => "Outlet", :as => :consumer, :dependent => :destroy
+
+  # Virtual Assignments
+  has_many :virtual_assignments_as_host, 
+           :foreign_key => 'parent_id',
+           :class_name => 'VirtualAssignment',
+           :dependent => :destroy
+  has_one  :virtual_assignment_as_guest, 
+           :foreign_key => 'child_id',
+           :class_name => 'VirtualAssignment',
+           :dependent => :destroy
+  has_one  :virtual_host, :through => :virtual_assignment_as_guest
+  has_many :virtual_guests,  :through => :virtual_assignments_as_host
 
   validates_presence_of :name, :hardware_profile_id, :status_id
   
@@ -35,6 +49,7 @@ class Node < ActiveRecord::Base
   validates_numericality_of :processor_core_count,   :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
   validates_numericality_of :os_processor_count,     :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
   validates_numericality_of :power_supply_count,     :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
+  #validates_format_of :virtualarch, :with => /^(xen|vmware)$/i, :if => :virtualarch
 
   CONSOLE_TYPES = ['','Serial','HP iLO','Dell DRAC','Sun RSC','Sun ALOM']
   def self.allowed_console_types
@@ -49,15 +64,57 @@ class Node < ActiveRecord::Base
                          :message => "not one of the allowed console " +
                             "types: #{CONSOLE_TYPES.join(',')}"
 
+  def validate
+    validates_virtualarch
+  end
+
+  def validates_virtualarch
+    if (virtualarch.blank? || virtualarch.nil?)
+      return true
+    else
+      unless virtualarch.match(/^(xen|vmware)$/i)
+        errors.add(:virtualarch, "#{virtualarch} - invalid.  Can only be \"xen\" or \"vmware\"\n")
+        return false
+      end
+    end
+  end
+
   def self.default_search_attribute
     'name'
   end
+
+  def virtual_host?
+    if (!virtual_guests.nil? && !virtual_guests.empty?)
+      return true
+    else
+      return false
+    end
+  end
+
+  def virtual_guest?
+    if (!virtual_host.nil?)
+      return true
+    else
+      return false
+    end
+  end
+
  
   def real_node_group_node_assignments
     node_group_node_assignments.reject { |ngna| ngna.virtual_assignment? }
   end
   def real_node_groups
     real_node_group_node_assignments.collect { |ngna| ngna.node_group }
+  end
+  def recursive_real_node_groups
+    results = []
+    real_node_group_node_assignments.each do |rngna|
+      results << rngna.node_group
+      rngna.node_group.child_groups.each do |rngcg|
+        results << rngcg
+      end
+    end
+    results
   end
   def virtual_node_group_node_assignments
     node_group_node_assignments.select { |ngna| ngna.virtual_assignment? }
@@ -69,9 +126,7 @@ class Node < ActiveRecord::Base
   after_save :update_outlets
   
   def consumed_network_outlets
-    network_outlets = []
-    self.consumed_outlets.each { |outlet| network_outlets << outlet if outlet.producer.hardware_profile.outlet_type == "Network" }
-    return network_outlets
+    return self.network_interfaces.collect{|nic| nic.switch_port}.compact
   end
   
   def consumed_power_outlets
@@ -216,8 +271,19 @@ class Node < ActiveRecord::Base
     end
   end
 
+  def ips
+    self.ip_addresses.collect{|ip| ip.address}.find_all{ |ip| ip =~ /\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/ && ip !~ /127\.0\.0\.1/}
+  end
+
   def before_destroy
     raise "A node can not be destroyed that has database instances assigned to it." if !self.node_database_instance_assignments.nil? && self.node_database_instance_assignments.count > 0
+  end
+
+  def services?
+    self.real_node_groups.each do |ng|
+      return true unless (ng.parent_services.empty? || ng.child_services.empty?)
+    end
+    return false
   end
   
 end

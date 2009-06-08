@@ -131,7 +131,7 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
   
   # GET /node_group_node_group_assignments/1/version_history
   def version_history
-    @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.find_with_deleted(params[:id])
+    @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

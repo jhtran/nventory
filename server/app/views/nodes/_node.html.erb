@@ -1,9 +1,12 @@
-<p><strong>Name:</strong> <em>*</em> <br/><%= f.text_field :name %></p>
+<strong>Name:</strong> <em>*</em> <br/><%= f.text_field :name %></p>
 <p><strong>Alternate Names:</strong> <br/><%= f.text_field :alternate_names %></p>
 
 <p><strong>Status:</strong> <em>*</em> <br /><%= f.select :status_id, Status.find(:all, :order => 'name').collect { |s| [ s.name, s.id ] }, { :include_blank => true } %></p>
+<p><strong>Contact:</strong> (comma separated list) <br/><%= f.text_field :contact %></p>
+<p><strong>Expiration:</strong> <br/><%= f.datetime_select(:expiration,:include_blank => true) %></p>
 
 <p><strong>Hardware Profile:</strong> <em>*</em> <br /><%= f.select :hardware_profile_id, HardwareProfile.find(:all, :order => 'name').collect { |h| [ h.name, h.id ] }, { :include_blank => true } %></p>
+<p><strong>Virtual Architecture:</strong><br /><%= f.text_field :virtualarch %></p>
 
 <p><strong>Serial Number:</strong> <br/><%= f.text_field :serial_number %></p>
 <p><strong>Asset Tag:</strong> <br/><%= f.text_field :asset_tag %></p>
@@ -37,4 +40,3 @@
 <p><strong>NICs:</strong> <br />FIXME </p>
 
 <p><strong>Description:</strong> <br /><%= f.text_area :description, {"cols" => 60, "rows" => 4} %> </p>
-

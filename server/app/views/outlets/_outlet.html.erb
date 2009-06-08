@@ -1,3 +1,24 @@
 <p><strong>Name</strong> <em>*</em> <br /> <%= f.text_field :name %></p>
-<p><strong>Producer:</strong> <br /><%= f.select :producer_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
-<p><strong>Consumer:</strong> <br /><%= f.select :consumer_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong>Outlet Type:</strong> <br />
+  <%= select_tag "outlet_type", options_for_select([[" "]] + $outlet_types.sort) %>
+</p>
+
+<div id=indicator_div 
+	style="postition: absolute; left: your_X px; top: your_Y px">
+  <%= image_tag("spinner.gif", :id => 'spinner_gif_id', 
+    :style => 'display:none') %>
+</div>
+
+<div id="producer_consumer">
+  <p><strong>Producer:<br /></strong>
+    <%= select_tag nil %></p>
+  <p><strong>Consumer:<br /></strong>
+    <%= select_tag nil %></p>
+</div>
+
+<%= observe_field("outlet_type",
+        :frequency => 2,
+        :update => :producer_consumer,
+        :before => "Element.show('spinner_gif_id')",
+        :success => "Element.hide('spinner_gif_id')",
+        :url => { :action => :get_producer_consumer } ) %>

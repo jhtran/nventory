@@ -5,8 +5,9 @@
 <h3>Nodes</h3>
 <ul>
   Search by name: <% form_tag nodes_path, :method => :get do -%>
-    <%= text_field_tag 'name' -%>
+    <%= text_field_tag 'name' -%><br />
   <% end %>
+  <br />
   <li><%= link_to 'Add New Node', new_node_path %></li>
   <li><%= link_to 'Add New Hardware Profile', new_hardware_profile_path %></li>
   <li><%= link_to 'View All Nodes', nodes_path %></li>
@@ -49,6 +50,10 @@
 </tbody>
 </table>
 
+<script type="text/javascript" src="/javascripts/swfobject.js"></script>
+<p><center><%= @nodes_over_time_chart %></center></p>
+<p><center><%= @operating_systems_pie %></center></p>
+<p><center><%= @hardware_profiles_pie %></center></p>
 
 </div>
 
@@ -56,4 +61,3 @@
 <%- if !Datacenter.find(:first) && !Rack.find(:first) && !Node.find(:first) -%>
   <p><%= link_to "Setup Sample Data", { :action => "setup_sample_data" } %></p>
 <%- end -%>
-

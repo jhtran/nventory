@@ -107,7 +107,7 @@ class SubnetsController < ApplicationController
   
   # GET /subnets/1/version_history
   def version_history
-    @subnet = Subnet.find_with_deleted(params[:id])
+    @subnet = Subnet.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

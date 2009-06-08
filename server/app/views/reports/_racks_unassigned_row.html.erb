@@ -1,0 +1,7 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%">
+  <%= link_to 'View', self.send(racks_unassigned_row.class.to_s.underscore + '_path', racks_unassigned_row) %> / 
+  <%= link_to 'Edit', self.send('edit_' + racks_unassigned_row.class.to_s.underscore + '_path', racks_unassigned_row) %>
+  <td><%= link_to racks_unassigned_row.name, self.send(racks_unassigned_row.class.to_s.downcase + '_path', racks_unassigned_row) %></td>
+  <td><%= if racks_unassigned_row.rack.nil? then 'Unassigned' else racks_unassigned_row.rack.name.to_s end %></td>
+</tr>

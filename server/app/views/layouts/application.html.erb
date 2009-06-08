@@ -19,8 +19,8 @@
 
 <p id="account_links">
 <%- if session[:account_id] -%>
-Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account) %>! 
- | <%= link_to "Help", "http://nventory.wiki.sourceforge.net/UsingNventory" %> 
+Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account) %>!
+ | <%= link_to "Help", "http://nventory.wiki.sourceforge.net/UsingNventory" %>
  | <%= link_to "Logout", :controller => 'login', :action => 'logout' %>
 <%- else -%>
 <%= link_to "Login", :controller => 'login', :action => 'login' %>
@@ -42,7 +42,8 @@ Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account
 <div id="error"><%= flash[:error] %></div> 
 <% end -%>
 
-<%= @content_for_layout %>
+<%- # Calling yield here triggers the insertion of the specific view -%>
+<%= yield %>
 
 <hr />
 </div> <!-- end content -->
@@ -61,8 +62,10 @@ Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account
 
 <h3>Meta</h3>
 <ul>
+    <li><%= link_to "Audits", audits_url %></li>
     <li><%= link_to 'N', new_account_path %>&nbsp;&nbsp;<%= link_to "Accounts", accounts_url %></li>
     <li><%= link_to 'N', new_node_group_path %>&nbsp;&nbsp;<%= link_to "Node Groups", node_groups_url %></li>
+    <li><%= link_to 'N', new_lb_pool_path %>&nbsp;&nbsp;<%= link_to "Load Balancer Pools", lb_pools_url %></li>
     <li><%= link_to 'N', new_hardware_profile_path %>&nbsp;&nbsp;<%= link_to "Hardware Profiles", hardware_profiles_url %></li>
     <li><%= link_to 'N', new_operating_system_path %>&nbsp;&nbsp;<%= link_to "Operating Systems", operating_systems_url %></li>
     <li><%= link_to 'N', new_status_path %>&nbsp;&nbsp;<%= link_to "Statuses", statuses_url %></li>
@@ -77,8 +80,15 @@ Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account
     <li><%= link_to 'N', new_datacenter_vip_assignment_path %>&nbsp;&nbsp;<%= link_to "Datacenter <=> VIP", datacenter_vip_assignments_url %></li>
     <li><%= link_to 'N', new_node_group_node_assignment_path %>&nbsp;&nbsp;<%= link_to "Node <=> Node Group", node_group_node_assignments_url %></li>
     <li><%= link_to 'N', new_node_group_node_group_assignment_path %>&nbsp;&nbsp;<%= link_to "Node Group <=> Node Group", node_group_node_group_assignments_url %></li>
+    <li><%= link_to 'N', new_service_service_assignment_path %>&nbsp;&nbsp;<%= link_to "Service <=> Service", service_service_assignments_url %></li>
 </ul>
 
+<h3>Reports</h3>
+<ul>
+   <li><%= link_to "Nodes <=> Rack Unassigned", url_for(:controller => 'reports',:action => :racks_unassigned) %></li>
+   <li><%= link_to "Nodes Not Updated > 7 Days", url_for(:controller => 'reports',:action => :have_not_updated) %></li>
+   <li><%= link_to "Unused Hardware Profiles", url_for(:controller => 'reports',:action => :unused_hardware_profiles) %></li>
+</ul>
 
 <hr />
 </div> <!-- end sidepanel -->

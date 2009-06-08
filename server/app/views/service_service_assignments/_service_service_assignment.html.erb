@@ -1,0 +1,3 @@
+<p><strong>Parent:</strong> <br /><%= f.select :parent_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong>Child:</strong> <br /><%= f.select :child_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong>Assigned at:</strong> <br/><%= f.datetime_select :assigned_at %></p>

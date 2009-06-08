@@ -5,17 +5,17 @@
 <tr>
 
 <td>
-<%= link_to 'New ' + objects.first.class.to_s.titleize, self.send('new_' + objects.first.class.to_s.underscore + '_path') %><br/>
+<%= link_to 'New ' + objects.first.class.to_s.titleize, self.send('new_' + objects.first.class.to_s.underscore + '_path') unless objects.first.class == Audit %><br/>
 <%= page_entries_info objects %>
 </td>
 
 <td align="right">
 <% if self.respond_to?('search_' + objects.first.class.to_s.underscore.pluralize + '_path') -%>
-  <%= link_to 'Advanced Search', self.send('search_' + objects.first.class.to_s.underscore.pluralize + '_path') %><br/>
+  <%= link_to 'Advanced Search', self.send('search_' + objects.first.class.to_s.underscore.pluralize + '_path') unless objects.first.class == Audit %><br/>
 <% end -%>
-<% if objects.first.class.respond_to?('default_search_attribute') -%>
+<% if objects.first.class.respond_to?('default_search_attribute') && objects.first.class != Audit -%>
   Search by <%= objects.first.class.default_search_attribute %>: <% form_tag self.send(objects.first.class.to_s.underscore.pluralize + '_path'), :method => :get do -%>
-    <%= text_field_tag objects.first.class.default_search_attribute -%>
+    <%= text_field_tag objects.first.class.default_search_attribute -%><br />
   <% end %>
 <% end -%>
 </td>
@@ -26,3 +26,16 @@
 <div id="results_table">
 <%= render :partial => 'shared/results_table', :locals => { :objects => objects } %>
 </div> <!-- end results_table div -->
+
+<% if @csvon %>
+   <div id="advanced_csv_export">
+      <%= render :partial => 'shared/advanced_csv_export' -%>
+   </div>
+   <div id="basic_csv_export">
+      <%= render :partial => 'shared/basic_csv_export' %>
+   </div>
+   <div id="csv_inline_link">
+      <%= render :partial => 'shared/csv_inline_link' %>
+   </div>
+<% end %>
+<%= javascript_tag "Element.hide('advanced_csv_export')" -%>

@@ -107,7 +107,7 @@ class OperatingSystemsController < ApplicationController
   
   # GET /operating_systems/1/version_history
   def version_history
-    @operating_system = OperatingSystem.find_with_deleted(params[:id])
+    @operating_system = OperatingSystem.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

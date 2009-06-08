@@ -1,7 +1,5 @@
 <%- @page_title = "Subnet: " + h(@subnet.network) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @subnet} %>
-
 <div class="record_view">
 
 <h1>Subnet: <%=h @subnet.network %></h1>
@@ -26,9 +24,7 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@subnet.deleted_at -%>
 <p><%= link_to 'Edit', edit_subnet_path(@subnet) %> | 
 <%= link_to 'Delete', subnet_path(@subnet), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @subnet} %>

@@ -1,6 +1,7 @@
 class VipsController < ApplicationController
   # GET /vips
   # GET /vips.xml
+  $protocols = %w[ tcp udp both ]
   def index
     includes = process_includes(Vip, params[:include])
     
@@ -107,7 +108,7 @@ class VipsController < ApplicationController
   
   # GET /vips/1/version_history
   def version_history
-    @vip = Vip.find_with_deleted(params[:id])
+    @vip = Vip.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

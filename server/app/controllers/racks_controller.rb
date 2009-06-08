@@ -146,13 +146,13 @@ class RacksController < ApplicationController
   
   # GET /racks/1/version_history
   def version_history
-    @rack = Rack.find_with_deleted(params[:id])
+    @rack = Rack.find(params[:id])
     render :action => "version_table", :layout => false
   end
   
   # GET /racks/1/visualization
   def visualization
-    @rack = Rack.find_with_deleted(params[:id])
+    @rack = Rack.find(params[:id])
   end
   
   # GET /racks/field_names

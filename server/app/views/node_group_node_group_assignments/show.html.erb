@@ -1,13 +1,11 @@
 <%- @page_title = "Node Group Node Group Assignment: " + h(@node_group_node_group_assignment.parent_group.name) + '<->' + h(@node_group_node_group_assignment.child_group.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @node_group_node_group_assignment} %>
-
 <div class="record_view">
 
 <h1>Node Group Node Group Assignment</h1>
 
-<p><strong>Parent:</strong> <%= h(@node_group_node_group_assignment.parent_group.name) %><br />
-<strong>Child:</strong> <%= h(@node_group_node_group_assignment.child_group.name) %><br />
+<p><strong>Parent:</strong> <%= link_to @node_group_node_group_assignment.parent_group.name, node_group_path(@node_group_node_group_assignment.parent_group) %><br />
+<strong>Child:</strong> <%= link_to @node_group_node_group_assignment.child_group.name, node_group_path(@node_group_node_group_assignment.child_group) %><br />
 <strong>Assigned at:</strong> <%= h(@node_group_node_group_assignment.assigned_at.to_formatted_s(:long)) %></p>
 
 <p class="metadata"><strong>Created at:</strong> <%= h(@node_group_node_group_assignment.created_at) %><br />
@@ -15,9 +13,7 @@
 
 </div>
 
-<%- if !@node_group_node_group_assignment.deleted_at -%>
 <p><%= link_to 'Edit', edit_node_group_node_group_assignment_path(@node_group_node_group_assignment) %> | 
 <%= link_to 'Delete', node_group_node_group_assignment_path(@node_group_node_group_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @node_group_node_group_assignment} %>

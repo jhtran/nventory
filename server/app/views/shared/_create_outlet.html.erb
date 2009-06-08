@@ -1,0 +1,21 @@
+<% remote_form_for( :outlet, :url => outlets_path ) do |f| %>
+  
+  <p>
+  <strong>Name:</strong>
+  <%= f.text_field :name %><br />
+  <strong>Outlet:</strong>
+  
+  <%- if node.hardware_profile.outlet_type == 'Network' %>
+    <%- to_array = NetworkInterface.find(:all, :include => {:node => {}}, :order => 'nodes.name').collect { |r| [ "#{r.node.name} [ #{r.name} ]", r.id ] } -%>
+    <%= f.hidden_field( :consumer_type, { :value => 'NetworkInterface' } ) %>
+  <%- else -%>
+    <%- to_array = Node.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+    <%= f.hidden_field( :consumer_type, { :value => 'Node' } ) %>
+  <%- end -%>
+  
+  <%= f.hidden_field( :producer_id, { :value => node.id } ) %>
+  <%= f.select( :consumer_id, to_array, {:include_blank => true} ) %>
+  
+  <%= submit_tag "Create", :onclick => "$('outlet_producer_id').value = _node_id" %> | <%= link_to_function 'Cancel', "Element.show('create_outlet');Element.hide('new_outlet')" %>
+  </p>
+<% end %>

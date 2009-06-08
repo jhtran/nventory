@@ -1,0 +1,61 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td><%= link_to index_row.id, index_row %></td>
+  <td>
+    <%= h(index_row.version) %><br/>
+    <span class="arversion_date">(<%= h(index_row.created_at.to_formatted_s(:short)) %>)</span>
+  </td>
+  <td>
+    <%- def_attr = index_row.auditable_type.constantize.default_search_attribute -%>
+    <%- if !index_row.auditable.nil? -%>
+      <%- descript = " : #{index_row.auditable.send(def_attr)}" -%>
+      <%= link_to index_row.auditable_type + (descript unless descript.nil?), index_row.auditable %>
+    <%- else -%>
+      <%- if !index_row.changes.nil? && index_row.changes[def_attr.to_s] -%>
+          <%- descript = " : #{index_row.changes[def_attr.to_s]}" -%>
+          <%= index_row.auditable_type + "#{descript} (no longer exists)" %>
+      <%- else -%>
+        <%= index_row.auditable_type + " no longer exists" %>
+      <%- end -%>
+    <%- end -%>
+  </td>
+  <td>
+    <%= link_to index_row.user.login, self.send('account_path', index_row.user) unless index_row.user.nil? %>
+  </td>
+  <td><%= index_row.action %></td>
+  <td>
+    <table cellspacing="0" class="arattributes" summary="Changes in this version of the model.">
+      <%- unless index_row.changes.nil? -%>
+        <%- index_row.changes.each do |attribute, oldnew| -%>
+          <%- oldvalue = nil -%>
+          <%- newvalue = nil -%>
+          <%- if oldnew.kind_of?(Array) -%>
+            <%- oldvalue = oldnew[0] -%>
+            <%- newvalue = oldnew[1] -%>
+          <%- else -%>
+            <%- newvalue = oldnew -%>
+            <%- previous_index_row = index_row.ancestors[-2] -%>
+            <%- if !previous_index_row.nil? -%>
+              <%- oldvalue = previous_index_row.revision.send(attribute) -%>
+            <%- end -%>
+          <%- end -%>
+          <%- # Treat nil and '' as the same -%>
+          <%- if oldvalue == '' then oldvalue = nil end -%>
+          <%- if newvalue == '' then newvalue = nil end -%>
+          <%- if oldvalue != newvalue -%>
+            <tr>
+              <th><%= h(attribute) %></th>
+              <td>
+                <%- if oldvalue.nil? -%>
+                  <ins><%= h(newvalue) %></ins>
+                <%- else -%>
+                  <del><%= h(oldvalue) %></del><ins><%= h(newvalue) %></ins>
+                <%- end -%>
+              </td>
+            </tr>
+          <%- end -%>
+        <%- end -%>
+      <%- end -%>
+    </table>
+  </td>
+
+</tr>

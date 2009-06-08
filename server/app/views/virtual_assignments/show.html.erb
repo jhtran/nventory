@@ -1,0 +1,19 @@
+<%- @page_title = "Virtual Assignment: " + h(@virtual_assignment.virtual_host.name) + '<->' + h(@virtual_assignment.virtual_guest.name) %>
+
+<div class="record_view">
+
+<h1>Virtual Assignment</h1>
+
+<p><strong>Virtual Host:</strong> <%= link_to @virtual_assignment.virtual_host.name, node_path(@virtual_assignment.virtual_host) %><br />
+<strong>Virtual Guest:</strong> <%= link_to @virtual_assignment.virtual_guest.name, node_path(@virtual_assignment.virtual_host) %><br />
+<strong>Assigned at:</strong> <%= h(@virtual_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@virtual_assignment.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@virtual_assignment.updated_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_virtual_assignment_path(@virtual_assignment) %> | 
+<%= link_to 'Delete', virtual_assignment_path(@virtual_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @virtual_assignment} %>

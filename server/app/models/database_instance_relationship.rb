@@ -1,6 +1,5 @@
 class DatabaseInstanceRelationship < ActiveRecord::Base
-  
-  acts_as_paranoid
+  named_scope :def_scope
   
   belongs_to :from, :class_name => "DatabaseInstance", :foreign_key => "from_id"
   belongs_to :to,   :class_name => "DatabaseInstance", :foreign_key => "to_id"

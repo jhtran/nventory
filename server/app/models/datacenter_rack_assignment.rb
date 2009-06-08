@@ -1,6 +1,7 @@
 class DatacenterRackAssignment < ActiveRecord::Base
+  named_scope :def_scope
   
-  acts_as_paranoid
+  acts_as_reportable
   
   belongs_to :datacenter
   belongs_to :rack 

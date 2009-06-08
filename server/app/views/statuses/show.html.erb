@@ -1,7 +1,5 @@
 <%- @page_title = "Status: " + h(@status.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @status} %>
-
 <div class="record_view">
 
 <h1>Status: <%=h @status.name %></h1>
@@ -20,9 +18,7 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@status.deleted_at -%>
 <p><%= link_to 'Edit', edit_status_path(@status) %> | 
 <%= link_to 'Delete', status_path(@status), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @status} %>

@@ -1,7 +1,5 @@
 <%- @page_title = "IP Address: " + h(@ip_address.address) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @ip_address} %>
-
 <div class="record_view">
 
 <h1>Address: <%=h @ip_address.address %></h1>
@@ -23,9 +21,7 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@ip_address.deleted_at -%>
 <p><%= link_to 'Edit', edit_ip_address_path(@ip_address) %> | 
 <%= link_to 'Delete', ip_address_path(@ip_address), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @ip_address} %>

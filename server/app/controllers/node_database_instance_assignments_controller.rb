@@ -113,7 +113,7 @@ class NodeDatabaseInstanceAssignmentsController < ApplicationController
   
   # GET /node_database_instance_assignments/1/version_history
   def version_history
-    @node_database_instance_assignment = NodeDatabaseInstanceAssignment.find_with_deleted(params[:id])
+    @node_database_instance_assignment = NodeDatabaseInstanceAssignment.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

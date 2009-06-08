@@ -117,13 +117,13 @@ class DatacentersController < ApplicationController
   
   # GET /datacenters/1/version_history
   def version_history
-    @datacenter = Datacenter.find_with_deleted(params[:id])
+    @datacenter = Datacenter.find(params[:id])
     render :action => "version_table", :layout => false
   end
   
   # GET /datacenters/1/visualization
   def visualization
-    @datacenter = Datacenter.find_with_deleted(params[:id])
+    @datacenter = Datacenter.find(params[:id])
   end
   
   # GET /datacenters/field_names

@@ -1,7 +1,5 @@
 <%- @page_title = "Operating System: " + h(@operating_system.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @operating_system} %>
-
 <div class="record_view">
 
 <h1>Operating System: <%=h @operating_system.name %></h1>
@@ -31,9 +29,7 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@operating_system.deleted_at -%>
 <p><%= link_to 'Edit', edit_operating_system_path(@operating_system) %> | 
 <%= link_to 'Delete', operating_system_path(@operating_system), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @operating_system} %>

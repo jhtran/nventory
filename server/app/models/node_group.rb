@@ -1,7 +1,8 @@
 class NodeGroup < ActiveRecord::Base
-
-  acts_as_paranoid
+  named_scope :def_scope
+  
   acts_as_commentable
+  acts_as_reportable
 
   has_many :subnets
 
@@ -20,6 +21,17 @@ class NodeGroup < ActiveRecord::Base
   has_many :parent_groups, :through => :assignments_as_child
   has_many :child_groups,  :through => :assignments_as_parent
 
+  has_many :service_assignments_as_parent,
+           :foreign_key => 'parent_id',
+           :class_name => 'ServiceServiceAssignment',
+           :dependent => :destroy
+  has_many :service_assignments_as_child,
+           :foreign_key => 'child_id',
+           :class_name => 'ServiceServiceAssignment',
+           :dependent => :destroy
+  has_many :parent_services, :through => :service_assignments_as_child
+  has_many :child_services,  :through => :service_assignments_as_parent
+
   # This is used by the edit page in the view
   # http://lists.rubyonrails.org/pipermail/rails/2006-August/059801.html
   def child_group_ids
@@ -32,6 +44,8 @@ class NodeGroup < ActiveRecord::Base
   has_many :node_group_node_assignments, :dependent => :destroy
   has_many :nodes, :through => :node_group_node_assignments
 
+  belongs_to :lb_profile
+
   # These constraints are duplicates of constraints imposed at the
   # database layer (see the relevant migration file for details).
   # These are here because they'll catch errors most of the time
@@ -41,7 +55,12 @@ class NodeGroup < ActiveRecord::Base
   # layer.
   validates_presence_of :name
   validates_uniqueness_of :name
-
+  validates_format_of :owner,
+      :with => /^([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})$/i,
+      :message => 'must be a valid email address',
+      :allow_nil => true,
+      :allow_blank => true
+  
   def self.default_search_attribute
     'name'
   end
@@ -52,11 +71,17 @@ class NodeGroup < ActiveRecord::Base
   def real_nodes
     real_node_group_node_assignments.collect { |ngna| ngna.node }
   end
+  def real_nodes_names
+    real_node_group_node_assignments.collect { |ngna| ngna.node.name }.join(",")
+  end
   def virtual_node_group_node_assignments
     node_group_node_assignments.select { |ngna| ngna.virtual_assignment? }
   end
   def virtual_nodes
     virtual_node_group_node_assignments.collect { |ngna| ngna.node }
+  end
+  def virtual_nodes_names
+    virtual_node_group_node_assignments.collect { |ngna| ngna.node.name }.join(",")
   end
   
   # This method ensures that the child groups of this node group are the
@@ -140,48 +165,60 @@ class NodeGroup < ActiveRecord::Base
     node_assignment_save_successful
   end
   
-  def all_parent_groups(path=[])
-    visited = []
-    path << self
-    
-    self.parent_groups.each do |parent_group|
-      # We try to prevent cycles from getting into the node group
-      # hierarchy in the first place (see the circular reference
-      # validation in NodeGroupNodeGroupAssignment) but a little safety check
-      # seems like a good idea, otherwise this method would go into an
-      # infinite loop in the face of a cycle.
-      if path.include?(parent_group)
-        raise "Loop detected in node group hierarchy, #{self.name} " +
-          "has #{parent_group.name} as a parent, check #{parent_group.name} " +
-          " for connections back to #{self.name}"
+  def all_parent_groups(ng=self,list={},depth=0)
+    depth += 1
+    ng.parent_groups.each do |parent_group|
+      if list[depth].kind_of?(Array)
+        list[depth] << parent_group
+      else
+        list[depth] = [parent_group]
       end
-      visited << parent_group
-      visited.concat(parent_group.all_parent_groups(path))
+      all_parent_groups(parent_group, list, depth) unless parent_group.parent_groups.empty? 
     end
-    
-    visited
+
+    # Starting with top level, ensure that value doesn't exist on lower levels
+    num_keys = list.keys.last
+    list.keys.each do |level|
+      count = level 
+      while count + 1 <= num_keys
+        list[level].each do |parent_ng|
+          if list[count + 1].include?(parent_ng)
+            raise "Loop detected in node group hierarchy, #{parent_ng.name}\n"
+          end
+        end
+        count += 1
+      end
+    end
+   
+    return list.values.flatten
   end
   
-  def all_child_groups(path=[])
-    visited = []
-    path << self
-    
-    self.child_groups.each do |child_group|
-      # We try to prevent cycles from getting into the node group
-      # hierarchy in the first place (see the circular reference
-      # validation in NodeGroupNodeGroupAssignment) but a little safety check
-      # seems like a good idea, otherwise this method would go into an
-      # infinite loop in the face of a cycle.
-      if path.include?(child_group)
-        raise "Loop detected in node group hierarchy, #{self.name} " +
-          "has #{child_group.name} as a child, check #{child_group.name} " +
-          " for connections back to #{self.name}"
+  def all_child_groups(ng=self,list={},depth=0)
+    depth += 1
+    ng.child_groups.each do |child_group|
+      if list[depth].kind_of?(Array)
+        list[depth] << child_group
+      else
+        list[depth] = [child_group]
       end
-      visited << child_group
-      visited.concat(child_group.all_child_groups(path))
+      all_child_groups(child_group, list, depth) unless child_group.child_groups.empty? 
     end
-    
-    visited
+
+    # Starting with top level, ensure that value doesn't exist on lower levels
+    num_keys = list.keys.last
+    list.keys.each do |level|
+      count = level 
+      while count + 1 <= num_keys
+        list[level].each do |child_ng|
+          if list[count + 1].include?(child_ng)
+            raise "Loop detected in node group hierarchy, #{child_ng.name}\n"
+          end
+        end
+        count += 1
+      end
+    end
+
+    return list.values.flatten
   end
   
   def all_child_groups_except_ngnga(excluded_ngnga, path=[])
@@ -208,15 +245,6 @@ class NodeGroup < ActiveRecord::Base
     visited
   end
   
-  def all_child_nodes
-    child_nodes = {}
-    nodes.each { |node| child_nodes[node] = true }
-    all_child_groups.each do |group|
-      group.nodes.each { |node| child_nodes[node] = true }
-    end
-    child_nodes.keys
-  end
-  
   def all_child_nodes_except_ngna(excluded_ngna)
     child_nodes = {}
     node_group_node_assignments.each do |ngna|
@@ -236,11 +264,25 @@ class NodeGroup < ActiveRecord::Base
 
   def all_child_nodes_except_ngnga(excluded_ngnga)
     child_nodes = {}
-    nodes.each { |node| child_nodes[node] = true }
+    real_nodes.each { |node| child_nodes[node] = true }
     all_child_groups_except_ngnga(excluded_ngnga).each do |group|
       group.nodes.each { |node| child_nodes[node] = true }
     end
     child_nodes.keys
   end
-end
 
+  def recursive_child_services
+    @all_child_services = []
+    recurse_child_services(self)
+    @all_child_services
+  end
+
+  def recurse_child_services(ng)
+    @all_child_services << ng
+    if ng.child_services.size > 0
+      ng.child_services.each do |child|
+        recurse_child_services(child)
+      end
+    end
+  end
+end

@@ -1,0 +1,21 @@
+<p>
+  <strong>Name</strong> <em>*</em> <br />
+  <%= f.text_field :name %>
+</p>
+<p>
+  <strong>Owner</strong> <br />
+  <%= f.text_field :owner %>
+</p>
+
+<p>
+  <strong>Load Balancer Profile</strong> <br />
+  <%= f.select :lb_profile_id, LbProfile.find(:all, :order => 'port').collect{ |obj| [ "Port [#{ obj.port}] , Protocol [#{obj.protocol}] , LBMethod [#{obj.lbmethod}], Healthcheck [#{ (obj.healthcheck.blank? || obj.healthcheck.nil?) ? 'no healthcheck ' : (obj.healthcheck) }]", obj.id ] } %><br />
+  <%= link_to 'New LB Profile',new_lb_profile_path %>
+</p>
+
+<p>
+  <strong>Description</strong> <br />
+  <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %>
+</p>
+
+<%= javascript_tag "Element.hide('create_lb_profile')" %>

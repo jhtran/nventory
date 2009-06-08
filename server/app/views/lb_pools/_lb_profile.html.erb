@@ -1,0 +1,20 @@
+<table cellspacing="0" class="styled" summary="A profile listing all load balancing metrics used by the lb service pool">
+<thead>
+<tr>
+    <th>Port</th>
+    <th>Protocol</th>
+    <th>LBMethod</th>
+    <th>Health Check</th>
+    <th>&nbsp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(lb_pool.lb_profile) %>">
+    <td><%= lb_pool.lb_profile.port %></td>
+    <td><%= lb_pool.lb_profile.protocol %></td>
+    <td><%= lb_pool.lb_profile.lbmethod %></td>
+    <td><%= lb_pool.lb_profile.healthcheck %></td>
+    <td><%= link_to 'Profile', lb_pool.lb_profile %></td>
+</tr>
+</tbody>
+</table>

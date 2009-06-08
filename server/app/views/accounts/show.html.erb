@@ -1,7 +1,5 @@
 <%- @page_title = "Account: " + h(@account.login) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @account} %>
-
 <div class="record_view">
 
 <h1>Account: <%=h @account.login %></h1>
@@ -11,16 +9,16 @@
 <%- end -%>
 
 <p><strong>Name:</strong> <%=h @account.name %><br />
-<strong>Email:</strong> <%=h @account.email_address %></p>
+<strong>Email:</strong> <%=h @account.email_address %><br />
+<%= link_to "User Audits", audits_path(:user_id => @account.id) %>
+</p>
 
 <p class="metadata"><strong>Created at:</strong> <%= h(@account.created_at) %><br />
 <strong>Updated at:</strong> <%= h(@account.updated_at) %></p>
 
 </div>
 
-<%- if !@account.deleted_at -%>
 <p><%= link_to 'Edit', edit_account_path(@account) %> | 
 <%= link_to 'Delete', account_path(@account), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @account} %>

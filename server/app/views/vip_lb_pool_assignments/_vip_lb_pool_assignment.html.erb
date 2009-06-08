@@ -1,0 +1,3 @@
+<p><strong>Vip:</strong> <br /><%= f.select :vip_id, Vip.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong>LbPool:</strong> <br /><%= f.select :lb_pool_id, LbPool.def_scope.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong>Assigned at:</strong> <br/><%= f.datetime_select :assigned_at %></p>

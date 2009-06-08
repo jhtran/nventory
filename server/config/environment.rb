@@ -3,9 +3,9 @@
 # Uncomment below to force Rails into production mode when 
 # you don't control web/app server and can't set it the proper way
 # ENV['RAILS_ENV'] ||= 'production'
-
+@@domain_name = "domain.com"
 # Specifies gem version of Rails to use when vendor/rails is not present
-RAILS_GEM_VERSION = '2.1.1' unless defined? RAILS_GEM_VERSION
+RAILS_GEM_VERSION = '2.1.2' unless defined? RAILS_GEM_VERSION
 
 # Bootstrap the Rails environment, frameworks, and default configuration
 require File.join(File.dirname(__FILE__), 'boot')
@@ -42,6 +42,10 @@ Rails::Initializer.run do |config|
   # config.active_record.default_timezone = :utc
   
   # See Rails::Configuration for more options
+  config.after_initialize do
+    require 'ruport'
+  end
+  #require 'ruport/acts_as_reportable'
 end
 
 # Add new inflection rules using the following format 
@@ -77,3 +81,10 @@ Mime::Type.register "text/config", :config
 ExceptionNotifier.exception_recipients = %w(webmaster)
 
 require 'will_paginate'
+require 'fastercsv'
+require 'fast_xs'
+require 'net/http'
+require 'hpricot'
+require 'graphviz'
+# Needed for offline background jobs (starling/workling)
+Workling::Remote.dispatcher = Workling::Remote::Runners::StarlingRunner.new

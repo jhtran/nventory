@@ -1,6 +1,7 @@
 class NodeDatabaseInstanceAssignment < ActiveRecord::Base
+  named_scope :def_scope
   
-  acts_as_paranoid
+  acts_as_reportable
   
   belongs_to :node
   belongs_to :database_instance

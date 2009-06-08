@@ -159,7 +159,7 @@ class NetworkInterfacesController < ApplicationController
   
   # GET /network_interfaces/1/version_history
   def version_history
-    @network_interface = NetworkInterface.find_with_deleted(params[:id])
+    @network_interface = NetworkInterface.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

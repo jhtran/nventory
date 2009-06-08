@@ -2,30 +2,20 @@ class AccountsController < ApplicationController
   # GET /accounts
   # GET /accounts.xml
   def index
-    includes = process_includes(Account, params[:include])
-    
-    sort = case params['sort']
-           when "login" then "accounts.login"
-           when "login_reverse" then "accounts.login DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = Account.default_search_attribute
-      sort = 'accounts.' + Account.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = Account.find(:all,
-                              :include => includes,
-                              :order => sort)
-    else
-      @objects = Account.paginate(:all,
-                                  :include => includes,
-                                  :order => sort,
-                                  :page => params[:page])
-    end
+    default_includes = []
+    special_joins = {}
+
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = Account
+    allparams[:webparams] = params
+    allparams[:default_includes] = default_includes
+    allparams[:special_joins] = special_joins
+
+    results = SearchController.new.search(allparams)
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -107,7 +97,7 @@ class AccountsController < ApplicationController
   
   # GET /accounts/1/version_history
   def version_history
-    @account = Account.find_with_deleted(params[:id])
+    @account = Account.find(params[:id])
     render :action => "version_table", :layout => false
   end
   

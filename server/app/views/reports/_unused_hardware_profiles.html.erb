@@ -1,0 +1,5 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(unused_hardware_profiles.class.to_s.underscore + '_path', unused_hardware_profiles) %> / <%= link_to 'Edit', self.send('edit_' + unused_hardware_profiles.class.to_s.underscore + '_path', unused_hardware_profiles) %>
+  <td><%= link_to unused_hardware_profiles.name, self.send(unused_hardware_profiles.class.to_s.underscore + '_path', unused_hardware_profiles) %></td>
+  <td><%= unused_hardware_profiles.nodes.size %></td>
+</tr>

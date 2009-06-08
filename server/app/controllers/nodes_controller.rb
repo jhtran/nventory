@@ -2,317 +2,52 @@ class NodesController < ApplicationController
   # GET /nodes
   # GET /nodes.xml
   def index
-    includes = process_includes(Node, params[:include])
-
-    sort = case params['sort']
-           when "name"                     then "nodes.name"
-           when "name_reverse"             then "nodes.name DESC"
-           when "status"                   then includes[:status] = {}; "statuses.name"
-           when "status_reverse"           then includes[:status] = {}; "statuses.name DESC"
-           when "hardware_profile"         then includes[:hardware_profile] = {}; "hardware_profiles.name"
-           when "hardware_profile_reverse" then includes[:hardware_profile] = {}; "hardware_profiles.name DESC"
-           when "operating_system"         then includes[:operating_system] = {}; "operating_systems.name"
-           when "operating_system_reverse" then includes[:operating_system] = {}; "operating_systems.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = Node.default_search_attribute
-      sort = 'nodes.' + Node.default_search_attribute
-    end
-    
-    # The index page includes some data from associations.  If we don't
-    # include those associations then N SQL calls result as that data is
-    # looked up row by row.
-    if !params[:format] || params[:format] == 'html'
-      includes[:operating_system] = {}
-      includes[:hardware_profile] = {}
-      includes[:node_groups] = {}
-      includes[:status] = {}
-    end
-
-    # Parse all other params as search query args
-    #
-    # If the query arg is prefaced by "exact_" then we do an exact match,
-    # otherwise we do a substring match.
-    #
-    # The user can specify more than one possible value for a given key
-    # by adding an arbitrary unique identifier in square brackets after
-    # each instance of the key.  In that case Rails passes us the values
-    # in a hash associated with that key in params.  (See the "Parameters"
-    # section of the ActionController::Base docs for more info.)  Or by
-    # adding empty square brackets after the key, in which case Rails
-    # passes us the values in an array associated with that key in params.
-    # (This behavior seems to be undocumented.)
-    #
-    # The user can also specify queries against any other table that we
-    # have a relationship with (i.e. something defined via belongs_to/has_*
-    # in the node model).
-    #
-    # Searches across multiple keys are combined with AND
-    #
-    # Some example query args:
-    # name=foo (expands to nodes.name LIKE '%foo%')
-    # exact_name=foo (expands to nodes.name = 'foo')
-    # name[1]=foo&name[2]=bar (expands to (nodes.name LIKE '%foo%' OR nodes.name LIKE '%bar%'))
-    # name[]=foo&name[]=bar (expands to (nodes.name LIKE '%foo%' OR nodes.name LIKE '%bar%'))
-    # exact_name[1]=foo&exact_name[2]=bar (expands to nodes.name IN ('foo','bar'))
-    # status=Active (expands to statuses.name LIKE '%Active%')
-    # network_interfaces[hardware_address]=FF:AA (expands to network_interfaces.hardware_address LIKE '%FF:AA%')
-    # exact_name=foo&exact_status=Active (expands to nodes.name = 'foo' AND statuses.name = 'Active')
-    searchquery = {}
-    joins = {}
-    # You need to specify a special join if your assosciation uses a
-    # non-standard foreign key (i.e. you specified a :foreign_key when
-    # defining the association).
-    # 
-    # The Rails :include mechanism is not deterministic enough in creating
-    # table aliases for us to handle this situation automatically.
-    # (See the "Table Aliasing" section of the
-    # ActiveRecord::Associations::ClassMethods docs for more info.)
-    # 
-    # Based on the way the Rails and the code below interact your table
-    # alias (JOIN table AS alias) needs to be the plural of the search
-    # key the user will be using.  The search key doesn't have to match
-    # the name of the association in the model, but sticking with that
-    # will be way less confusing for everyone.
+    # Turns on csv export form on
+    @csvon = "true"
+    params[:csv] = true
+    # The default display index_row columns
+    default_includes = [:operating_system, :hardware_profile, :node_groups, :status] 
     special_joins = {
       'preferred_operating_system' =>
         'LEFT OUTER JOIN operating_systems AS preferred_operating_systems ON nodes.preferred_operating_system_id = preferred_operating_systems.id'
     }
-    content_column_names = Node.content_columns.collect { |c| c.name }
-    params.each_pair do |key, value|
-      next if key == 'action'
-      next if key == 'controller'
-      next if key == 'format'
-      next if key == 'page'
-      next if key == 'sort'
-      next if key == 'include'
-
-      if content_column_names.include?(key) && !value.empty?
-        # We have to disambiguate the column name here (by specifying
-        # 'nodes.') in case the user also searches on or we otherwise join
-        # to an associated table, as it might also have a column with the
-        # same name.
-        search_values = []
-        if value.kind_of? Hash
-          value.each_value { |v| search_values.push('%' + v + '%') }
-        elsif value.kind_of? Array
-          value.each { |v| search_values.push('%' + v + '%') }
-        else
-          search_values.push('%' + value + '%')
-        end
-        searchquery["nodes.#{key} LIKE ?"] = search_values
-      elsif key =~ /^exact_(.+)$/ && content_column_names.include?($1) && !value.empty?
-        if value.kind_of? Hash
-          searchquery["nodes.#{$1} IN (?)"] = value.values
-        elsif value.kind_of? Array
-          searchquery["nodes.#{$1} IN (?)"] = value
-        else
-          searchquery["nodes.#{$1} = ?"] = value
-        end
-      elsif !value.empty?
-        # This section handles any search queries which aren't in the main
-        # table.  We check to ensure the user is referring to an associated
-        # value defined via belongs_to/has_*
-
-        # We use find's :include by default (since it handles the
-        # join automagically), but special cases can be defined via the
-        # special_joins hash above, in which case we use find's :joins.
-
-        # The user can specify a complete column name like status[name],
-        # or just the name of the relationship in which case we use the
-        # model's default_search_attribute as the column name.
-        # Possible formats the user might use, see comments above about
-        # the various formats for specifying more than one value:
-        # status=inservice
-        # status[1]=inservice
-        # status[]=inservice
-        # status[name]=inservice
-        # status[name][1]=inservice
-        # status[name][]=inservice
-        # And each of those could be preceeded by exact_
-
-        search_key = nil
-        exact_search = nil
-        if (key =~ /^exact_(.+)/)
-          search_key = $1
-          exact_search = true
-        else
-          search_key = key
-          exact_search = false
-        end
-
-        assoc = nil
-        if (special_joins.include?(search_key))
-          joins[special_joins[search_key]] = true
-          assoc = Node.reflect_on_association(search_key.to_sym)
-        else
-          # Walk the association tree looking for the key, and automatically
-          # populate 'includes' as necessary.
-          # FIXME: Multiple assocations (in different models) can have the
-          # same name.  search_for_association returns the "closest"
-          # association (least hops).  It's possible that isn't the one the
-          # user wants.  We should support a mechanism for the user to give
-          # us a full path or possibly "breadcrumbs" indicating the tree of
-          # associations that would get to the association they want.  I
-          # imagine that would involve URL syntax similar to includes.
-          assoc, includes, depth = search_for_association(Node, search_key.to_sym, includes)
-        end
-        
-        if assoc.nil?
-          # FIXME: Need better error handling for XML users
-          flash[:error] = "Ignored invalid search key #{key}"
-          logger.info "Ignored invalid search key #{key}"
-          next
-        end
-
-        table_name = search_key.tableize
-        
-        search = {}
-        # Figure out if the user specified a search column
-        # status=inservice
-        # status[]=inservice
-        if value.kind_of?(String) || value.kind_of?(Array)
-          search["#{table_name}.#{assoc.klass.default_search_attribute}"] = value
-        # status[1]=inservice
-        # status[name]=inservice
-        # status[name][1]=inservice
-        # status[name][]=inservice
-        elsif value.kind_of?(Hash)
-          assoc_content_column_names = assoc.klass.content_columns.collect { |c| c.name }
-          # This is a bit messy as we have to disambiguate the first two
-          # possibilities.
-          if value.values.first.kind_of?(String)
-            if !assoc_content_column_names.include?(value.keys.first)
-              # The first hash key isn't a valid column name in the
-              # association, so assume this is like the first example
-              search["#{table_name}.#{assoc.klass.default_search_attribute}"] = value.values
-            else
-              value.each_pair do |search_column,search_value|
-                if assoc_content_column_names.include?(search_column)
-                  search["#{table_name}.#{search_column}"] = search_value
-                else
-                  # FIXME: Need better error handling for XML users
-                  flash[:error] = "Ignored invalid search key #{key}"
-                  logger.info "Ignored invalid search key #{key}"
-                end
-              end
-            end
-          elsif value.values.first.kind_of?(Array)
-            value.each_pair do |search_column,search_value|
-              if assoc_content_column_names.include?(search_column)
-                search["#{table_name}.#{search_column}"] = search_value
-              else
-                # FIXME: Need better error handling for XML users
-                flash[:error] = "Ignored invalid search key #{key}"
-                logger.info "Ignored invalid search key #{key}"
-              end
-            end
-          elsif value.values.first.kind_of?(Hash)
-            value.each_pair do |search_column,search_value|
-              if assoc_content_column_names.include?(search_column)
-                search["#{table_name}.#{search_column}"] = search_value.values
-              else
-                # FIXME: Need better error handling for XML users
-                flash[:error] = "Ignored invalid search key #{key}"
-                logger.info "Ignored invalid search key #{key}"
-              end
-            end
-          end
-        end
-        
-        search.each_pair do |skey,svalue|
-          if svalue.empty?
-            logger.info "Search value for #{skey} is empty"
-          else
-            if exact_search
-              if svalue.kind_of? Array
-                searchquery["#{skey} IN (?)"] = svalue
-              else
-                searchquery["#{skey} = ?"] = svalue
-              end
-            else
-              if svalue.kind_of? Array
-                search_values = []
-                svalue.each { |v| search_values.push('%' + v + '%')}
-                searchquery["#{skey} LIKE ?"] = search_values
-              else
-                searchquery["#{skey} LIKE ?"] = '%' + svalue + '%'
-              end
-            end
-          end
-        end
-      else
-        logger.info "Search value for #{key} is empty"
-      end
-    end
     
-    logger.info "searchquery" + searchquery.to_yaml
-    logger.info "includes" + includes.to_yaml
-    logger.info "joins" + joins.keys.to_yaml
-
-    if searchquery.empty?
-      # XML doesn't get pagination
-      if params[:format] && params[:format] == 'xml'
-        @objects = Node.find(:all,
-                             :include => includes,
-                             :joins => joins.keys.join(' '),
-                             :order => sort)
-      else
-        @objects = Node.paginate(:all,
-                                 :include => includes,
-                                 :joins => joins.keys.join(' '),
-                                 :order => sort,
-                                 :page => params[:page])
-      end
-    else
-      # Params like name[1]=foo&name[2]=bar&exact_status=Active
-      # will be inserted into searchquery like this:
-      # {
-      #   'nodes.name LIKE ?' => ['%foo%','%bar%']
-      #   'statuses.name = ?' => 'Active'
-      # }
-      # We need to turn that into a valid SQL query, in this case:
-      # (nodes.name LIKE ? OR nodes.name LIKE ?) AND statuses.name = ?
-      # and an array of search values ['%foo%','%bar%','Active']
-      conditions_query = []
-      conditions_values = []
-      searchquery.each_pair do |key, value|
-        if value.kind_of? Array
-          conditions_tmp = []
-          value.each do |v|
-            conditions_tmp.push(key)
-            conditions_values.push(v)
-          end
-          conditions_query.push( '(' + conditions_tmp.join(' OR ') + ')' )
-        else
-          conditions_query.push(key)
-          conditions_values.push(value)
-        end
-      end
-      conditions_string = conditions_query.join(' AND ')
-      # XML doesn't get pagination
-      if params[:format] && params[:format] == 'xml'
-        @objects = Node.find(:all,
-                             :include => includes,
-                             :joins => joins.keys.join(' '),
-                             :conditions => [ conditions_string, *conditions_values ],
-                             :order => sort)
-      else
-        @objects = Node.paginate(:all,
-                                 :include => includes,
-                                 :joins => joins.keys.join(' '),
-                                 :conditions => [ conditions_string, *conditions_values ],
-                                 :order => sort,
-                                 :page => params[:page])
-      end
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = Node
+    allparams[:webparams] = params
+    allparams[:default_includes] = default_includes
+    allparams[:special_joins] = special_joins
     
+    results = SearchController.new.search(allparams)
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    @objects = results[:search_results]
+    
+    # search results should contain csvobj which contains all the params for building and put it in session.  View will launch csv controller to call on that session
+    if @csvon == "true"
+      results[:csvobj]['def_attr_names'] = %w(name operating_system hardware_profile node_groups status)
+      session[:csvobj] = results[:csvobj] 
+    end
+
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
-                                                   :dasherize => false) }
+      format.xml do 
+        if params[:inline] == "off"
+          xmlobj = @objects.to_xml(:include => convert_includes(includes), :dasherize => false)
+          send_data(xmlobj)
+        else
+          render :xml => @objects.to_xml(:include => convert_includes(includes),
+                                                   :dasherize => false)
+        end
+      end
+      format.csv do
+        if params[:inline] == "off"
+          send_data(@objects)
+        else
+          send_data(@objects, :type => 'text/plain', :disposition => 'inline')
+        end
+      end
     end
   end
 
@@ -320,9 +55,9 @@ class NodesController < ApplicationController
   # GET /nodes/1.xml
   def show
     includes = process_includes(Node, params[:include])
-    
-    @node = Node.find(params[:id],
-                      :include => includes)
+    @node = Node.find(params[:id], :include => includes)
+    @parent_services = @node.node_groups.collect { |ng| ng.parent_services }.flatten
+    @child_services = @node.node_groups.collect { |ng| ng.child_services }.flatten
 
     respond_to do |format|
       format.html # show.html.erb
@@ -382,6 +117,11 @@ class NodesController < ApplicationController
       params[:node].delete(:outlet_names)
     end
 
+    if params[:node].include?(:virtualmode)
+      virtual_guest = true
+      params[:node].delete(:virtualmode)
+    end
+
     @node = Node.new(params[:node])
 
     respond_to do |format|
@@ -389,7 +129,7 @@ class NodesController < ApplicationController
         # If the user specified some network interface info then handle that
         # We have to perform this after saving the new node so that the
         # NICs can be associated with it.
-        process_network_interfaces
+        virtual_guest ? process_network_interfaces(:noswitch) : process_network_interfaces
         # If the user specified a rack assignment then handle that
         process_rack_assignment
         # If the user included outlet names apply them now
@@ -429,6 +169,8 @@ class NodesController < ApplicationController
   # PUT /nodes/1
   # PUT /nodes/1.xml
   def update
+    xmloutput = {}
+    xmlinfo = [""]
     @node = Node.find(params[:id])
 
     # If the user is just setting a value related to one of the
@@ -472,8 +214,72 @@ class NodesController < ApplicationController
       end
     end
 
+
+    if params[:node][:virtualarch]
+      if params[:node][:virtualmode]
+        if params[:node][:virtualmode] == 'guest'
+          virtual_guest = true
+          # use switch ip & port info to find out who the vm host is
+          vmhost = find_vm_host
+          unless vmhost.nil?
+            if vmhost.virtual_host?
+              # does node belong to ANY vmvirt_assignment?  (can only belong to ONE at any time as a guest)
+              results = VirtualAssignment.find(:all,:conditions => ["child_id = ?", @node.id])
+              if results.empty?
+                xmlinfo << "Virtual assignment to #{vmhost.name} doesn't exist.  Creating..."
+                VirtualAssignment.create(
+                  :parent_id => vmhost.id,
+                  :child_id => @node.id)
+              else
+                xmlinfo << "#{@node.name} already assigned to virtual host #{results.first.virtual_host.name}.\n    - Skipping vm guest assignment registration."
+              end
+            else
+              xmlinfo << "Found vmhost (#{vmhost.name}) but not registered in nventory as a vmhost.\nCancelled virtual assignment"
+            end
+          else
+            xmlinfo << "Was unable to find a vmhost associated to the switch and switch port."
+          end
+        elsif params[:node][:virtualmode] == 'host'
+          # register all guest vms from value passed from cli
+          vmguests = params[:node][:vmguests].split(',')
+          # clear this out of hash or will try to register a non-existing table column
+          params[:node].delete(:vmguests)
+          # try to find each node if exists in nventory, if does then see if virtual assign exists to this vm host, if not create it
+          vmguests.each do |vmguest|
+            vmresults = Node.find(:all,:conditions => ["name like ?","#{vmguest}%"])
+            if vmresults.size == 1
+              vmnode = vmresults.first
+              vmassign_results = VirtualAssignment.find(:all,:conditions => ["child_id = ?", vmnode.id])
+              if vmassign_results.size > 1
+                xmlinfo << "#{vmguest} already registered to MULTIPLE vm hosts\n    (Illegal registration!) Should only belong to one vm assignment at any given time."
+              elsif vmassign_results.size == 1
+                xmlinfo << "#{vmguest} already registered to vmhost #{vmassign_results.first.virtual_host.name}\n    - Skipping vm guest assignment registration."
+              elsif vmassign_results.empty?
+                xmlinfo << "#{vmguest} not registered to vmhost #{@node.name}.  Registering..."
+                VirtualAssignment.create(
+                  :parent_id => @node.id,
+                  :child_id => vmnode.id)
+              end
+            elsif vmresults > 1
+              xmlinfo << "#{vmguest}: More than 1 nodes found with that name.  Unable to register."
+            elsif vmresults.empty?
+              xmlinfo << "#{vmguest}: No nodes found with that name.  Unable to register"
+            end
+          end
+        end
+        params[:node].delete(:virtualmode)
+      end
+    end
+    
     # If the user specified some network interface info then handle that
-    process_network_interfaces
+    if  params[:format] == 'xml'
+      # if it's xml request we want to output whether we found a switch port or not.   
+      # ideally xmloutput should be used for other steps in this other than just process_network_interfaces,
+      # however, we'll start with this for now.
+      virtual_guest ? (xmlinfo << process_network_interfaces(:noswitch)) : (xmlinfo << process_network_interfaces)
+    else
+      virtual_guest ? process_network_interfaces(:noswitch) : process_network_interfaces
+    end
     # If the user specified a rack assignment then handle that
     process_rack_assignment
     # If the user included outlet names apply them now
@@ -482,11 +288,13 @@ class NodesController < ApplicationController
       params[:node].delete(:outlet_names)
     end
 
+    xmloutput[:info] = xmlinfo.join("\n").to_s 
+
     respond_to do |format|
       if @node.update_attributes(params[:node])
         flash[:notice] = 'Node was successfully updated.'
         format.html { redirect_to node_url(@node) }
-        format.xml  { head :ok }
+        format.xml  { render :xml => xmloutput.to_xml }
       else
         format.html { render :action => "edit" }
         format.xml  { render :xml => @node.errors.to_xml, :status => :unprocessable_entity }
@@ -517,7 +325,7 @@ class NodesController < ApplicationController
   
   # GET /nodes/1/version_history
   def version_history
-    @node = Node.find_with_deleted(params[:id])
+    @node = Node.find(params[:id])
     render :action => "version_table", :layout => false
   end
   
@@ -580,8 +388,53 @@ class NodesController < ApplicationController
     return hwprof
   end
   private :find_or_create_hardware_profile
+
+  def find_vm_host
+    info = ["\n"]
+    # If the user specified some network interface info then handle that
+    if params.include?(:network_interfaces)
+      nichashes = []
+      if params[:network_interfaces].kind_of?(Hash)
+        # Pull out the authoritative flag if the user specified it
+        nichashes = params[:network_interfaces].values
+      elsif params[:network_interfaces].kind_of?(Array)
+        nichashes = params[:network_interfaces]
+      end
+      vmhost = {}
+      nichashes.each do |nichash|
+        if nichash.include?("switch")
+          vmhost[:switch] = nichash["switch"]
+          vmhost[:swport] = nichash["port"]
+        end
+      end
+      if (vmhost[:switch] && vmhost[:swport])
+        # find the switch by name
+        sw_results = Node.find(:all,:conditions => ["name like ?", "%#{vmhost[:switch]}%"])
+        if sw_results.size == 1
+          sw_object = sw_results.first
+        else
+          info << "The switch name (#{vmhost[:switch]}) provided by cdpr resulted in more or less than 1 match against nventory\n"
+          return nil
+        end
+        # now find the switch port for this switch
+        port_results = Outlet.find(:all,:conditions => ["producer_id = ? and name like ?", sw_object.id, "Gi#{vmhost[:swport]}"])
+        if port_results.size == 1
+          port_obj = port_results.first
+        else
+          info << "The port name (#{vmhost[:swport]}) provided by cdpr resulted in more or less than 1 match against nventory\n"
+          return nil
+        end
+        # now that we have the port obj, we can determine who the node attached to it is
+        vmhost[:node] = port_obj.consumer.node
+      end
+      return vmhost[:node] unless vmhost[:node].nil? 
+    else
+      return nil
+    end
+  end
   
-  def process_network_interfaces
+  def process_network_interfaces(flag='')
+    info = []
     # If the user specified some network interface info then handle that
     if params.include?(:network_interfaces)
       logger.info "User included NIC info, handling it"
@@ -613,6 +466,62 @@ class NodesController < ApplicationController
           end
           nichash.delete(:ip_addresses)
         end
+
+        # Remove switch info for processing outside the nic model
+        # and then try to see if we can find the switchand port to correspond exactly
+        if ( nichash[:interface_type] && nichash[:interface_type] == "Ethernet" )
+            switch = {}
+            if nichash.include?(:switch)
+              switch[:name] = nichash[:switch]
+              nichash.delete(:switch)
+            end
+            if nichash.include?(:port)
+              switch[:port] = nichash[:port]
+              nichash.delete(:port)
+            end
+            if nichash.include?(:portspeed)
+              switch[:portspeed] = nichash[:portspeed]
+              nichash.delete(:portspeed)
+            end
+            if (switch[:port] && switch[:name])
+              sw_results = Node.find(:all,:conditions => ["name like ?", "%#{switch[:name]}%"])
+              if sw_results.size == 1
+                # check if a switch
+                if !sw_results.first.hardware_profile.outlet_type.nil? && sw_results.first.hardware_profile.outlet_type.match(/Network/)
+                  # found the switch , not what?
+                  sw_object = sw_results.first
+                  # look for the association of switch(node#object) and port(Outlet#id)
+                  port_results = Outlet.find(:all,:conditions => ["producer_id = ? and name like ?", sw_object.id, "Gi#{switch[:port]}"])
+                  if port_results.size == 1
+                    port = port_results.first
+                  elsif port_results.size > 1
+                    # return error that the switch has MORE than ONE port results with that name
+                    info << "The port name (#{switch[:port]}) provided by cdpr resulted in more than 1 match against nventory"
+                  else
+                    info << "The port name (#{switch[:port]}) wasn't found for the switch name (#{switch[:name]}) provided"
+                  end
+                else 
+                  # return error that found the name but isn't a switch hardware-profile
+                  info << "Switch name (#{switch[:name]}) provided by cdpr isn't registered in nventory as a Network type hardware"
+                end
+              elsif sw_results.size == 0
+                # send error back that didn't find the switch
+                info << "Found no switch name matches for switch name (#{switch[:name]}) provided by cdpr"
+              elsif sw_results.size > 1 
+                # send error back that it found more than one switch with that name
+                info << "Found more than 1 switch name matches for switch name (#{switch[:name]}) provided by cdpr"
+              end
+            else
+              info << "#{nichash[:name]}: Not enough switch data provided by cdpr to register system's switch port against nventory"
+            end
+            # try to assign nic to the correct switch port if we've been able to determine one 
+            if (port && (flag != :noswitch))
+              nichash[:switch_port] = port
+              info << "#{nichash[:name]}: Registered switch port successfully (to #{port.producer.name} #{port.name})"
+            else
+              info << "#{nichash[:name]}: Skipped switch port registration"
+            end
+        end # if interface_type == "Ethernet"
 
         # Create/update the NIC
         logger.info "Search for NIC #{nichash[:name]}"
@@ -665,10 +574,124 @@ class NodesController < ApplicationController
           end
         end
       end
+      
+      # process and RETURN the info msgs into one big string 
+      output = String.new
+      info.each { |msg| output << msg + "\n" }
+      output
 
     end # if params.include?(:network_interfaces)
   end
   private :process_network_interfaces
+
+  def graph_node_groups
+    @node = Node.find(params[:id])
+    @graphobjs = {}
+    @graph = GraphViz::new( "G", "output" => "png" )
+    @dots = {}
+    @all_node_groups = @node.node_groups
+    @real_node_groups = @node.real_node_groups
+    @node.real_node_groups.each do |ng|
+      # Add this node's parent ngs as services
+      @graphobjs[ng.name.gsub(/-/,'')] = @graph.add_node(ng.name.gsub(/-/,''), :label => "#{ng.name}", :shape => 'rectangle', :color => "yellow", :style => "filled")
+      # walk the ng's parents service tree
+      dot_parent_node_groups(ng)
+      # walk the ng's children service tree 
+      dot_child_node_groups(ng)
+    end
+    ## Write the function to add all the dot points from the hash
+    @dots.each_pair do |parent,children|
+      children.uniq.each do |child|
+        @graph.add_edge( @graphobjs[parent],@graphobjs[child] )
+      end
+    end
+    @graph.output( :output => 'gif',:file => "public/images/#{@node.name}_nodegroups.gif" )
+    respond_to do |format|
+      format.html # graph_node_groups.html.erb
+    end
+  end
+
+  def dot_child_node_groups(ng)
+    ng.child_groups.each do |child_group|
+      if (@all_node_groups.include?(child_group) && !@real_node_groups.include?(child_group))
+        # Virtual Node Groups should be colored purple
+        @graphobjs[child_group.name.gsub(/[-.]/,'')] = @graph.add_node(child_group.name.gsub(/[-.]/,''), :label => "#{child_group.name}", :shape => 'rectangle', :color => 'purple', :style => 'filled')
+      else
+        @graphobjs[child_group.name.gsub(/[-.]/,'')] = @graph.add_node(child_group.name.gsub(/[-.]/,''), :label => "#{child_group.name}", :shape => 'rectangle')
+      end
+      @dots[ng.name.gsub(/[-.]/,'')] = [] unless @dots[ng.name.gsub(/[-.]/,'')]
+      @dots[ng.name.gsub(/[-.]/,'')] << child_group.name.gsub(/[-.]/,'')
+      unless child_group.child_groups.empty?
+        dot_child_node_groups(child_group)
+      end
+    end
+  end
+  private :dot_child_node_groups
+
+  def dot_parent_node_groups(ng)
+    ng.parent_groups.each do |parent_group|
+      if (@all_node_groups.include?(parent_group) && !@real_node_groups.include?(parent_group))
+        @graphobjs[parent_group.name.gsub(/[-.]/,'')] = @graph.add_node(parent_group.name.gsub(/[-.]/,''), :label => "#{parent_group.name}", :shape => 'rectangle', :color => 'purple', :style => 'filled')
+      else
+        @graphobjs[parent_group.name.gsub(/[-.]/,'')] = @graph.add_node(parent_group.name.gsub(/[-.]/,''), :label => "#{parent_group.name}", :shape => 'rectangle')
+      end
+      @dots[parent_group.name.gsub(/[-.]/,'')] = [] unless @dots[parent_group.name.gsub(/[-.]/,'')]
+      @dots[parent_group.name.gsub(/[-.]/,'')] << ng.name.gsub(/[-.]/,'')
+      unless parent_group.parent_groups.empty?
+        dot_parent_node_groups(parent_group)
+      end
+    end
+  end
+  private :dot_parent_node_groups
+
+  def graph_services
+    @node = Node.find(params[:id])
+    @graphobjs = {}
+    @graph = GraphViz::new( "G", "output" => "png" )
+    @dots = {}
+    @node.real_node_groups.each do |ng|
+      # Add this node's parent ngs as services
+      @graphobjs[ng.name.gsub(/-/,'')] = @graph.add_node(ng.name.gsub(/-/,''), :label => "#{ng.name}", :shape => 'rectangle', :color => "yellow", :style => "filled")
+      # walk the ng's parents service tree
+      dot_parent_services(ng)
+      # walk the ng's children service tree 
+      dot_child_services(ng)
+    end
+    ## Write the function to add all the dot points from the hash
+    @dots.each_pair do |parent,children|
+      children.uniq.each do |child|
+        @graph.add_edge( @graphobjs[parent],@graphobjs[child] )
+      end
+    end
+    @graph.output( :output => 'gif',:file => "public/images/#{@node.name}_servicetree.gif" )
+    respond_to do |format|
+      format.html # graph_services.html.erb
+    end
+  end
+
+  def dot_child_services(ng)
+    ng.child_services.each do |child_service|
+      @graphobjs[child_service.name.gsub(/[-.]/,'')] = @graph.add_node(child_service.name.gsub(/[-.]/,''), :label => "#{child_service.name}", :shape => 'rectangle')
+      @dots[ng.name.gsub(/[-.]/,'')] = [] unless @dots[ng.name.gsub(/[-.]/,'')]
+      @dots[ng.name.gsub(/[-.]/,'')] << child_service.name.gsub(/[-.]/,'')
+      unless child_service.child_services.empty?
+        dot_child_services(child_service)
+      end
+    end
+  end
+  private :dot_child_services
+
+  def dot_parent_services(ng)
+    ng.parent_services.each do |parent_service|
+      @graphobjs[parent_service.name.gsub(/[-.]/,'')] = @graph.add_node(parent_service.name.gsub(/[-.]/,''), :label => "#{parent_service.name}", :shape => 'rectangle')
+      @dots[parent_service.name.gsub(/[-.]/,'')] = [] unless @dots[parent_service.name.gsub(/[-.]/,'')]
+      @dots[parent_service.name.gsub(/[-.]/,'')] << ng.name.gsub(/[-.]/,'')
+      unless parent_service.parent_services.empty?
+        dot_parent_services(parent_service)
+      end
+    end
+  end
+  private :dot_parent_services
 
   def process_rack_assignment
     # If the user specified a rack assignment then handle that
@@ -688,7 +711,7 @@ class NodesController < ApplicationController
           end
         end
         if !rack.nil?
-          existing.update_attributes(:rack => rack)
+          existing.update_attributes(:rack => rack, :assigned_at => Time.now)
         end
       else
         # Create a new assignment
@@ -705,5 +728,4 @@ class NodesController < ApplicationController
     end
   end
   private :process_rack_assignment
-  
 end

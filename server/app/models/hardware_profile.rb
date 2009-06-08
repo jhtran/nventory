@@ -1,6 +1,7 @@
 class HardwareProfile < ActiveRecord::Base
+  named_scope :def_scope
   
-  acts_as_paranoid
+  acts_as_reportable
   acts_as_commentable
   
   has_many :nodes

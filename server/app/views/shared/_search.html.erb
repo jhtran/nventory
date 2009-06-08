@@ -3,6 +3,11 @@
 
 <% form_tag self.send(object.class.to_s.underscore.pluralize + '_path'), :method => :get do -%>
   <table>
+    <th><font color="green">FIELD</font></th>
+    <th><font color="green">EXACT MATCH</font></th>
+    <th><font color="green">KEYWORD SEARCH</font></th>
+    <th><font color="green">REGEX ON?</font></th>
+    <th><font color="green">EXCLUDE</font></th>
   <% object.class.content_columns.each do |column| %>
     <% next if (column.name == 'description') %>
     <% next if (exclude && exclude.include?(column.name))%>
@@ -18,6 +23,8 @@
     <% size = 5 if options.length >= 5 %>
     <td><%= select_tag column.name, options_for_select(options), :multiple => true, :id => "select_#{column.name}", :name => "exact_#{column.name}[]", :size => size %></td>
     <td><%= text_field_tag column.name %></td>
+    <td><%= check_box_tag "webregex_#{column.name}" %></td>
+    <td><%= text_field_tag "exclude_#{column.name}" %></td>
     </tr>
   <% end -%>
   <% object.class.reflect_on_all_associations.each do |assoc| -%>
@@ -36,6 +43,8 @@
       <% size = 5 if options.length >= 5 %>
       <td><%= select_tag assoc.klass.default_search_attribute, options_for_select(options), :multiple => true, :id => "select_#{assoc.name}[#{assoc.klass.default_search_attribute}]", :name => "exact_#{assoc.name}[#{assoc.klass.default_search_attribute}][]", :size => size %></td>
       <td><%= text_field_tag "#{assoc.name}[#{assoc.klass.default_search_attribute}]" %></td>
+      <td><%= check_box_tag "webregex_#{assoc.name}" %></td>
+      <td><%= text_field_tag "exclude_#{assoc.name}" %></td>
       </tr>
     <% end -%>
   <% end -%>

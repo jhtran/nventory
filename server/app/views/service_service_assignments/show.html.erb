@@ -1,0 +1,19 @@
+<%- @page_title = "Service Service Assignment: " + h(@service_service_assignment.parent_service.name) + '<->' + h(@service_service_assignment.child_service.name) %>
+
+<div class="record_view">
+
+<h1>Service Service Assignment</h1>
+
+<p><strong>Parent:</strong> <%= link_to @service_service_assignment.parent_service.name, node_group_path(@service_service_assignment.parent_service) %><br />
+<strong>Child:</strong> <%= link_to @service_service_assignment.child_service.name, node_group_path(@service_service_assignment.parent_service) %><br />
+<strong>Assigned at:</strong> <%= h(@service_service_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@service_service_assignment.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@service_service_assignment.updated_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_service_service_assignment_path(@service_service_assignment) %> | 
+<%= link_to 'Delete', service_service_assignment_path(@service_service_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @service_service_assignment} %>

@@ -1,6 +1,7 @@
 class NodeGroupNodeGroupAssignment < ActiveRecord::Base
-
-  acts_as_paranoid
+  named_scope :def_scope
+  
+  acts_as_reportable
   
   belongs_to :parent_group, :foreign_key => 'parent_id', :class_name => 'NodeGroup'
   belongs_to :child_group,  :foreign_key => 'child_id',  :class_name => 'NodeGroup'
@@ -11,22 +12,18 @@ class NodeGroupNodeGroupAssignment < ActiveRecord::Base
     'assigned_at'
   end
  
-  def before_create 
+  def before_create
     self.assigned_at ||= Time.now 
   end
   
   def validate
     # Don't allow loops in the connections, the connection hierarchy
     # should constitute a directed _acyclic_ graph.
-    if child_group == parent_group || child_group.all_child_groups.include?(parent_group)
+    if child_group == parent_group || child_group.all_child_groups.include?(parent_group) || parent_group.all_child_groups.include?(child_group)
       errors.add :child_id, "new child #{child_group.name} creates a loop in group hierarchy, check that group for connection back to #{parent_group.name}"
     end
   end
 
-  def before_create 
-    self.assigned_at ||= Time.now 
-  end
-  
   def after_validation
     # When a new NGNGA is created we need to walk up the parent tree and add
     # virtual NGNAs to each parent group for every child node of the new
@@ -43,8 +40,7 @@ class NodeGroupNodeGroupAssignment < ActiveRecord::Base
   # When an NGNA is deleted we need to walk up the parent tree and remove
   # virtual NGNAs
   def before_destroy
-    all_child_nodes = child_group.all_child_nodes
-    remove_virtual_assignments_from_parents(all_child_nodes)
+    remove_parent_virts
   end
   
   def add_virtual_assignments_to_parents
@@ -57,7 +53,7 @@ class NodeGroupNodeGroupAssignment < ActiveRecord::Base
     # assignments above that parent when the NGNGA to that parent was
     # created).  And yes, in the time it took to write this comment I
     # probably could have written the tree walking code.  :)
-    all_child_nodes = child_group.all_child_nodes
+    all_child_nodes = child_group.nodes
     logger.debug "child group #{child_group.name} has #{all_child_nodes.size} children"
     [parent_group, *parent_group.all_parent_groups].each do |parent|
       logger.debug "add_virtual_assignments_to_parents processing #{parent.name}"
@@ -88,10 +84,28 @@ class NodeGroupNodeGroupAssignment < ActiveRecord::Base
         ngna = NodeGroupNodeAssignment.find_by_node_group_id_and_node_id(parent.id, node.id)
         if ngna.virtual_assignment?
           logger.debug "Removing NGNA from node #{node.name} to parent #{parent.name}"
-          ngna.remove_virtual_assignments_from_parents(local_child_nodes_to_remove, deleted_ngnga)
+          #ngna.remove_virtual_assignments_from_parents(local_child_nodes_to_remove, deleted_ngnga)
           ngna.destroy
         end
       end
     end
   end
+  
+  def remove_parent_virts
+    child_ng_nodes = child_group.nodes
+    destroy_candidates = []
+    parent_group.node_group_node_assignments.each do |ngna|
+      if ngna.virtual_assignment?
+        destroy_candidates << ngna if child_ng_nodes.include?(ngna.node)
+      end
+    end
+    other_child_group_nodes = []
+    parent_group.child_groups.each do |other_child_group|
+      next if other_child_group == child_group
+      other_child_group.nodes.each { |ocg_node| other_child_group_nodes << ocg_node }
+    end
+    destroy_candidates.each do |candidate|
+      candidate.destroy unless other_child_group_nodes.include?(candidate.node)
+    end
+  end # def remove_parent_virts
 end

@@ -1,0 +1,10 @@
+<% remote_form_for( :lb_pool_node_assignment, :url => lb_pool_node_assignments_path ) do |f| %>
+  <p><%= Node %>:
+  
+  <%- to_array = Node.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+  
+  <%= f.select( :node_id, to_array, { :include_blank => true } ) %>
+  <%= f.hidden_field( :node_group_id, { :value => '0' } ) %>
+  
+  <%= submit_tag "Assign", :onclick => "$('lb_pool_node_assignment_node_group_id').value = _lb_pool_id" %> | <%= link_to_function 'Cancel', "Element.show('add_node_assignment_link');Element.hide('create_node_assignment');Element.hide('new_node_id')"%></p>
+<% end %>

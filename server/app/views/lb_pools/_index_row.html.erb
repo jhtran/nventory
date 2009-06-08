@@ -1,0 +1,13 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+<td nowrap="nowrap" width="5%">
+<%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / 
+<%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+<td><%= link_to index_row.name, self.send(index_row.class.to_s.underscore + '_path', index_row) %></td>
+<td>
+  <%= index_row.vips.collect{ |vip| link_to vip.name,vip }.join(',') %>
+</td>
+<td><%= index_row.lb_profile.port %></td>
+<td><%= index_row.lb_profile.protocol %></td>
+<td><%= index_row.lb_profile.lbmethod %></td>
+<td><%= index_row.lb_profile.healthcheck %></td>
+</tr>

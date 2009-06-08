@@ -34,7 +34,8 @@
 <div id="error"><%= flash[:error] %></div> 
 <% end -%>
 
-<%= @content_for_layout %>
+<%- # Calling yield here triggers the insertion of the specific view -%>
+<%= yield %>
 
 <hr />
 </div> <!-- end content -->

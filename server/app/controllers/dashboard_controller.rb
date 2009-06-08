@@ -1,8 +1,181 @@
 class DashboardController < ApplicationController
 
   def index
+    respond_to do |format|
+      format.html {
+        @nodes_over_time_chart = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'nodes_over_time_chart', :format => :json ))
+        @operating_systems_pie = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'operating_systems_pie', :format => :json )) unless !@operating_systems_pie
+        @hardware_profiles_pie = open_flash_chart_object(700,400, url_for( :action => 'index', :graph => 'hardware_profiles_pie', :format => :json )) unless !@hardware_profiles_pie
+      } # format.html
+      format.json {
+        case params[:graph]
+          when 'nodes_over_time_chart'
+            chart = nodes_over_time_chart_method
+            render :text => chart.to_s
+          when 'hardware_profiles_pie'
+            chart = hardware_profiles_pie_method
+            render :text => chart.to_s
+          when 'operating_systems_pie'
+            chart = operating_systems_pie_method
+            render :text => chart.to_s
+        end
+      } # format.json
+    end
+  end # def index
+
+  def hardware_profiles_pie_method
+    data = {}
+    percent = {}
+    pie_values = []
+    other = 0
+    HardwareProfile.find(:all, :include => {:nodes => {}}).each do |hwp|
+      data[hwp.name] = hwp.nodes.size
+    end
+    sum = data.values.inject(0) { |s,v| s += v }
+    if sum == 0 then return false end
+    data.each_pair do |hwp,count|
+      if (percent[(count * 100)/sum].nil?) || (percent[(count * 100)/sum].empty?) 
+        percent[(count * 100)/sum] = [hwp]
+      else
+        percent[(count * 100)/sum] << hwp
+      end
+    end 
+    order = percent.keys.sort
+    # only take the top 7 hw profiles otherwise pie graph is ugly
+    counter = 15
+    while counter > 0
+      highest_percent = order.pop
+      # may be more than 1 hw profile with the same % key
+      percent[highest_percent].each do |hwp|
+        if counter > 0
+          pie_values << PieValue.new(data[hwp], "#{hwp}: #{data[hwp]}")
+          counter -= 1
+        else
+          other += data[hwp]
+        end
+      end
+    end
+    # Doesn't matter what the OS's are left, we'll just add the # of those hwprofiles to "other"
+    order.each do |leftover|
+      other += leftover
+    end
+    pie_values << PieValue.new(other, "Other: #{other}")
+
+    # Generate the graph
+    title = Title.new("Members of Each Hardware Profile")
+    title.set_style('{font-size: 20px; color: #778877}')
+    pie = Pie.new
+    pie.start_angle = 0
+    pie.animate = true
+    pie.values = pie_values
+    chart = OpenFlashChart.new
+    chart.title = title
+    chart.add_element(pie)
+    chart.bg_colour = '#FFFFFF'
+    chart.x_axis = nil
+    
+    return chart
+  end # def hardware_profiles_pie
+
+  def nodes_over_time_chart_method
+    data = {}
+    data[:months] = []
+    data[:values] = []
+
+    # Create datapoints for the past 12 months and keep them in array so that their order is retained
+    counter = 12
+    while counter > 0
+      month = counter.months.ago.month
+      year = counter.months.ago.year
+      data[:months] << "#{Date::ABBR_MONTHNAMES[month]}\n#{year}"
+      date = Date.new(year,month)
+      data[:values] << Node.count(:all,:conditions => ["created_at < ?", date.to_s(:db)])
+      counter -= 1
+    end
+
+    # Create Graph
+    title = Title.new("Nodes Over Time")
+    title.set_style('{font-size: 20px; color: #778877}')
+    line = Line.new
+    line.text = "Nodes"
+    line.set_values(data[:values])
+    y = YAxis.new
+    y.set_range(0,2000,200)
+    x = XAxis.new
+    x.set_labels(data[:months])
+
+    chart = OpenFlashChart.new
+    chart.set_title(title)
+    chart.add_element(line)
+    chart.x_axis = x
+    chart.y_axis = y
+
+    return chart
   end
   
+  def operating_systems_pie_method
+    data = {}
+    percent = {}
+    pie_values = []
+    other = 0
+    OperatingSystem.find(:all,:include => {:nodes => {}}).each do |os|
+      data[os.name] = os.nodes.size
+    end
+    sum = data.values.inject(0) { |s,v| s += v }
+    if sum == 0 then return false end
+    data.each_pair do |os,count|
+      if (percent[(count * 100)/sum].nil?) || (percent[(count * 100)/sum].empty?) 
+        percent[(count * 100)/sum] = [os]
+      else
+        percent[(count * 100)/sum] << os 
+      end
+    end 
+    order = percent.keys.sort
+    # only take the top 7 hw profiles otherwise pie graph is ugly
+    counter = 10
+    while counter > 0
+      highest_percent = order.pop
+      # may be more than 1 hw profile with the same % key
+      percent[highest_percent].each do |os|
+        if counter > 0
+          if (os =~ /windows/i) 
+            shortname = os.gsub(/standard edition/i, 'SE').gsub(/service pack/i, 'SP').gsub(/Microsoft.*Windows.*Server/, "Windows Server\n").gsub(/enterprise edition/i, 'EE')
+          elsif (os =~ /red *hat.*centos/i)
+            shortname = os.gsub(/red *hat.*centos/i, 'CentOS').gsub(/\sLinux/i, '')
+          elsif (os =~ /red *hat.*enterprise/i)
+            shortname = os.gsub(/red *hat.*enterprise/i, 'RHEL').gsub(/\sLinux/i, '')
+          else
+            shortname = os
+          end
+          pie_values << PieValue.new(data[os], "#{shortname}: #{data[os]}")
+          counter -= 1
+        else
+          other += data[os]
+        end
+      end
+    end
+    # Doesn't matter what the OS's are left, we'll just add the # of those os's to "other"
+    order.each do |leftover|
+      other += leftover
+    end
+    pie_values << PieValue.new(other, "Other: #{other}")
+
+    # Generate the graph
+    title = Title.new("Members of Operating Systems")
+    title.set_style('{font-size: 20px; color: #778877}')
+    pie = Pie.new
+    pie.start_angle = 0
+    pie.animate = true
+    pie.values = pie_values
+    chart = OpenFlashChart.new
+    chart.title = title
+    chart.add_element(pie)
+    chart.bg_colour = '#FFFFFF'
+    chart.x_axis = nil
+   
+    return chart
+  end # def 
+
   def setup_sample_data
 	if !Datacenter.find(:first) && !Rack.find(:first) && !Node.find(:first)
       
@@ -92,7 +265,7 @@ class DashboardController < ApplicationController
       ny.name = "New York"
       ny.save
       
-      hardware_profiles = HardwareProfile.find(:all)
+      hardware_profiles = HardwareProfile.find(:all,:include => {:nodes => {}})
       
       rack = Rack.new(:name => "NY-Rack 001")
       rack.save

@@ -1,0 +1,35 @@
+<%- if lb_profile.vip_lb_profile_assignments.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of all vips this lb_profile belongs to">
+  <caption>VIPs</caption>
+  <thead>
+  <tr>
+      <th>Name</th>
+      <th>IP Address</th>
+      <th>Port</th>
+      <th>Protocol</th>
+      <th>Load Balancer</th>
+      <th>Datacenter</th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in lb_profile.vip_lb_profile_assignments.sort{|a,b| a.vip.name <=> b.vip.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.vip.name, assignment.vip %></td>
+      <td><%= assignment.vip.ip_address %></td>
+      <td><%= assignment.vip.port %></td>
+      <td><%= assignment.vip.protocol %></td>
+      <td><%= link_to assignment.vip.load_balancer.name, assignment.vip.load_balancer %></td>
+      <td><%= link_to assignment.vip.load_balancer.rack.datacenter.name, assignment.vip.load_balancer.rack.datacenter %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => assignment,
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+
+<%- else -%>
+  <p>This Load Balancer Service Pool is not assigned to any VIPs.</p>
+<%- end -%>

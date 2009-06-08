@@ -1,7 +1,5 @@
 <%- @page_title = "Network Interface: " + h(@network_interface.name) %>
 
-<%= render :partial => 'shared/deleted_message', :locals => { :object => @network_interface} %>
-
 <div class="record_view">
 
 <h1>Name: <%=h @network_interface.name %></h1>
@@ -37,9 +35,7 @@
 
 </div> <!-- end relationship -->
 
-<%- if !@network_interface.deleted_at -%>
 <p><%= link_to 'Edit', edit_network_interface_path(@network_interface) %> | 
 <%= link_to 'Delete', network_interface_path(@network_interface), :confirm => 'Are you sure?', :method => :delete %></p>
-<%- end -%>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @network_interface} %>

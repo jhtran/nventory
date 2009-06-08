@@ -1,4 +1,5 @@
 <tr class="<%= cycle('odd', 'even') -%>">
   <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %></td>
   <td><%= h(index_row.login) %></td>
+  <td><%= link_to "User Audits", audits_path(:user_id => index_row.id) %></td>
 </tr>
