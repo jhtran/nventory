@@ -25,6 +25,8 @@ my $swapmemory;
 my $os_cpu_count;
 my $timezone;
 my $virtual_client_ids;
+my $xenstatus;
+my %xenhostinfo;
 
 # Hostname as configured on the system, may or may not be fully
 # qualified
@@ -143,6 +145,33 @@ sub getfqdn
 
 	warn "getfqdn returning '$fqdn'" if ($debug);
 	return $fqdn;
+}
+
+sub getxenstatus
+{
+        if (!$xenstatus)
+        {
+                $xenstatus = `facter virtual`;
+                chomp($xenstatus);
+        }
+        warn "getxenstatus returning '$xenstatus'" if ($debug);
+        return $xenstatus;
+}
+
+sub getxenhostinfo
+{
+	if (!%xenhostinfo)
+	{
+		my @xmlist = `xm list`;
+		foreach my $line (@xmlist) 
+		{
+  			next if $line =~ /(^Name |Domain-0)/;
+  			my ($guest) = $line =~ /^(\S+)/;
+			push(@{$xenhostinfo{'guests'}}, $guest);
+		}
+		## Reserve the hash for other host info such as $xenhostinfo{'memory'}
+	}
+	return %xenhostinfo;
 }
 
 sub getos
@@ -670,7 +699,22 @@ sub get_timezone
 				open my $ltfh, '<', '/etc/localtime' or die "open: $!";
 				our $ltcontents = do { local $/; <$ltfh> };
 				close $ltfh;
+
+				# first check the one returned by date shell command
+				my $datetz = `date +%Z`;
+				chomp($datetz);
+				my $datetzf = "/usr/share/zoneinfo/$datetz";
+				if (-f $datetzf) {
+					my $st = stat($datetzf);
+					if ($st->size == $ltsize) {
+						open my $zfh, '<', $datetzf or die "open: $!";
+						my $zcontents = do { local $/; <$zfh> };
+						close $zfh;
+						$timezone = $datetz if ($zcontents eq $ltcontents);
+					}
+				}
 				
+				# if not a match try other timezones
 				find(\&zonematch, '/usr/share/zoneinfo');
 
 				sub zonematch

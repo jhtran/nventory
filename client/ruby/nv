@@ -30,6 +30,8 @@ end
 $objecttype = 'nodes'
 $get = nil
 $exactget = nil
+$regexget = nil
+$exclude = nil
 $name = nil
 $allfields = nil
 $fields = nil
@@ -90,6 +92,26 @@ opts.on('--exactget [field=value1,value2]',
     $exactget = opt_hash_parse(opt)
   end
 end
+opts.on('--regexget [field=value1,value2]',
+        'Select objects for display or updating.  get does a substring',
+        'match, regexget does an regexp match.  Multiple fields and values ',
+        'can be specified seperated by commas.') do |opt|
+  if opt.nil?
+    $regexget = {}
+  else
+    $regexget = opt_hash_parse(opt)
+  end
+end
+opts.on('--exclude [field=value1,value2]',
+        'Select objects for display or updating.  get does a substring',
+        'match, exclude does an regexp match.  Multiple fields and values ',
+        'can be specified seperated by commas.') do |opt|
+  if opt.nil?
+    $exclude = {}
+  else
+    $exclude = opt_hash_parse(opt)
+  end
+end
 opts.on('--name value[,value2]', Array,
         'Shortcut for --get name=value') do |opt|
   $name = opt
@@ -116,7 +138,7 @@ opts.on('--fields field1[,field2]', Array,
   end
 end
 opts.on('--set field=value1[,value2][,field2=value1[,value2]]',
-        'Update fields in objects selected via get/exactget, Multiple ',
+        'Update fields in objects selected via get/exactget/regexget/exclude, Multiple ',
         'fields and values can be specified seperated by commas.') do |opt|
   $set = opt_hash_parse(opt)
 end
@@ -147,11 +169,11 @@ opts.on('--createnodegroup nodegroup1[,nodegroup2]', Array,
   $createnodegroup = opt
 end
 opts.on('--addtonodegroup nodegroup1[,nodegroup2]', Array,
-        'Add nodes selected via get/exactget to one or more node groups') do |opt|
+        'Add nodes selected via get/exactget/regexget/exclude to one or more node groups') do |opt|
   $addtonodegroup = opt
 end
 opts.on('--removefromnodegroup nodegroup1[,nodegroup2]', Array,
-        'Remove nodes selected via get/exactget from one or more node groups') do |opt|
+        'Remove nodes selected via get/exactget/regexget/exclude from one or more node groups') do |opt|
   $removefromnodegroup = opt
 end
 opts.on('--addnodegrouptonodegroup child_group,parent_group', Array,
@@ -189,14 +211,14 @@ end
 
 opts.parse(ARGV)
 
-(puts opts; exit) unless $get || $exactget || $name || $getfieldnames || $getallvalues || $register || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup
+(puts opts; exit) unless $get || $exactget || $regexget || $name || $getfieldnames || $getallvalues || $register || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup
 # These options are mutually exclusive
 (puts opts; exit) if $allfields && $fields
-(puts opts; exit) if $getfieldnames && ($get || $exactget || $name)
-(puts opts; exit) if $getallvalues && ($get || $exactget || $name)
+(puts opts; exit) if $getfieldnames && ($get || $exactget || $regexget || $name)
+(puts opts; exit) if $getallvalues && ($get || $exactget || $regexget || $name) 
 # FIXME: Should support searches on node group membership and other characteristics
-(puts opts; exit) if ($nodegroup || $nodegroupexpanded) && ($get || $exactget || $name)
-(puts opts; exit) if $register && ($get || $exactget || $name || $getfieldnames || $getallvalues || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup)
+(puts opts; exit) if ($nodegroup || $nodegroupexpanded) && ($get || $exactget || $regexget || $exclude || $name)
+(puts opts; exit) if $register && ($get || $exactget || $regexget || $exclude || $name || $getfieldnames || $getallvalues || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup)
 (puts opts; exit) if ($addtonodegroup || $removefromnodegroup) && $objecttype != 'nodes'
 
 if $name
@@ -214,8 +236,8 @@ SEARCH_SHORTCUTS = {
   'macs' => 'network_interfaces[hardware_address]',
   'nic' => 'network_interfaces',
   'nics' => 'network_interfaces',
-  'node_group' => 'node_groups[name]',
-  'node_groups' => 'node_groups[name]',
+  'node_group' => 'node_group[name]',
+  'node_groups' => 'node_group[name]',
   'os' => 'operating_system[name]',
   'osvendor' => 'operating_system[vendor]',
   'osvariant' => 'operating_system[variant]',
@@ -240,6 +262,22 @@ if $exactget
     if SEARCH_SHORTCUTS.has_key?(key)
       $exactget[SEARCH_SHORTCUTS[key]] = value
       $exactget.delete(key)
+    end
+  end
+end
+if $regexget
+  $regexget.each_pair do |key,value|
+    if SEARCH_SHORTCUTS.has_key?(key)
+      $regexget[SEARCH_SHORTCUTS[key]] = value
+      $regexget.delete(key)
+    end
+  end
+end
+if $exclude
+  $exclude.each_pair do |key,value|
+    if SEARCH_SHORTCUTS.has_key?(key)
+      $exclude[SEARCH_SHORTCUTS[key]] = value
+      $exclude.delete(key)
     end
   end
 end
@@ -306,14 +344,18 @@ if $register
   exit
 end
 if $nodegroup
-  results = nvclient.get_objects('node_groups', {}, {'name' => [$nodegroup]}, ['child_groups', 'nodes'])
+  results = nvclient.get_objects('node_groups', {}, {}, {}, {'name' => [$nodegroup]}, ['child_groups', 'nodes'])
   puts "Child groups:"
   results[$nodegroup]['child_groups'].sort{|a,b| a['name'] <=> b['name']}.each do |child_group|
     puts "  #{child_group['name']}"
   end
-  puts "Nodes:"
-  results[$nodegroup]['nodes'].sort{|a,b| a['name'] <=> b['name']}.each do |node|
-    puts "  #{node['name']}"
+  puts "Real Nodes:"
+  results[$nodegroup]['real_nodes_names'].split(",").sort{|a,b| a <=> b}.each do |node|
+    puts "  #{node}"
+  end
+  puts "Virtual Nodes:"
+  results[$nodegroup]['virtual_nodes_names'].split(",").sort{|a,b| a <=> b}.each do |node|
+    puts "  #{node}"
   end
   exit
 end
@@ -372,8 +414,8 @@ end
 
 results = nil
 names = nil
-if $get || $exactget
-  results = nvclient.get_objects($objecttype, $get, $exactget, includes)
+if $get || $exactget || $regexget
+  results = nvclient.get_objects($objecttype, $get, $exactget, $regexget, $exclude, includes)
   names = results.keys.sort
 end
 if $nodegroupexpanded
@@ -474,13 +516,14 @@ if $set
 end
 
 if $addtonodegroup
-  nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => [$addtonodegroup]}, ['nodes'])
+  nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => $addtonodegroup}, {}, {}, ['nodes'])
   if (nodegroup_results.length != $addtonodegroup.length)
     warn "Not all requested node groups for 'addtonodegroup' were found:"
     warn "Requested:  #{$addtonodegroup.join(',')}"
     warn "Found:  #{nodegroup_results.keys.join(',')}"
     abort
   end
+
   nvclient.add_nodes_to_nodegroups(results, nodegroup_results, $username, PasswordCallback);
 end
 if $removefromnodegroup

@@ -297,7 +297,7 @@ while (@todo)
 		{
 			%results =
 				nVentory::Client::get_objects(
-					'nodes', {}, {'uniqueid' => [$data{uniqueid}]}, [], 'autoreg');
+					'nodes', {}, {'uniqueid' => [$data{uniqueid}]}, {}, {}, {}, [], 'autoreg');
 		}
 
 		# If we failed to find an existing entry based on the unique id
@@ -309,7 +309,7 @@ while (@todo)
 		{
 			%results =
 				nVentory::Client::get_objects(
-					'nodes', {}, {'name' => [$data{name}]}, [], 'autoreg');
+					'nodes', {}, {'name' => [$data{name}]}, {}, {}, {}, [], 'autoreg');
 		}
 
 		if (!$dryrun)

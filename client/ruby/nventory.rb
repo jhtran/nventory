@@ -15,12 +15,28 @@ class Net::HTTP
   end
 end
 
+# fix for ruby http bug where it encodes the params incorrectly
+class Net::HTTP::Put
+  def set_form_data(params, sep = '&')
+      params_array = params.map do |k,v|
+        if v.is_a? Array
+          v.inject([]){|c, val| c << "#{urlencode(k.to_s)}=#{urlencode(val.to_s)}"}.join(sep)
+        else
+          "#{urlencode(k.to_s)}=#{urlencode(v.to_s)}"          
+        end
+      end
+      self.body = params_array.join(sep)
+      self.content_type = 'application/x-www-form-urlencoded'
+  end
+end
+
 # Module and class names are constants, and thus have to start with a
 # capital letter.
 module NVentory
 end
 
 class NVentory::Client
+  attr_accessor :delete
   def initialize(debug=false, dryrun=false)
     @debug = debug
     @dryrun = dryrun
@@ -62,11 +78,10 @@ class NVentory::Client
     end
   end
 
-  def get_objects(objecttype, get, exactget, includes=nil, login=nil)
+  def get_objects(objecttype, get, exactget, regexget, exclude, includes=nil, login=nil)
     #
     # Package up the search parameters in the format the server expects
     #
-
     metaget = []
     if get
       get.each_pair do |key,values|
@@ -93,6 +108,34 @@ class NVentory::Client
           # 'key[]=[value]' would work fine, but this makes for a cleaner URL
           # and slightly reduced processing on the backend
           metaget << "exact_#{key}=#{CGI.escape(values[0])}"
+        end
+      end
+    end
+    if regexget
+      regexget.each_pair do |key,values|
+        if values.length > 1
+          values.each do |value|
+            metaget << "regex_#{key}[]=#{CGI.escape(value)}"
+          end
+        else
+          # This isn't strictly necessary, specifying a single value via
+          # 'key[]=[value]' would work fine, but this makes for a cleaner URL
+          # and slightly reduced processing on the backend
+          metaget << "regex_#{key}=#{CGI.escape(values[0])}"
+        end
+      end
+    end
+    if exclude
+      exclude.each_pair do |key,values|
+        if values.length > 1
+          values.each do |value|
+            metaget << "exclude_#{key}[]=#{CGI.escape(value)}"
+          end
+        else
+          # This isn't strictly necessary, specifying a single value via
+          # 'key[]=[value]' would work fine, but this makes for a cleaner URL
+          # and slightly reduced processing on the backend
+          metaget << "exclude_#{key}=#{CGI.escape(values[0])}"
         end
       end
     end
@@ -125,10 +168,10 @@ class NVentory::Client
     uri = URI::join(@server, "#{objecttype}.xml?#{querystring}")
     req = Net::HTTP::Get.new(uri.request_uri, @headers)
     warn "GET URL: #{uri}" if (@debug)
-    response = http.request(req)
-    if !response.kind_of?(Net::HTTPOK)
-      puts response.body
-      response.error!
+    $response = http.request(req)
+    if !$response.kind_of?(Net::HTTPOK)
+      puts $response.body
+      $response.error!
     end
 
     #
@@ -137,8 +180,8 @@ class NVentory::Client
     # as a Perl hash.  It may need to evolve over time.
     #
 
-    puts response.body if (@debug)
-    results_xml = REXML::Document.new(response.body)
+    puts $response.body if (@debug)
+    results_xml = REXML::Document.new($response.body)
     results = {}
     if results_xml.root.elements["/#{objecttype}"]
       results_xml.root.elements["/#{objecttype}"].each do |elem|
@@ -161,14 +204,14 @@ class NVentory::Client
     uri = URI::join(@server, "#{objecttype}/field_names.xml")
     req = Net::HTTP::Get.new(uri.request_uri, @headers)
     warn "GET URL: #{uri}" if (@debug)
-    response = http.request(req)
-    if !response.kind_of?(Net::HTTPOK)
-      puts response.body
-      response.error!
+    $response = http.request(req)
+    if !$response.kind_of?(Net::HTTPOK)
+      puts $response.body
+      $response.error!
     end
 
-    puts response.body if (@debug)
-    results_xml = REXML::Document.new(response.body)
+    puts $response.body if (@debug)
+    results_xml = REXML::Document.new($response.body)
     field_names = []
     results_xml.root.elements['/field_names'].each do |elem|
       # For some reason Elements[] is returning things other than elements,
@@ -218,20 +261,26 @@ class NVentory::Client
 
     if results && !results.empty?
       results.each_pair do |result_name, result|
+        if @delete
+          http = get_http(login, password_callback)
+          uri = URI::join(@server, "#{objecttypes}/#{result['id']}.xml")
+          req = Net::HTTP::Delete.new(uri.request_uri, @headers)
+          req.set_form_data(cleandata)
+          $response = http.request(req)
         # PUT to update an existing object
-        if result['id']
+        elsif result['id']
           http = get_http(login, password_callback)
           uri = URI::join(@server, "#{objecttypes}/#{result['id']}.xml")
           req = Net::HTTP::Put.new(uri.request_uri, @headers)
           req.set_form_data(cleandata)
           warn "PUT to URL: #{uri}" if (@debug)
           if !@dryrun
-            response = http.request(req)
+            $response = http.request(req)
             # FIXME: Aborting partway through a multi-node action is probably
             # not ideal behavior
-            if !response.kind_of?(Net::HTTPOK)
-              puts response.body
-              response.error!
+            if !$response.kind_of?(Net::HTTPOK)
+              puts $response.body
+              $response.error!
             end
           end
         else
@@ -245,10 +294,10 @@ class NVentory::Client
       req.set_form_data(cleandata)
       warn "POST to URL: #{uri}" if (@debug)
       if !@dryrun
-        response = http.request(req)
-        if !response.kind_of?(Net::HTTPCreated)
-          puts response.body
-          response.error!
+        $response = http.request(req)
+        if !$response.kind_of?(Net::HTTPCreated)
+          puts $response.body
+          $response.error!
         end
       end
     end
@@ -456,10 +505,9 @@ class NVentory::Client
       # Use a hash to merge the current and new members and
       # eliminate duplicates
       merged_nodes = nodes
-
-      nodegroup[nodes].each do |node|
-        name = node[name]
-        merged_nodes[name] = node
+      nodegroup["nodes"].each do |node|
+         name = node['name']
+         merged_nodes[name] = node
       end
 
       set_nodegroup_node_assignments(merged_nodes, {nodegroup_name => nodegroup}, login, password_callback)
@@ -579,7 +627,7 @@ class NVentory::Client
   # Private methods
   #
   private
-  
+
   def get_http(login=nil, password_callback=nil)
     if login
       return @write_http if (@write_http)
@@ -676,11 +724,11 @@ class NVentory::Client
       # nothing special about accounts, we could use any controller,
       # accounts just seemed appropriate.
       uri = URI::join(@server, 'accounts.xml')
-      response = http.post(uri.request_uri, '', @headers)
-      if response.kind_of?(Net::HTTPFound)
+      $response = http.post(uri.request_uri, '', @headers)
+      if $response.kind_of?(Net::HTTPFound)
         warn "POST to #{uri} was redirected, authenticating" if (@debug)
         # Extract cookie
-        newcookieentry = response['Set-Cookie']
+        newcookieentry = $response['Set-Cookie']
         # Some cookie fields are optional, and should default to the
         # values in the request.  We need to insert these so that we
         # save them properly.
@@ -702,21 +750,21 @@ class NVentory::Client
         req = Net::HTTP::Post.new(uri.request_uri, @headers)
         password = password_callback.get_password if (!password)
         req.set_form_data({'login' => login, 'password' => password})
-        response = https.request(req)
+        $response = https.request(req)
 
-        # The server always sends back a 302 redirect in response
+        # The server always sends back a 302 redirect in $response
         # to a login attempt.  You get redirected back to the login
         # page if your login failed, or redirected to your original
         # page or the main page if the login succeeded.
         locurl = nil
-        if response['Location']
-          locurl = URI.parse(response['Location'])
+        if $response['Location']
+          locurl = URI.parse($response['Location'])
         end
-        if (!response.kind_of?(Net::HTTPFound) || locurl.path == uri.path)
+        if (!$response.kind_of?(Net::HTTPFound) || locurl.path == uri.path)
           warn "Authentication failed"
           if @debug
-            puts response.body
-            response.error!
+            puts $response.body
+            $response.error!
           else
             abort
           end

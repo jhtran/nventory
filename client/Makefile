@@ -1,6 +1,6 @@
 # When updating the version number you currently need to update
 # nventory-client.spec, control and pkginfo as well
-VER=1.1
+VER=1.2-1
 
 all:
 

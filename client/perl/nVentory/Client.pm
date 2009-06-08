@@ -7,7 +7,7 @@ use nVentory::OSInfo;
 use LWP::UserAgent;
 use URI;
 use HTTP::Cookies;
-use HTTP::Request::Common; # GET, PUT, POST
+use HTTP::Request::Common;  # GET, PUT, POST
 use HTTP::Status;          # RC_* constants
 use File::stat;            # Improved stat
 use XML::LibXML;
@@ -164,6 +164,14 @@ sub _get_ua
 	return $ua;
 }
 
+# Sets flag for search results of deleted (hidden & reserved) objects 
+my $delete;
+sub setdelete
+{
+        ($delete) = @_;
+	warn "** You have requested to delete node(s) **\n";
+}
+
 sub _xml_to_perl
 {
 	my ($xmlnode) = @_;
@@ -198,11 +206,12 @@ sub _xml_to_perl
 
 sub get_objects
 {
-	my ($objecttype, $getref, $exactgetref, $regexgetref, $excluderef, $includesref, $login) = @_;
+	my ($objecttype, $getref, $exactgetref, $regexgetref, $excluderef, $andref, $includesref, $login) = @_;
 	my %get = %$getref;
 	my %exactget = %$exactgetref;
         my %regexget = %$regexgetref;
         my %excludeget = %$excluderef;
+        my %andget = %$andref;
         
 	#
 	# Package up the search parameters in the format the server expects
@@ -269,10 +278,46 @@ sub get_objects
 			$metaget{'exclude_' . $key} = $value;
 		}
 	}
+	while (my ($key, $values) = each %andget)
+	{
+		if (scalar @$values > 1)
+		{
+			$metaget{'and_' . $key . '[]'} = $values;
+		}
+		else
+		{
+			# This isn't strictly necessary, specifying a single value via
+			# 'key[]=[value]' would work fine, but this makes for a cleaner URL
+			# and slightly reduced processing on the backend
+			my $value = @{$values}[0];
+			$metaget{'and_' . $key} = $value;
+		}
+	}
 
 	if ($includesref)
 	{
-		$metaget{'include[]'} = $includesref;
+		# includes = ['status', 'rack:datacenter']
+		# maps to
+		# include[status]=&include[rack]=datacenter
+		foreach my $inc (@$includesref)
+		{
+			if ($inc =~ /:/)
+			{
+				my $incstring = '';
+				my @incparts = split(/:/, $inc);
+				my $lastpart = pop(@incparts);
+				$incstring = 'include';
+				foreach my $part (@incparts)
+				{
+					$incstring .= "[$part]";
+				}
+				$metaget{$incstring} = $lastpart;
+			}
+			else
+			{
+				$metaget{"include[$inc]"} = '';
+			}
+		}
 	}
 
 	#
@@ -341,7 +386,7 @@ sub get_expanded_nodegroup
 {
 	my ($nodegroup) = @_;
 
-	my %results = get_objects('node_groups', {}, {'name' => [$nodegroup]}, {}, {}, ['nodes', 'child_groups']);
+	my %results = get_objects('node_groups', {}, {'name' => [$nodegroup]}, {}, {}, {}, ['nodes', 'child_groups']);
 	my %nodes;
 	foreach my $node (@{$results{$nodegroup}->{nodes}})
 	{
@@ -433,7 +478,13 @@ sub set_objects
 			my $id = $results{$result}->{id};
 
 			# PUT to update an existing object
-			if ($id)
+			if ($id && $delete) 
+                        {
+				my $ua = _get_ua($login, $password_callback);
+				warn "DELETE to URL: $SERVER/$objecttypes/$id.xml\n" if ($debug);
+				$response = $ua->request(POST "$SERVER/$objecttypes/$id.xml", [ _method => 'delete' ]);
+                        }
+                        elsif ($id && !$delete)
 			{
 				# HTTP::Request::Common doesn't support taking form data
 				# and encoding it into the content field for PUT requests,
@@ -444,6 +495,11 @@ sub set_objects
 				my $ua = _get_ua($login, $password_callback);
 				warn "PUT to URL: $SERVER/$objecttypes/$id.xml\n" if ($debug);
 				$response = $ua->request($request);
+                                my (@output) = split("\n",$response->content);
+				foreach my $line (@output) { 
+ 					if ($line !~ /</) { print "** INFO **: $line\n"; }
+                                }
+				print "Command completed successfully\n";
 			}
 			else
 			{
@@ -540,8 +596,32 @@ sub register
 		push @physical_memory_sizes, $physical_memory_sizes{$size} . 'x' . $size;
 	}
 	$data{physical_memory_sizes} = join ',', @physical_memory_sizes;
-
-	my %nicdata = nVentory::HardwareInfo::getnicdata();
+	# Switchport detection depends on if virtual or not
+	if ($data{kernel_version} =~ /xen$/)
+	{
+		$data{virtualarch} = 'xen';
+        	my $xen_status = nVentory::OSInfo::getxenstatus();
+		if ($xen_status =~ /xenu/)
+		{
+			print "XEN GUEST VM.\n";
+			$data{virtualmode} = 'guest';
+		}
+		elsif ($xen_status =~ /xen0/)
+		{
+			print "XEN MASTER HOST.  Listing all guest vm:\n";
+			$data{virtualmode} = 'host';
+			my %xenhostinfo = nVentory::OSInfo::getxenhostinfo;
+			foreach my $xenguest (@{$xenhostinfo{'guests'}})
+			{
+				print "$xenguest\n";
+			}
+			$data{vmguests} = join(',',@{$xenhostinfo{'guests'}})
+		}
+        } elsif ($data{'hardware_profile[manufacturer]'} =~ /vmware/i) {
+		$data{virtualarch} = 'vmware';
+		print "VMWARE\n";
+	}
+	my %nicdata = nVentory::HardwareInfo::getnicdata($data{virtualarch},$data{virtualmode});
 	my $niccounter = 0;
 	while (my ($nic, $valueref) = each %nicdata)
 	{
@@ -580,7 +660,7 @@ sub register
 
 	if ($data{'hardware_profile[model]'} eq 'VMware Virtual Platform')
 	{
-		my %results = get_objects('nodes', {'virtual_client_ids' => [$data{uniqueid}]}, {}, {}, {}, [], 'autoreg');
+		my %results = get_objects('nodes', {'virtual_client_ids' => [$data{uniqueid}]}, {}, {}, {}, {}, [], 'autoreg');
 		if (scalar keys %results == 1)
 		{
 			$data{virtual_parent_node_id} = $results{(keys(%results))[0]}->{id};
@@ -602,7 +682,7 @@ sub register
 	my %results;
 	if ($data{uniqueid})
 	{
-		%results = get_objects('nodes', {}, {'uniqueid' => [$data{uniqueid}]}, {}, {}, [], 'autoreg');
+		%results = get_objects('nodes', {}, {'uniqueid' => [$data{uniqueid}]}, {}, {}, {}, [], 'autoreg');
 	}
 
 	# If we failed to find an existing entry based on the unique id
@@ -612,7 +692,7 @@ sub register
 	# server.
 	if (!%results && $data{name})
 	{
-		%results = get_objects('nodes', {}, {'name' => [$data{name}]}, {}, {}, [], 'autoreg');
+		%results = get_objects('nodes', {}, {'name' => [$data{name}]}, {}, {}, {}, [], 'autoreg');
 	}
 
 	set_objects('nodes', \%results, \%data, 'autoreg');
@@ -809,6 +889,9 @@ sub set_nodegroup_nodegroup_assignments
 			warn "set_nodegroup_nodegroup_assignments passed a bogus child groups hash, ", $child_group->{name}, " has no id field\n";
 		}
 	}
+        # if there are NO child_groups, HTTP::Common::Request will discard the empty hash instead of url encoding it.
+        # Added code to server NodeGroupsController#update to watch for the 'nil' token and convert accordingly
+        if (!@child_ids) { push(@child_ids, 'nil') }
 
 	my %nodegroupdata;
 	$nodegroupdata{'node_group_node_group_assignments[child_groups][]'} = \@child_ids;

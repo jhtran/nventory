@@ -28,6 +28,7 @@ my $power_supply_count;
 my $first_nic_hwaddr;
 my %dmidata;
 my %nicdata;
+my %virtdata;
 
 sub get_host_manufacturer
 {
@@ -1086,8 +1087,11 @@ sub _getsmbiosdata
 # - Speed
 # - Duplex
 # - Link
+# - Switch / Switch port
 sub getnicdata
 {
+	my $virtualarch = $_[0] if $_[0];
+	my $virtualmode = $_[1] if $_[1];
 	if (!%nicdata)
 	{
 		my $nic;
@@ -1299,14 +1303,14 @@ sub getnicdata
 		close $ifconfigfh;
 
 		# Gather additional Linux NIC info from various sources
-		if ($os =~ /Linux/)
+		if ($os =~ /(Linux|SunOS)/)
 		{
 			foreach my $nic (keys %nicdata)
 			{
 				# ethtool only applies to Ethernet interfaces
-				next if ($nicdata{$nic}->{interface_type} ne 'Ethernet');
+				next if (($nicdata{$nic}->{interface_type}) && ($nicdata{$nic}->{interface_type} ne 'Ethernet'));
 				# Don't bother for virtual interfaces
-				next if ($nic =~ /:/);
+				next if ($nic =~ /(:|virbr|veth|vif|peth)/);
 
 				# Run ethtool to grab the speed, duplex, link and
 				# autoneg status
@@ -1365,6 +1369,47 @@ sub getnicdata
 				close OUT;
 				close ERR;
 				waitpid $pid, 0;
+                                # Run cdpr to discover which switch and switch port
+				# this interface connected to 
+				my $cdprflag = 0;
+				if ($virtualarch =~ /vmware/i)  {
+					$cdprflag = 1;
+				} elsif (($virtualarch eq 'xen') && ($virtualmode eq 'guest')) {
+					$cdprflag = 2;
+				} else {	
+					$cdprflag = 0;
+				}
+
+				unless ($cdprflag == 1) {
+					print "Running cdpr on ($nic) to detect switch port - this may take up to 2 minutes...\n";
+					warn "Running 'cdpr -t 120 -d $nic'" if ($debug);
+					my $cdprpid = open3(\*IN, \*OUT, \*ERR,
+						"cdpr -d $nic -t 120")
+						or die "open cdpr: $!";
+					close IN;
+	                                my $prev = $_;
+					while (<OUT>)
+					{
+						if ($prev) {
+							if ($prev =~ /Device ID/ && /value:\s+(\S+)/)
+							{
+								$nicdata{$nic}->{switch} = $1;
+							}
+							elsif ($prev =~ /Port ID/ && /value:\s+(\S+)/)
+							{
+								my $switchport = $1;
+								(my $portspeed) = $switchport =~ /(\w+)\d+/;
+								(my $port) = $switchport =~ /\D+(\d+\/\d+)/;
+								$nicdata{$nic}->{portspeed} = $portspeed;
+								$nicdata{$nic}->{port} = $port;
+							}
+		                                }
+	                                        $prev = $_;
+					}
+					close OUT;
+					close ERR;
+					waitpid $cdprpid, 0;
+				}
 			}
 		}
 		# Gather Solaris NIC speed and duplex
