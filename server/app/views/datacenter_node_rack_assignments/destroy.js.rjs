@@ -1,0 +1,15 @@
+<%- @tooltips = [] %>
+# We expect this AJAX deletion to come from one of two places,
+# the datacenter show page or the rack show page. Depending on
+# which we do something slightly different.
+if request.env["HTTP_REFERER"].include? "datacenters"
+  page.replace_html 'datacenter_node_rack_assignments', :partial => 'datacenters/rack_assignments', :locals => { :datacenter => @datacenter }
+  page.hide 'create_rack_assignment'
+  page.show 'add_rack_assignment_link'
+elsif request.env["HTTP_REFERER"].include? "node_racks"
+  page.replace_html 'datacenter_node_rack_assignments', :partial => 'node_racks/datacenter_assignment', :locals => { :node_rack => @node_rack }
+  page.hide 'create_datacenter_assignment'
+  page.show 'add_datacenter_assignment_link'
+end
+
+<%= @tooltips %>

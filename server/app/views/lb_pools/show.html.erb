@@ -1,18 +1,19 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Load Balancer Pool: " + h(@lb_pool.name) %>
 
 <div class="record_view">
 
-<h1>LB Pool: <%=h @lb_pool.name %></h1>
-<p><strong>Owner:</strong><%= @lb_pool.owner %><br />
-<strong>Description:</strong><br />
+<h1><%= tooltip(Node,:lb_pools,'Load Balancer Pool') %>: <%=h @lb_pool.name %></h1>
+<p><strong><%= tooltip(LbPool,:name) %>:</strong><%= @lb_pool.owner %><br /></p>
+<p><strong><%= tooltip(LbProfile,:port) %>:</strong><%= @lb_pool.lb_profile.port%><br />
+<strong><%= tooltip(LbProfile,:protocol) %>:</strong><%= @lb_pool.lb_profile.protocol%><br />
+<strong><%= tooltip(LbProfile,:lbmethod) %>:</strong><%= @lb_pool.lb_profile.lbmethod%><br />
+<strong><%= tooltip(LbProfile,:healthcheck) %>:</strong><%= @lb_pool.lb_profile.healthcheck%><br /></p>
+<p><strong><%= tooltip(LbPool,:description) %>:</strong><br />
 <%= textilize_without_paragraph(h(@lb_pool.description)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@lb_pool.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@lb_pool.updated_at) %></p>
-
-<div id="lb_profile">
-  <%= render :partial => 'lb_profile', :locals => {:lb_pool => @lb_pool} %>
-</div>
+<p class="metadata"><strong><%= tooltip(LbPool,:created_at) %>:</strong> <%= h(@lb_pool.created_at) %><br />
+<strong><%= tooltip(LbPool,:updated_at) %>:</strong> <%= h(@lb_pool.updated_at) %></p>
 
 </div>
 
@@ -68,3 +69,5 @@
 <%= javascript_tag "Element.hide('create_vip_assignment')" %>
 <%= javascript_tag "Element.hide('create_node_assignment')" %>
 <%= javascript_tag "_lb_pool_id = "+@lb_pool.id.to_s %>
+
+<%= @tooltips %>

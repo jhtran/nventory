@@ -1,7 +1,7 @@
 # Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
 one:
   id: 1
-  name: MyString
+  name: NodeOne
   serial_number: MyString
   processor_manufacturer: MyString
   processor_model: MyString
@@ -20,7 +20,7 @@ one:
   preferred_operating_system_id: 1
 two:
   id: 2
-  name: MyString
+  name: NodeTwo
   serial_number: MyString
   processor_manufacturer: MyString
   processor_model: MyString

@@ -1,0 +1,31 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- unless node.volumes_served.empty? -%>
+  <table cellspacing="0" class="styled" summary="A list of all volumes this node serves">
+  <caption><%= tooltip(@node.class,:volumes_served,'Network Volumes Served') %></caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(Volume,:name) %></th>
+      <th><%= tooltip(Volume,:volume_type) %></th>
+      <th><%= tooltip(Volume,:nodes) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for volume in node.volumes_served.sort{|a,b| a.name <=> b.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(volume) %>">
+      <td><%= link_to volume.name, volume %></td>
+      <td><%= volume.volume_type %></td>
+      <td><%= volume.nodes.count %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => volume,
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <br /><p>This node does not serve any volumes.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

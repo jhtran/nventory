@@ -1,19 +1,20 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Operating System: " + h(@operating_system.name) %>
 
 <div class="record_view">
 
-<h1>Operating System: <%=h @operating_system.name %></h1>
+<h1><%= tooltip(Node,:operating_system) %>: <%=h @operating_system.name %></h1>
 
-<p><strong>Vendor:</strong> <%=h @operating_system.vendor %><br />
-<strong>Variant:</strong> <%=h @operating_system.variant %><br />
-<strong>Version Number:</strong> <%=h @operating_system.version_number %></p>
-<strong>Architecture:</strong> <%=h @operating_system.architecture %></p>
+<p><strong><%= tooltip(OperatingSystem,:vendor) %>:</strong> <%=h @operating_system.vendor %><br />
+<strong><%= tooltip(OperatingSystem,:variant) %>:</strong> <%=h @operating_system.variant %><br />
+<strong><%= tooltip(OperatingSystem,:version_number) %>:</strong> <%=h @operating_system.version_number %></p>
+<strong><%= tooltip(OperatingSystem,:architecture) %>:</strong> <%=h @operating_system.architecture %></p>
 
-<p><strong>Description:</strong><br />
+<p><strong><%= tooltip(OperatingSystem,:description) %>:</strong><br />
 <%= textilize_without_paragraph(h(@operating_system.description)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@operating_system.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@operating_system.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(OperatingSystem,:created_at) %>:</strong> <%= h(@operating_system.created_at) %><br />
+<strong><%= tooltip(OperatingSystem,:updated_at) %>:</strong> <%= h(@operating_system.updated_at) %></p>
 
 </div>
 
@@ -33,3 +34,5 @@
 <%= link_to 'Delete', operating_system_path(@operating_system), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @operating_system} %>
+
+<%= @tooltips %>

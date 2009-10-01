@@ -11,3 +11,6 @@ three:
 four:
   id: 4
   name: NodeGroupFour
+five:
+  id: 5
+  name: NodeGroupFive

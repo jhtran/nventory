@@ -1,0 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<font size=-2><%= button_to_function 'Add Alias', "Element.show('create_name_alias');Element.hide('add_name_alias_link');$('name_alias_node_id').value=''" %></font>
+
+<%= @tooltips if ttflag %>

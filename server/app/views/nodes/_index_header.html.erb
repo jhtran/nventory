@@ -1,8 +1,12 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr>
   <th nowrap="nowrap" width="5%">&nbsp;</th>
   <th <%= sort_td_class_helper "name" %> > <%= sort_link_helper "Name", "name" %></th>
-  <th>Node Groups</th>
+  <th><%= tooltip(Node,:name_aliases,'Aliases') %></th>
+  <th><%= tooltip(Node,:node_groups) %></th>
   <th <%= sort_td_class_helper "status" %> > <%= sort_link_helper "Status", "status" %></th>
   <th <%= sort_td_class_helper "hardware_profile" %> > <%= sort_link_helper "Hardware Profile", "hardware_profile" %></th>
   <th <%= sort_td_class_helper "operating_system" %> > <%= sort_link_helper "Operating System", "operating_system" %></th>
 </tr>
+
+<%= @tooltips if ttflag %>

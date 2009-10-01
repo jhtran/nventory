@@ -1,0 +1,14 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :volume_node_assignment, :url => volume_node_assignments_path ) do |f| %>
+  <p><%= tooltip(Volume,:network_volume) %>:
+  
+  <%- to_array = Volume.find(:all, :order => 'name').collect { |r| [ "* #{r.name} * - #{r.volume_server.name}", r.id ] } -%>
+  
+  <%= f.select( :volume_id, to_array, { :include_blank => true } ) %>&nbsp&nbsp&nbsp
+  <%= tooltip(Volume,:mount) %>: <%= f.text_field :mount %>
+  <%= f.hidden_field( :node_id, { :value => @node.id } ) %>
+  
+  <%= submit_tag "Assign", :onclick => "$('volume_node_assignment_node_id').value = _node_id" %> | <%= link_to_function 'Cancel', "Element.show('add_volume_mounted_link');Element.hide('create_volume_mounted')"%></p>
+<% end %>
+
+<%= @tooltips if ttflag %>

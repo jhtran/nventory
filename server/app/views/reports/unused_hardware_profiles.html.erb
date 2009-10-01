@@ -1,5 +1,6 @@
-<%- @page_title = 'Unused Hardware Profiles' %>
-<h1>Unused Hardware Profiles</h1>
+<%- @tooltips = [] %>
+<%- @page_title = 'Unused ' + tooltip(Node,:hardware_profiles) %>
+<h1>Unused <%= tooltip(Node,:hardware_profiles) %></h1>
 
 <table width="100%">
 <tr>
@@ -24,3 +25,5 @@
 </tbody>
 </table>
 </div> <!-- end results_table div -->
+
+<%= @tooltips %>

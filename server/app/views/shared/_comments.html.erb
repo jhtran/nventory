@@ -1,10 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <div id="comments">
 <p>
-<strong>Comments:</strong>
+<strong><%= tooltip(nil,:comments,nil,comments_tooltip) %>:</strong>
 <%- if object.comments.length > 0 -%>
   <ul>
   <%- object.comments.each do |comment| -%>
-    <li><%= h(comment.created_at) + ' (' + link_to(comment.account.login, comment.account) + ')' %>: <%= h(comment.comment) %></li>
+    <li><%= link_to(comment.created_at, comment) + ' (' + link_to(comment.account.login, comment.account) + ')' %>: <%= h(comment.comment) %></li>
   <%- end -%>
   </ul>
 <%- else -%>
@@ -32,3 +33,5 @@
 
 </p>
 </div> <!-- end comments -->
+
+<%= @tooltips if ttflag %>

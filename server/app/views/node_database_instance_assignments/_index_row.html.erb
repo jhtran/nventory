@@ -1,6 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr class="<%= cycle('odd', 'even') -%>">
   <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
   <td><%= link_to index_row.node.name, node_path(index_row.node) %></td>
   <td><%= link_to index_row.database_instance.name, database_instance_path(index_row.database_instance) %></td>
   <td><%= link_to index_row.assigned_at.to_formatted_s(:long), node_database_instance_assignment_path(index_row) %></td>
 </tr>
+<%= @tooltips if ttflag %>

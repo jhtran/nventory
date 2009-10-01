@@ -1,0 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p>
+<%= tooltip(ToolTip,:attr) %>:
+  <%= select_tag "tool_tip[attr]", options_for_select(@attrs.sort) %>
+  <%= hidden_field :tool_tip, :model, :value => @model %>
+</p>
+
+<%= @tooltips if ttflag %>

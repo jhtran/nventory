@@ -1,5 +1,6 @@
-<%- @page_title = 'Nodes Unassigned to Rack' %>
-<h1>Nodes Unassigned to Rack</h1>
+<%- @tooltips = [] %>
+<%- @page_title = 'Nodes Unassigned to ' + tooltip(Node,:node_rack,'Rack') %>
+<h1>Nodes Unassigned to <%= tooltip(Node,:node_rack,'Rack') %></h1>
 
 <table width="100%">
 <tr>
@@ -16,7 +17,7 @@
 <tr>
   <th nowrap="nowrap" width="5%">&nbsp;</th>
   <th <%= sort_td_class_helper "name" %> > <%= sort_link_helper "Name", "name" %></th>
-  <th <%= sort_td_class_helper "rack" %> > <%= sort_link_helper "Rack", "rack" %></th>
+  <th <%= sort_td_class_helper "node_rack" %> > <%= sort_link_helper "Node Rack", "node_rack" %></th>
 </tr>
 </thead>
 <tbody>
@@ -24,3 +25,5 @@
 </tbody>
 </table>
 </div> <!-- end results_table div -->
+
+<%= @tooltips %>

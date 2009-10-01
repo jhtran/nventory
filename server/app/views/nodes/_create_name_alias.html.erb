@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :name_alias, :url => name_aliases_path ) do |f| %>
+  <p>Alias:
+  <%= f.text_field :name %>
+  <%= f.hidden_field( :source_id, { :value => @node.id } ) %>
+  <%= f.hidden_field( :source_type, { :value => "Node" } ) %>
+  
+  <%= submit_tag "Assign", :onclick => "$('name_alias_node_id').value = _node_id" %> | <%= link_to_function 'Cancel', "Element.show('add_name_alias_link');Element.hide('create_name_alias')"%></p>
+<% end %>
+
+<%= @tooltips if ttflag %>

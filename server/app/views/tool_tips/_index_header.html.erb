@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th><%= tooltip(ToolTip,:model) %></th>
+  <th><%= tooltip(ToolTip,:attribute) %></th>
+  <th><%= tooltip(ToolTip,:description) %></th>
+  <th><%= tooltip(ToolTip,:created_at) %></th>
+  <th><%= tooltip(ToolTip,:updated_at) %></th>
+</tr>
+
+<%= @tooltips if ttflag %>

@@ -1,5 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if @outlet.consumer.nil? -%>
   n/a
 <%- else -%>
   <%= link_to "#{outlet.consumer.node.name}:#{outlet.consumer.name}", outlet.consumer %>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

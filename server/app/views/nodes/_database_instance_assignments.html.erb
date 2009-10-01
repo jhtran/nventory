@@ -1,10 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if node.node_database_instance_assignments.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of the database instances assigned to this node.">
-  <caption>Database Instances</caption>
+  <caption><%= tooltip(@node.class,:database_instances) %></caption>
   <thead>
   <tr>
-      <th>Name</th>
-      <th>Assigned at</th>
+      <th><%= tooltip(DatabaseInstance,:name) %></th>
+      <th><%= tooltip(DatabaseInstance,:assigned_at) %></th>
       <th>&nbsp;</th>
   </tr>
   </thead>
@@ -24,3 +25,5 @@
 <%- else -%>
   <p>No database instances are assigned to this node.</p>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

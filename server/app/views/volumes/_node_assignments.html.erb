@@ -1,0 +1,34 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if volume.nodes.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of all vips this volume belongs to">
+  <caption><%= tooltip(VolumeNodeAssignment,:nodes) %></caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(Node,:name) %></th>
+      <th><%= tooltip(Node,:ip_addresses) %></th>
+      <th><%= tooltip(VolumeNodeAssignment,:mount) %></th>
+      <th><%= tooltip(VolumeNodeAssignment,:assigned_at) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in volume.volume_node_assignments.sort{|a,b| a.node.name <=> b.node.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.node.name, assignment.node %></td>
+      <td><%= assignment.node.ips.join('; ') %></td>
+      <td><%= assignment.mount %></td>
+      <td><%= link_to assignment.assigned_at, assignment%></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => assignment,
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+
+<%- else -%>
+  <p>There aren't any Nodes belonging to this Volume.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

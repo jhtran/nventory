@@ -130,7 +130,7 @@ class CsvWorker < Workling::Base
      # Send the data as csv file
      mailer_params = {}
      mailer_params[:object_class] = csvparams['object_class']
-     Mailer.deliver_mail_csv("#{csvparams[:username]}@#{@@domain_name}.com", mailer_params, csv)
+     Mailer.deliver_mail_csv("#{csvparams[:username]}@yellowpages.com", mailer_params, csv)
   end
 
 end

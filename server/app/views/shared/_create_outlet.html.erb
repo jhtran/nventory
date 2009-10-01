@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <% remote_form_for( :outlet, :url => outlets_path ) do |f| %>
   
   <p>
@@ -19,3 +20,5 @@
   <%= submit_tag "Create", :onclick => "$('outlet_producer_id').value = _node_id" %> | <%= link_to_function 'Cancel', "Element.show('create_outlet');Element.hide('new_outlet')" %>
   </p>
 <% end %>
+
+<%= @tooltips if ttflag %>

@@ -1,16 +1,16 @@
 require 'digest/sha1'
 require 'resolv'
-#require 'net/ldap'
+require 'net/ldap'
 
 class Account < ActiveRecord::Base
   named_scope :def_scope
-  
+    
   validates_presence_of   :login, :email_address, :name
   validates_uniqueness_of :login, :email_address
  
   attr_accessor :password_confirmation
   validates_confirmation_of :password
- 
+
   def validate
     errors.add("password", "can't be blank") if password_hash.blank?
   end
@@ -32,7 +32,7 @@ class Account < ActiveRecord::Base
         authentication_successful = true
       # If local authentication failed try LDAP
       else
-        #authentication_successful = ldap_authenticate(login, password)
+        authentication_successful = ldap_authenticate(login, password)
       end
       if !authentication_successful
         account = nil
@@ -41,8 +41,7 @@ class Account < ActiveRecord::Base
       # The user doesn't currently have a local account.  Try to authenticate
       # them via LDAP, and if that is successful then create a local account
       # with minimal privileges.
-      #if ldap_authenticate(login, password)
-      if false
+      if ldap_authenticate(login, password)
         attrs = ['displayname', 'mail']
         account_params = get_account_params_from_ldap(login, password, attrs)
         if !account_params.nil?
@@ -65,26 +64,34 @@ class Account < ActiveRecord::Base
   end
 
   def self.get_ldap_connection(login, password)
-    # Figure out which server to use to talk to Active Directory
-    # FIXME: This works for AD, for standard servers we probably just
-    # need to provide the user with a way to specify the servers to use.
-    res = Resolv::DNS::new()
-    ldapservers = res.getresources("_ldap._tcp.#{AD_DOMAIN}",
-                                   Resolv::DNS::Resource::IN::SRV)
-    ldapsrv = ldapservers.first
+    # Figure out which server to use to talk to Active DirectoryA
+    if LDAP_SERVERS
+      res = Resolv::DNS::new()
+      ldapservers = res.getresources(LDAP_DNS_NAME,
+                                     Resolv::DNS::Resource::IN::SRV)
+      ldapsrv = nil
+      ldapservers.each do |srv|
+        if LDAP_SERVERS.include?(srv.target.to_s)
+          ldapsrv = srv.target.to_s
+          break
+        end
+      end
+    end
+    if LDAP_SERVER
+      ldapsrv = LDAP_SERvER
+    end
+
     return nil if ldapsrv.nil?
-    logger.info "LDAP server is #{ldapsrv.target.to_s}"
+    logger.info "AD LDAP server is #{ldapsrv}"
     ldap = nil
     if ldapsrv
-      # FIXME: Need to provide the user with a way to specify a template
-      # string into which we substitute the login variable.  For standard
-      # LDAP servers that might look like:
-      # "uid=#{login},ou=people,dc=example,dc=com"
-      # And for AD:  "#{login}@#{AD_DOMAIN}"
-      ldapuser = login
+      if LDAP_EMAIL_SUFFIX
+        ldapuser = "#{login}@#{LDAP_EMAIL_SUFFIX}"
+      else
+        ldapuser = login
+      end
       # Note that :simple_tls is SSL, not STARTTLS
-      # FIXME: SSL should be configurable
-      ldap = Net::LDAP.new :host => ldapsrv.target.to_s,
+      ldap = Net::LDAP.new :host => ldapsrv,
                            :port => 636,
                            :encryption => {:method => :simple_tls},
                            :auth => {:method => :simple,
@@ -112,17 +119,17 @@ class Account < ActiveRecord::Base
   def self.get_account_params_from_ldap(login, password, attrs)
     ldap = get_ldap_connection(login, password)
     return nil if ldap.nil?
-    # FIXME: Need to provide user with a way to specify this
-    treebase = 'DC=EXAMPLE,DC=COM'
-    # FIXME: This works for AD, should be configurable to work with
-    # other LDAP servers
+    treebase = LDAP_BASE
     filter = Net::LDAP::Filter.eq('sAMAccountName', login)
     results = ldap.search(:base => treebase,
                           :filter => filter,
                           :attributes => attrs)
     # We should only get back one entry
     account_params = nil
-    if (!results.nil? && results.length == 1)
+    # The docs say we should always get back nil or a result set,
+    # but we seem to actually get back false if the search fails.
+    # Test for both in case that eventually gets fixed.
+    if (!results.nil? && results != false && results.length == 1)
       account_params = {}
       # Extract the first value for each attribute in the result entry
       # into our account_params hash

@@ -1,5 +1,6 @@
-<%- @page_title = 'Nodes Not Updated > 7 Days' %>
-<h1>Nodes Not Updated > 7 Days</h1>
+<%- @tooltips = [] %>
+<%- @page_title = 'Nodes' + tooltip(Node,:updated_at,'Not Updated') + ' > 7 Days' %>
+<h1>Nodes <%= tooltip(Node,:updated_at,'Not Updated') %> > 7 Days</h1>
 
 <table width="100%">
 <tr>
@@ -24,3 +25,5 @@
 </tbody>
 </table>
 </div> <!-- end results_table div -->
+
+<%= @tooltips %>

@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p>
   <strong>Name</strong> <em>*</em> <br />
   <%= f.text_field :name %>
@@ -19,3 +20,5 @@
 </p>
 
 <%= javascript_tag "Element.hide('create_lb_profile')" %>
+
+<%= @tooltips if ttflag %>

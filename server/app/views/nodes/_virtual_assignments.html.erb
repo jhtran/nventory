@@ -1,10 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if node.virtual_assignments_as_host.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of the virtual machines running on this node.">
-  <caption>Guest Virtual Machines</caption>
+  <caption><%= tooltip(@node.class,:vm_guests,'Guest Virtual Machines') %></caption>
   <thead>
   <tr>
-      <th>Name</th>
-      <th>Assigned at</th>
+      <th><%= tooltip(Node,:name) %></th>
+      <th><%= tooltip(Node,:assigned_at) %></th>
       <th>&nbsp;</th>
   </tr>
   </thead>
@@ -24,3 +25,5 @@
 <%- else -%>
   <p>This node is not running any guest virtual machines.</p>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr class="<%= cycle('odd', 'even') -%>">
 <td nowrap="nowrap" width="5%">
 <%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / 
@@ -11,3 +12,5 @@
 <td><%= index_row.lb_profile.lbmethod %></td>
 <td><%= index_row.lb_profile.healthcheck %></td>
 </tr>
+
+<%= @tooltips if ttflag %>

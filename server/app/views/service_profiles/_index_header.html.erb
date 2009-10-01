@@ -1,0 +1,16 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th><%= tooltip(ServiceProfile,:service) %></th>
+  <th><%= tooltip(ServiceProfile,:dev_url) %></th>
+  <th><%= tooltip(ServiceProfile,:qa_url) %></th>
+  <th><%= tooltip(ServiceProfile,:stage_url) %></th>
+  <th><%= tooltip(ServiceProfile,:prod_url) %></th>
+  <th><%= tooltip(ServiceProfile,:repo_url) %></th>
+  <th><%= tooltip(ServiceProfile,:contact,'Emergency Contact') %></th>
+  <th><%= tooltip(ServiceProfile,:codelang) %></th>
+  <th><%= tooltip(ServiceProfile,:external) %></th>
+  <th><%= tooltip(ServiceProfile,:pciscope) %></th>
+</tr>
+
+<%= @tooltips if ttflag %>

@@ -1,3 +1,6 @@
-<p><strong>Virtual Host:</strong> <br /><%= f.select :parent_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
-<p><strong>Virtual Guest:</strong> <br /><%= f.select :child_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
-<p><strong>Assigned at:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(Node,:virtual_host) %>:</strong> <br /><%= f.select :parent_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(Node,:virtual_guest) %>:</strong> <br /><%= f.select :child_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(Node,:assigned_at) %>:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+
+<%= @tooltips if ttflag %>

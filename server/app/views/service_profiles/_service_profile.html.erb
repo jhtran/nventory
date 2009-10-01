@@ -1,0 +1,43 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p>
+  <strong><%= tooltip(ServiceProfile,:service) %></strong> <em>*</em> <br />
+  <%= f.select :service_id, @services %>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:dev_url) %></strong><br />
+  <%= f.text_field :dev_url%>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:qa_url) %></strong><br />
+  <%= f.text_field :qa_url%>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:stg_url) %></strong><br />
+  <%= f.text_field :stg_url%>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:prod_url) %></strong><br />
+  <%= f.text_field :prod_url%>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:repo_url) %></strong><br />
+  <%= f.text_field :repo_url%>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:contact) %></strong><br />
+  <%= f.text_field :contact%>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:codelang) %></strong><br />
+  <%= f.text_field :codelang %>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:external) %></strong><br />
+  <%= f.check_box :external%>
+</p>
+<p>
+  <strong><%= tooltip(ServiceProfile,:pciscope) %></strong><br />
+  <%= f.check_box :pciscope %>
+</p>
+
+<%= @tooltips if ttflag %>

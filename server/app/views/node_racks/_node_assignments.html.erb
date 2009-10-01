@@ -1,0 +1,29 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<h3><%= tooltip(NodeRack,:nodes) %></h3>
+
+<%- if node_rack.node_rack_node_assignments.count > 0 -%>
+
+<ul id="node-list">
+  <%- node_rack.node_rack_node_assignments.each do |assignment| -%>
+  <li id="node_<%= assignment.id %>">
+    <span class="handle"><img src="/images/drag.gif" width="25" height="11" alt="Drag" /></span>
+    <%= link_to h(assignment.node.name), node_path(assignment.node) %> / 
+    <%= link_to h(assignment.assigned_at.to_formatted_s(:long)), node_rack_node_assignment_path(assignment) %> / 
+    <%= link_to_remote 'Remove from server rack',
+                              :url => node_rack_node_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %>
+    </li>
+  <%- end -%>
+</ul>
+
+<%= sortable_element 'node-list', 
+  :url => {:controller => 'ajax', :action => 'sort_nodes_in_rack', :id => node_rack.id},
+  :handle => 'handle' %>
+
+  
+<%- else -%>
+  <p>No nodes are assigned to this server rack.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

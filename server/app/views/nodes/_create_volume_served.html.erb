@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :volume, :url => volumes_path ) do |f| %>
+  <p>Volume Name: 
+  <%= f.text_field :name %>&nbsp&nbsp&nbsp
+  <%= tooltip(Volume,:volume_type) %>
+  <%= f.text_field :volume_type %>
+  <%= f.hidden_field( :volume_server_id, { :value => @node.id } ) %>
+  <%= submit_tag "Create", :onclick => "$('volume_volume_server_id').value = _node_id" %> | <%= link_to_function 'Cancel', "Element.show('add_volume_served_link');Element.hide('create_volume_served')"%></p>
+<% end %>
+
+<%= @tooltips if ttflag %>

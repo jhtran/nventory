@@ -1,0 +1,23 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Utilization Metric: " + h(@utilization_metric.utilization_metric_name.name) + '<->' + h(@utilization_metric.node.name) %>
+
+<div class="record_view">
+
+<h1>Utilization Metric</h1>
+
+<p><strong>Utilization Metric:</strong> <%= link_to @utilization_metric.utilization_metric_name.name, @utilization_metric.utilization_metric_name  %><br />
+<strong>Node:</strong> <%= link_to @utilization_metric.node.name, @utilization_metric.node %><br />
+<strong>Value:</strong> <%= h(@utilization_metric.value ) %><br />
+<strong>Assigned at:</strong> <%= h(@utilization_metric.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@utilization_metric.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@utilization_metric.updated_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_utilization_metric_path(@utilization_metric) %> | 
+<%= link_to 'Delete', utilization_metric_path(@utilization_metric), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @utilization_metric} %>
+
+<%= @tooltips %>

@@ -53,6 +53,10 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
   # POST /node_group_node_group_assignments.xml
   def create
     @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.new(params[:node_group_node_group_assignment])
+    if request.env["HTTP_REFERER"] =~ /http:\/\/.*?\/(\w+)\/(\d+)/
+      ref_class = $1.singularize
+      ref_id = $2.to_i
+    end
 
     respond_to do |format|
       if @node_group_node_group_assignment.save
@@ -62,12 +66,22 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
           redirect_to node_group_node_group_assignment_url(@node_group_node_group_assignment) 
         }
         format.js { 
-          render(:update) { |page| 
-            
-            page.replace_html 'node_group_node_group_assignments', :partial => 'nodes/node_group_node_group_assignments', :locals => { :node => @node_group_node_group_assignment.node }
-            page.hide 'create_node_group_node_group_assignment'
-            page.show 'add_node_group_node_group_assignment_link'
-          }
+          if ( (ref_class == 'node_group' && ref_id) && ( ref_obj = ref_class.camelize.constantize.find(ref_id) ) )
+            render(:update) { |page|
+              page.replace_html 'parent_group_assgns', :partial => 'node_groups/parent_group_assignments', :locals => { :node_group => ref_obj }
+              page.replace_html 'child_group_assgns', :partial => 'node_groups/child_group_assignments', :locals => { :node_group => ref_obj }
+              page.replace_html 'real_nodes', :partial => 'node_groups/real_node_assignments', :locals => { :node_group => ref_obj }
+              page.replace_html 'virtual_nodes', :partial => 'node_groups/virtual_node_assignments', :locals => { :node_group => ref_obj }
+              page.replace_html 'child_group_assignments', :partial => 'shared/child_node_group_assignment', :collection => ref_obj.assignments_as_parent
+              page.replace_html 'parent_group_assignments', :partial => 'shared/parent_node_group_assignment', :collection => ref_obj.assignments_as_child
+ 
+
+              page.hide 'create_parent_assignment'
+              page.hide 'create_child_assignment'
+              page.show 'add_parent_link'
+              page.show 'add_child_link'
+            }
+          end
         }
         format.xml  { head :created, :location => node_group_node_group_assignment_url(@node_group_node_group_assignment) }
       else
@@ -117,13 +131,30 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
     end
     
     # Success!
+    if request.env["HTTP_REFERER"] =~ /http:\/\/.*?\/(\w+)\/(\d+)/
+      ref_class = $1.singularize
+      ref_id = $2.to_i
+    end
+
+    # Success!
     respond_to do |format|
       format.html { redirect_to node_group_node_group_assignments_url }
       format.js {
-        render(:update) { |page|
-          
-          page.replace_html 'node_group_node_group_assignments', {:partial => 'nodes/node_group_node_group_assignments', :locals => { :node => @node} }
-        }
+        if ( (ref_class == 'node_group' && ref_id) && ( ref_obj = ref_class.camelize.constantize.find(ref_id) ) )
+          render(:update) { |page|
+            page.replace_html 'parent_group_assgns', :partial => 'node_groups/parent_group_assignments', :locals => { :node_group => ref_obj }
+            page.replace_html 'child_group_assgns', :partial => 'node_groups/child_group_assignments', :locals => { :node_group => ref_obj }
+            page.replace_html 'real_nodes', :partial => 'node_groups/real_node_assignments', :locals => { :node_group => ref_obj }
+            page.replace_html 'virtual_nodes', :partial => 'node_groups/virtual_node_assignments', :locals => { :node_group => ref_obj }
+            page.replace_html 'child_group_assignments', :partial => 'shared/child_node_group_assignment', :collection => ref_obj.assignments_as_parent
+            page.replace_html 'parent_group_assignments', :partial => 'shared/parent_node_group_assignment', :collection => ref_obj.assignments_as_child
+
+            page.hide 'create_parent_assignment'
+            page.hide 'create_child_assignment'
+            page.show 'add_parent_link'
+            page.show 'add_child_link'
+          }
+        end
       }
       format.xml  { head :ok }
     end

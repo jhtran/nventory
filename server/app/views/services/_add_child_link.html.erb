@@ -1,0 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= link_to_function 'Add Service Client', "Element.show('create_child_assignment');Element.hide('add_child_link')" %>
+
+<%= @tooltips if ttflag %>

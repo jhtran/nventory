@@ -1,6 +1,9 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr>
   <th nowrap="nowrap" width="5%">&nbsp;</th>
-  <th>Parent</th>
-  <th>Child</th>
+  <th><%= tooltip(ServiceServiceAssignment,:parent) %></th>
+  <th><%= tooltip(ServiceServiceAssignment,:child) %></th>
   <th <%= sort_td_class_helper "assigned_at" %> > <%= sort_link_helper "Assigned At", "assigned_at" %></th>
 </tr>
+
+<%= @tooltips if ttflag %>

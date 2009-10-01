@@ -1,0 +1,23 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Name Alias: " + h(@name_alias.name) %>
+
+<div class="record_view">
+
+<h1>Name Alias: <%=h @name_alias.name %></h1>
+
+<strong><%= tooltip(NameAlias,:object) %>:</strong> <%= link_to @name_alias.source.name, @name_alias.source %></strong><br /></p>
+<strong><%= tooltip(NameAlias,:model) %>:</strong> <%= link_to @name_alias.source_type, self.send("#{@name_alias.source_type.tableize}_path")%></strong><br />
+
+<p class="metadata"><strong><%= tooltip(NameAlias,:created_at) %>:</strong> <%= h(@name_alias.created_at) %><br />
+<strong><%= tooltip(NameAlias,:updated_at) %>:</strong> <%= h(@name_alias.updated_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_name_alias_path(@name_alias) %> | 
+<%= link_to 'Delete', name_alias_path(@name_alias), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @name_alias} %>
+
+<%= javascript_tag "_name_alias_id = "+@name_alias.id.to_s %>
+
+<%= @tooltips %>

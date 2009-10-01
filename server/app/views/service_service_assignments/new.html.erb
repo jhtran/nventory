@@ -1,2 +1,5 @@
+<%- @tooltips = [] %>
 <%= render :partial => 'shared/crud_new_form', :locals => { :object => @service_service_assignment } %>
 Creating a service-to-service assignment will define a relationship in which the child service is dependent on the parent service. 
+
+<%= @tooltips %>

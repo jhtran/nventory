@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th <%= sort_td_class_helper "name" %> > <%= sort_link_helper "Name", "name" %></th>
+  <th><%= tooltip(NodeRack,:datacenter) %></th>
+  <th><%= tooltip(NodeRack,:node_count) %></th>
+  <th><%= tooltip(NodeRack,:used_u_height) %></th>
+  <th><%= tooltip(NodeRack,:free_u_height) %></th>
+</tr>
+
+<%= @tooltips if ttflag %>

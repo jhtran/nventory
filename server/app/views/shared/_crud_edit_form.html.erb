@@ -1,9 +1,10 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- @page_title = 'Editing ' + object.class.to_s.underscore.titleize %>
 <h1>Editing <%= object.class.to_s.underscore.titleize %></h1>
 
 <%= error_messages_for object.class.to_s.underscore.to_sym %>
 
-<% form_for(object.class.to_s.underscore.to_sym, :url => self.send(object.class.to_s.underscore + '_path', object), :html => { :method => :put, :class => 'edit_record_form' }) do |f| %>
+<% form_for(object, :html => { :method => :put, :class => 'edit_record_form' } ) do |f| %>
 
 <div class="record_view">
 
@@ -16,3 +17,5 @@
 <%= render :partial => 'shared/requirement_note' %>
 
 <% end %>
+
+<%= @tooltips if ttflag %>

@@ -1,4 +1,7 @@
-<p><strong>Database:</strong> <em>*</em> <br /><%= f.select :from_id, DatabaseInstance.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
-<p><strong>Has a relationship of:</strong> <em>*</em> <br /> <%= f.select :name, DatabaseInstanceRelationship.names_allowed.collect { |name| [ name, name ] }, { :include_blank => true } %></p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(DatabaseInstanceRelationship,:database) %>:</strong> <em>*</em> <br /><%= f.select :from_id, DatabaseInstance.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(DatabaseInstanceRelationship,:from,'Has a relationship with') %>:</strong> <em>*</em> <br /> <%= f.select :name, DatabaseInstanceRelationship.names_allowed.collect { |name| [ name, name ] }, { :include_blank => true } %></p>
 
-<p><strong>To Database:</strong> <em>*</em> <br /><%= f.select :to_id, DatabaseInstance.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(DatabaseInstanceRelationship,:to,'To Database') %>:</strong> <em>*</em> <br /><%= f.select :to_id, DatabaseInstance.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+
+<%= @tooltips if ttflag %>

@@ -5,6 +5,8 @@ class NodeGroupNodeAssignment < ActiveRecord::Base
   
   belongs_to :node
   belongs_to :node_group 
+ 
+  belongs_to :service, :foreign_key => 'node_group_id'
   
   validates_presence_of :node_id, :node_group_id
   validates_uniqueness_of :node_id, :scope => :node_group_id
@@ -104,57 +106,19 @@ class NodeGroupNodeAssignment < ActiveRecord::Base
     end
   end
 
+  # remove all the virtuals from parents, prior to destroying the object
   def remove_parent_virtuals(ng=self.node_group,nd=self.node,excludes=[],depth=0)
     depth += 1
-    # ask each parent group if they have a DIFF child group with that node.  If not, delete.
+    # ask each parent group if they have a DIFF child group with that node, either exclude that parent or add to delete list
     to_delete = []
     ng.parent_groups.each do |parent|
-      if excludes.include?(parent)
-        next
-      end
-      parent.child_groups.each do |child|
-        # each parent should not check the child that initiated the inquiry so create a list of each
-        # of its children except the one that initiated
-        if child == ng
-          ngna = NodeGroupNodeAssignment.find_by_node_group_id_and_node_id(parent.id, nd.id)
-          # If there aren't any other parents (relative to source ngna), means safe to delete
-          if (parent.child_groups.size == 1)
-            # if the parent ngna is a real assignment, don't delete it.
-            if (defined?(ngna.virtual_assignment?)) && (!ngna.virtual_assignment?)
-              return
-            elsif 
-              to_delete << parent
-            end
-          else
-          end
-          next
-        end
-        # if the parent indeed has another childng with the node as a member, then we break the chain.  
-        # meaning the parentng keeps its ng-to-node assoc as well as ITS parents.
-        ngna_to_del = NodeGroupNodeAssignment.find_by_node_group_id_and_node_id(parent.id, nd.id)
-        if (child.nodes.include?(nd))
-          excludes << parent
-          unless (parent.parent_groups.nil?) || (parent.parent_groups.empty?)
-            parent.parent_groups.each do |ppg|
-              excludes << ppg
-            end
-          end
-          return
-        # OR if it is a real ngna and not a virtual, we should also exclude it from being deleted
-        elsif defined?(ngna_to_del.virtual_assignment?) && (!ngna_to_del.virtual_assignment?)
-          excludes << parent
-          unless (parent.parent_groups.nil?) || (parent.parent_groups.empty?)
-            parent.parent_groups.each do |ppg|
-              excludes << ppg
-            end
-          end
-          return
-        else
-          to_delete << parent
-        end
-      end
+      results = _build_exclude_delete(parent,ng,node_group,nd,excludes,depth)
+      next if results.nil?
+      results[:to_del].each { |to_del| to_delete << to_del } unless results[:to_del].nil?
+      results[:excl].each { |excl| excludes << excl } unless results[:excl].nil?
     end
 
+    # delete parent groups in the delete list
     to_delete.uniq.each do |del_ng|
       ngna = NodeGroupNodeAssignment.find_by_node_group_id_and_node_id(del_ng.id, nd.id)
       unless excludes.include?(del_ng)
@@ -179,6 +143,62 @@ class NodeGroupNodeAssignment < ActiveRecord::Base
         remove_parent_virtuals(parent,nd,excludes,depth)
       end
     end
+
     return true
   end # remove_parent_virtuals
-end
+
+  # Called on by remove_parent_virtuals only 
+  def _build_exclude_delete(parent,ng,node_group,nd,excludes,depth)
+    return nil if excludes.include?(parent)
+    build_del_list = {}
+    build_del_list[:excl] = []
+    build_del_list[:to_del] = []
+    
+    parent.child_groups.each do |child|
+      # each parent should not check the child that initiated the inquiry so create a list of each
+      # of its children except the one that initiated
+      if child == ng
+        ngna = NodeGroupNodeAssignment.find_by_node_group_id_and_node_id(parent.id, nd.id)
+        # If there aren't any other parents (relative to source ngna), means safe to delete
+        if (parent.child_groups.size == 1)
+          # if the parent ngna is a real assignment, don't delete it.
+          if (defined?(ngna.virtual_assignment?)) && (!ngna.virtual_assignment?)
+            build_del_list[:excl] << parent
+            return build_del_list
+          elsif 
+            build_del_list[:to_del] << parent
+            return build_del_list
+          end
+        else # more child groups to process
+          next
+        end
+      end
+      # if the parent indeed has another childng with the node as a member, then we break the chain.  
+      # meaning the parentng keeps its ng-to-node assoc as well as ITS parents.
+      ngna_to_del = NodeGroupNodeAssignment.find_by_node_group_id_and_node_id(parent.id, nd.id)
+      if (child.nodes.include?(nd))
+        build_del_list[:excl] << parent
+        unless (parent.parent_groups.nil?) || (parent.parent_groups.empty?)
+          parent.parent_groups.each do |ppg|
+            build_del_list[:excl] << ppg
+          end
+        end
+        return build_del_list
+      # OR if it is a real ngna and not a virtual, we should also exclude it from being deleted
+      elsif defined?(ngna_to_del.virtual_assignment?) && (!ngna_to_del.virtual_assignment?)
+        build_del_list[:excl] << parent
+        unless (parent.parent_groups.nil?) || (parent.parent_groups.empty?)
+          parent.parent_groups.each do |ppg|
+            build_del_list[:excl] << ppg
+          end
+        end
+        return build_del_list
+      else
+        build_del_list[:to_del] << parent
+      end
+    end
+    return build_del_list
+  end
+  private :_build_exclude_delete
+
+end 

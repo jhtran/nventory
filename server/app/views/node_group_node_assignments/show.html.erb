@@ -1,16 +1,17 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Node Group Node Assignment: " + h(@node_group_node_assignment.node.name) + '<->' + h(@node_group_node_assignment.node_group.name) %>
 
 <div class="record_view">
 
 <h1>Node Group Node Assignment</h1>
 
-<p><strong>Node:</strong> <%= link_to @node_group_node_assignment.node.name, node_path(@node_group_node_assignment.node) %><br />
-<strong>Node Group:</strong> <%= link_to @node_group_node_assignment.node_group.name, node_group_path(@node_group_node_assignment.node_group) %><br />
-<strong>Virtual Assignment:</strong> <%= h(@node_group_node_assignment.virtual_assignment) %><br />
+<p><strong><%= tooltip(NodeGroupNodeAssignment,:node) %>:</strong> <%= link_to @node_group_node_assignment.node.name, node_path(@node_group_node_assignment.node) %><br />
+<strong><%= tooltip(NodeGroupNodeAssignment,:node_group) %>:</strong> <%= link_to @node_group_node_assignment.node_group.name, node_group_path(@node_group_node_assignment.node_group) %><br />
+<strong><%= tooltip(NodeGroupNodeAssignment,:virtual_assignment) %>:</strong> <%= h(@node_group_node_assignment.virtual_assignment) %><br />
 <strong>Assigned at:</strong> <%= h(@node_group_node_assignment.assigned_at.to_formatted_s(:long)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@node_group_node_assignment.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@node_group_node_assignment.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(NodeGroupNodeAssignment,:created_at) %>:</strong> <%= h(@node_group_node_assignment.created_at) %><br />
+<strong><%= tooltip(NodeGroupNodeAssignment,:updated_at) %>:</strong> <%= h(@node_group_node_assignment.updated_at) %></p>
 
 </div>
 
@@ -22,3 +23,5 @@
 <%= link_to 'Delete', node_group_node_assignment_path(@node_group_node_assignment), :confirm => confirm_message, :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @node_group_node_assignment} %>
+
+<%= @tooltips %>

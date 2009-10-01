@@ -1,21 +1,39 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p>
-  <strong>Name</strong> <em>*</em> <br />
+  <strong><%= tooltip(LbPool,:name) %></strong> <em>*</em> <br />
   <%= f.text_field :name %>
 </p>
 <p>
-  <strong>Owner</strong> <br />
+  <strong><%= tooltip(LbPool,:owner) %></strong> <br />
   <%= f.text_field :owner %>
 </p>
 
-<p>
-  <strong>Load Balancer Profile</strong> <br />
-  <%= f.select :lb_profile_id, LbProfile.find(:all, :order => 'port').collect{ |obj| [ "Port [#{ obj.port}] , Protocol [#{obj.protocol}] , LBMethod [#{obj.lbmethod}], Healthcheck [#{ (obj.healthcheck.blank? || obj.healthcheck.nil?) ? 'no healthcheck ' : (obj.healthcheck) }]", obj.id ] } %><br />
-  <%= link_to 'New LB Profile',new_lb_profile_path %>
-</p>
+<!-- BEGIN nested lb_profile nested assocs BEGIN -->
+
+<%- f.fields_for :lb_profile do |lp_fields| -%>
+  <p>
+    <strong><%= tooltip(LbProfile,:port) %>:</strong><br />
+    <%= lp_fields.text_field :port %>
+  </p>
+  <p>
+    <strong><%= tooltip(LbProfile,:protocol) %>:</strong><br />
+    <%= lp_fields.text_field :protocol %>
+  </p>
+  <p>
+    <strong><%= tooltip(LbProfile,:lbmethod) %>:</strong><br />
+    <%= lp_fields.text_field :lbmethod %>
+  </p>
+  <p>
+    <strong><%= tooltip(LbProfile,:healthcheck) %>:</strong><br />
+    <%= lp_fields.text_field :healthcheck %>
+  </p>
+<%- end -%>
+
+<!-- END nested lb_profile nested assocs END -->
 
 <p>
-  <strong>Description</strong> <br />
+  <strong><%= tooltip(LbPool,:description) %></strong> <br />
   <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %>
 </p>
 
-<%= javascript_tag "Element.hide('create_lb_profile')" %>
+<%= @tooltips if ttflag %>

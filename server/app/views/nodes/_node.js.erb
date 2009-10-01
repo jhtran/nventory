@@ -1,6 +1,5 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p><strong>Name:</strong> <em>*</em> <br/><%= f.text_field :name %></p>
-<p><strong>Alternate Names:</strong> <br/><%= f.text_field :alternate_names %></p>
-
 <p><strong>Status:</strong> <em>*</em> <br /><%= f.select :status_id, Status.find(:all, :order => 'name').collect { |s| [ s.name, s.id ] }, { :include_blank => true } %></p>
 
 <p><strong>Hardware Profile:</strong> <em>*</em> <br /><%= f.select :hardware_profile_id, HardwareProfile.find(:all, :order => 'name').collect { |h| [ h.name, h.id ] }, { :include_blank => true } %></p>
@@ -38,3 +37,5 @@
 
 <p><strong>Description:</strong> <br /><%= f.text_area :description, {"cols" => 60, "rows" => 4} %> </p>
 
+
+<%= @tooltips if ttflag %>

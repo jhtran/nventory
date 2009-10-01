@@ -1,10 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <table cellspacing="0" class="styled" summary="A profile listing all load balancing metrics used by the lb service pool">
 <thead>
 <tr>
-    <th>Port</th>
-    <th>Protocol</th>
-    <th>LBMethod</th>
-    <th>Health Check</th>
+    <th><%= tooltip(LbPool,:port) %></th>
+    <th><%= tooltip(LbPool,:protocol) %></th>
+    <th><%= tooltip(LbPool,:lbmethod) %></th>
+    <th><%= tooltip(LbPool,:healthcheck) %></th>
     <th>&nbsp</th>
 </tr>
 </thead>
@@ -18,3 +19,5 @@
 </tr>
 </tbody>
 </table>
+
+<%= @tooltips if ttflag %>

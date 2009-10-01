@@ -2,35 +2,22 @@ class CommentsController < ApplicationController
   # GET /comments
   # GET /comments.xml
   def index
-    includes = process_includes(Comment, params[:include])
-    
-    sort = case params['sort']
-           when "created_at" then "comments.created_at"
-           when "created_at_reverse" then "comments.created_at DESC"
-           when "account" then "comments.user_id"
-           when "account_reverse" then "comments.user_id DESC"
-           when "belongs_to" then "comments.commentable_type, comments.commentable_id"
-           when "belongs_to_reverse" then "comments.commentable_type DESC, comments.commentable_id DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = 'created_at'
-      sort = 'comments.created_at'
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = Comment.find(:all,
-                              :include => includes,
-                              :order => sort)
-    else
-      @objects = Comment.paginate(:all,
-                                  :include => includes,
-                                  :order => sort,
-                                  :page => params[:page])
-    end
+    # The default display index_row columns (node_groups model only displays local table name)
+    default_includes = []
+    special_joins = {}
 
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = Comment
+    allparams[:webparams] = params
+    allparams[:default_includes] = default_includes
+    allparams[:special_joins] = special_joins
+
+    results = SearchController.new.search(allparams)
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    @objects = results[:search_results]
+    
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
@@ -63,10 +50,24 @@ class CommentsController < ApplicationController
     @comment = Comment.find(params[:id])
   end
 
+  # GET /comments/field_names
+  def field_names
+    super(Comment)
+  end
+
   # POST /comments
   # POST /comments.xml
   def create
     params[:comment][:user_id] = current_user.id
+    if params[:comment][:commentable_type].eql?('Node')
+      mailer_params = {}
+      mailer_params[:nodename] = Node.find(params[:comment][:commentable_id]).name
+      mailer_params[:username] = current_user.name
+      mailer_params[:changetype] = 'comment'
+      mailer_params[:changevalue] = params[:comment][:comment]
+      mailer_params[:time] = Time.now
+      Mailer.deliver_notify_node_new($users_email, mailer_params)
+    end
     @comment = Comment.new(params[:comment])
 
     respond_to do |format|

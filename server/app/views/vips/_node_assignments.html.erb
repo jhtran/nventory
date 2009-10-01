@@ -1,14 +1,15 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if vip.lb_pools.collect{|pool| pool.nodes }.size > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of all vips this lb_pool belongs to">
-  <caption>Nodes</caption>
+  <caption><%= tooltip(LbPool,:nodes) %></caption>
   <thead>
   <tr>
-      <th>Name</th>
-      <th>LB Pool</th>
-      <th>IP Address</th>
-      <th>Status</th>
-      <th>Hardware Profile</th>
-      <th>OS</th>
+      <th><%= tooltip(Node,:name) %></th>
+      <th><%= tooltip(Vip,:lb_pools,'LbPool') %></th>
+      <th><%= tooltip(Node,:ip_addresses,'IPAddress') %></th>
+      <th><%= tooltip(Node,:status) %></th>
+      <th><%= tooltip(Node,:hardware_profile) %></th>
+      <th><%= tooltip(Node,:operating_system) %></th>
       <th>&nbsp;</th>
   </tr>
   </thead>
@@ -29,5 +30,7 @@
   </table>
 
 <%- else -%>
-  <p>No Nodes belong to this VIP.</p>
+  <p>No Nodes belong to this <%= tooltip(VipLbPoolAssignment,:vip) %>.</p>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

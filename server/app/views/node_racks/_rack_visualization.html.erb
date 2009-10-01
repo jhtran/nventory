@@ -1,0 +1,20 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- pixel_height_of_node = 12 -%>
+
+<div class="v_rack">
+
+<div class="v_rack_name"><%= tooltip(Node,:node_rack,'RACK') %>: <%= link_to h(node_rack.name), node_rack_path(node_rack) %></div>
+
+<div class="v_rack_container" style="height:<%= (node_rack.u_height * 25).to_s %>px;">
+
+<ul class="v_rack_node">
+<%- node_rack.node_rack_node_assignments.each do |assignment| -%>
+  <li><%= link_to h(assignment.node.visualization_summary), node_path(assignment.node), { :style => 'background-color:' + h(assignment.node.hardware_profile.visualization_color) + ';height:' + ((assignment.node.hardware_profile.rack_size || 0)*pixel_height_of_node).to_s + 'px;line-height:'+  ((assignment.node.hardware_profile.rack_size || 0)*pixel_height_of_node).to_s + 'px;' } %></li>
+<%- end -%>
+</ul>
+
+</div>
+
+</div>
+
+<%= @tooltips if ttflag %>

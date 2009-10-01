@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- @page_title = 'Search ' + object.class.to_s.underscore.titleize.pluralize %>
 <h1><%= 'Search ' + object.class.to_s.underscore.titleize.pluralize %></h1>
 
@@ -10,11 +11,14 @@
     <th><font color="green">EXCLUDE</font></th>
   <% object.class.content_columns.each do |column| %>
     <% next if (column.name == 'description') %>
+    <% next if (column.name == 'created_at') %>
+    <% next if (column.name == 'updated_at') %>
     <% next if (exclude && exclude.include?(column.name))%>
+    <% next if object.class.columns_hash[column.name].type == :datetime %>
     <tr>
     <td><%= h(column.name.humanize) %></td>
     <% optionshash = {} -%>
-    <% object.class.find(:all).each do |obj| -%>
+    <% object.class.find(:all, :select => "DISTINCT #{column.name}").each do |obj| -%>
       <% value = obj.send(column.name) -%>
       <% optionshash[value] = true if (!value.nil? && !value.blank?) -%>
     <% end -%>
@@ -29,12 +33,24 @@
   <% end -%>
   <% object.class.reflect_on_all_associations.each do |assoc| -%>
     <% next if assoc.name == :audits -%>
-    <% next if assoc.name.to_s =~ /_assignments?$/ -%>
+    <% next if assoc.name == :comments -%>
+    <% next if assoc.name == :utilization_metrics -%>
+    <!-- FIXME - not sure why the following break search -->
+    <% next if assoc.name == :volumes_served -%>
+    <% next if assoc.name == :volumes_mounted-%>
+    <% next if assoc.name == :consumed_outlets -%>
+    <% next if assoc.name == :produced_outlets -%>
+    <!-- FIXME - these probably break because their model don't exist? (alias of another model?)  -->
+    <% next if assoc.name == :virtual_host -%>
+    <% next if assoc.name == :virtual_guests -%>
+    <% next if assoc.name == :lb_pools -%>
+    <% next if assoc.name == :services -%>
     <% if assoc.klass.respond_to?('default_search_attribute') -%>
+      <% next if assoc.klass.columns_hash[assoc.klass.default_search_attribute].type == :datetime %>
       <tr>
       <td><%= h(assoc.name.to_s.humanize) %></td>
       <% optionshash = {} -%>
-      <% assoc.klass.find(:all).each do |obj| -%>
+      <% assoc.klass.find(:all,:select => "DISTINCT #{assoc.klass.default_search_attribute}").each do |obj| -%>
         <% value = obj.send(assoc.klass.default_search_attribute) -%>
         <% optionshash[value] = true if (!value.nil? && !value.blank?) -%>
       <% end -%>
@@ -51,3 +67,5 @@
   </table>
   <%= submit_tag 'Search', :name => '' %>
 <% end -%>
+
+<%= @tooltips if ttflag %>

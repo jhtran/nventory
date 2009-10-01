@@ -4,11 +4,11 @@ class LbProfile < ActiveRecord::Base
   acts_as_reportable
   acts_as_commentable
 
-  has_many :lb_pools
+  belongs_to :lb_pool
 
+  #validates_uniqueness_of :lb_pool_id
   validates_presence_of  :port, :protocol, :lbmethod
   validates_format_of :port, :with => /\b\d+\b/
-  validates_uniqueness_of :port, :scope => [:protocol, :healthcheck, :lbmethod]
   validates_format_of :protocol, :with => /\b(tcp|udp|both)\b/
   validates_format_of :lbmethod, :with => /\b(round_robin|ratio_member|dynamic_ratio|fastest_member|least_conn_member|observed_member|predictive_member)\b/
 

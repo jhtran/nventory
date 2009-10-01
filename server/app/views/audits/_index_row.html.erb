@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr class="<%= cycle('odd', 'even') -%>">
   <td><%= link_to index_row.id, index_row %></td>
   <td>
@@ -59,3 +60,5 @@
   </td>
 
 </tr>
+
+<%= @tooltips if ttflag %>

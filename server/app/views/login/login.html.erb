@@ -1,11 +1,21 @@
 <%- @page_title = "Login" %>
 
+
 <div id="loginbox">
 
+<%- if SSO_AUTH_URL %>
+  <center>
+  <%= button_to " Single Sign On",:action => "sso" %>
+  <br />
+  <strong>- OR -</strong>
+  </center>
+<br />
+<center><strong><u>Local Authentication</u></strong></center><br />
+<%- end -%>
 <form action="login" method="post">
 <p><strong>Login:</strong> <%= text_field_tag "login", params[:login] %></p>
 <p><strong>Password:</strong> <%= password_field_tag "password", params[:password] %></p>
-<p><%= submit_tag "Login" %></p>
+<p><center><%= submit_tag "Login" %></center></p>
 </form>
 
 </div>

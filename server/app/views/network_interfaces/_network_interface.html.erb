@@ -1,20 +1,23 @@
-<p><strong>Name</strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(NetworkInterface,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
 
-<p><strong>Interface type</strong> <br /> <%= f.text_field :interface_type %></p>
+<p><strong><%= tooltip(NetworkInterface,:interface_type) %></strong> <br /> <%= f.text_field :interface_type %></p>
 
-<p><strong>Node</strong> <br /> <%= %></p>
+<p><strong><%= tooltip(NetworkInterface,:node) %></strong> <br /> <%= %></p>
 
-<p><strong>Is physical (real)?</strong> <br /> <%= f.check_box :physical %></p>
+<p><strong><%= tooltip(NetworkInterface,:physical) %></strong> <br /> <%= f.check_box :physical %></p>
 
-<p><strong>Hardware address</strong> <br /> <%= f.text_field :hardware_address %></p>
+<p><strong><%= tooltip(NetworkInterface,:hardware_address) %></strong> <br /> <%= f.text_field :hardware_address %></p>
 
-<p><strong>Interface up?</strong> <br /> <%= f.check_box :up %></p>
+<p><strong><%= tooltip(NetworkInterface,:up) %></strong> <br /> <%= f.check_box :up %></p>
 
-<p><strong>Link?</strong> <br /> <%= f.check_box :link %></p>
+<p><strong><%= tooltip(NetworkInterface,:link) %></strong> <br /> <%= f.check_box :link %></p>
 
-<p><strong>Speed</strong> <br /> <%= f.text_field :speed %></p>
+<p><strong><%= tooltip(NetworkInterface,:speed) %></strong> <br /> <%= f.text_field :speed %></p>
 
-<p><strong>Full duplex?</strong> <br /> <%= f.check_box :full_duplex %></p>
+<p><strong><%= tooltip(NetworkInterface,:full_duplex) %></strong> <br /> <%= f.check_box :full_duplex %></p>
 
-<p><strong>Auto-negotiate?</strong> <br /> <%= f.check_box :autonegotiate %></p>
+<p><strong><%= tooltip(NetworkInterface,:autonegotiate) %></strong> <br /> <%= f.check_box :autonegotiate %></p>
 
+
+<%= @tooltips if ttflag %>

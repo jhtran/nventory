@@ -1,1 +1,4 @@
-<p><strong>Comment</strong> <br /> <%= f.text_area :comment, {"cols" => 30, "rows" => 4}  %></p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(nil,:comment,nil,comments_tooltip) %></strong> <br /> <%= f.text_area :comment, {"cols" => 30, "rows" => 4}  %></p>
+
+<%= @tooltips if ttflag %>

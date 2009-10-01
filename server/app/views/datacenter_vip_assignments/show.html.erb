@@ -1,17 +1,18 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Datacenter VIP Assignment: " + h(@datacenter_vip_assignment.datacenter.name) + '<->' + h(@datacenter_vip_assignment.vip.name) %>
 
 <div class="record_view">
 
 <h1>Datacenter VIP Assignment</h1>
 
-<p><strong>Datacenter:</strong> <%= h(@datacenter_vip_assignment.datacenter.name) %><br />
-<strong>VIP:</strong> <%= h(@datacenter_vip_assignment.vip.name) %><br />
-<strong>Priority:</strong> <%= h(@datacenter_vip_assignment.priority) %><br />
+<p><strong><%= tooltip(DatacenterVipAssignment,:datacenter) %>:</strong> <%= h(@datacenter_vip_assignment.datacenter.name) %><br />
+<strong><%= tooltip(DatacenterVipAssignment,:vip,'VIP') %>:</strong> <%= h(@datacenter_vip_assignment.vip.name) %><br />
+<strong><%= tooltip(DatacenterVipAssignment,:priority) %>:</strong> <%= h(@datacenter_vip_assignment.priority) %><br />
 
-<strong>Assigned at:</strong> <%= h(@datacenter_vip_assignment.assigned_at.to_formatted_s(:long)) %></p>
+<strong><%= tooltip(DatacenterVipAssignment,:assigned_at) %>:</strong> <%= h(@datacenter_vip_assignment.assigned_at.to_formatted_s(:long)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@datacenter_vip_assignment.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@datacenter_vip_assignment.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(DatacenterVipAssignment,:created_at) %>:</strong> <%= h(@datacenter_vip_assignment.created_at) %><br />
+<strong><%= tooltip(DatacenterVipAssignment,:updated_at) %>:</strong> <%= h(@datacenter_vip_assignment.updated_at) %></p>
 
 </div>
 
@@ -19,3 +20,5 @@
 <%= link_to 'Delete', datacenter_vip_assignment_path(@datacenter_vip_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @datacenter_vip_assignment} %>
+
+<%= @tooltips %>

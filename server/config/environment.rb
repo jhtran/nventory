@@ -1,11 +1,12 @@
 # Be sure to restart your web server when you modify this file.
+CONFIGFILE = 'config/nventory.conf'
 
 # Uncomment below to force Rails into production mode when 
 # you don't control web/app server and can't set it the proper way
 # ENV['RAILS_ENV'] ||= 'production'
-@@domain_name = "domain.com"
+
 # Specifies gem version of Rails to use when vendor/rails is not present
-RAILS_GEM_VERSION = '2.1.2' unless defined? RAILS_GEM_VERSION
+RAILS_GEM_VERSION = '2.3.2' unless defined? RAILS_GEM_VERSION
 
 # Bootstrap the Rails environment, frameworks, and default configuration
 require File.join(File.dirname(__FILE__), 'boot')
@@ -29,6 +30,7 @@ Rails::Initializer.run do |config|
   # Use the database for sessions instead of the file system
   # (create the session table with 'rake db:sessions:create')
   config.action_controller.session_store = :active_record_store
+  config.action_controller.session = { :key => '_nventory_session_id' }
 
   # Use SQL instead of Active Record's schema dumper when creating the test database.
   # This is necessary if your schema can't be completely dumped by the schema dumper, 
@@ -77,14 +79,49 @@ ActiveSupport::CoreExtensions::Time::Conversions::DATE_FORMATS.merge!(
 
 Mime::Type.register "text/config", :config
 
-# Email receipients for the exception_notification plugin
-ExceptionNotifier.exception_recipients = %w(webmaster)
-
 require 'will_paginate'
 require 'fastercsv'
 require 'fast_xs'
 require 'net/http'
 require 'hpricot'
 require 'graphviz'
+require 'redcloth'
 # Needed for offline background jobs (starling/workling)
 Workling::Remote.dispatcher = Workling::Remote::Runners::StarlingRunner.new
+
+## Pull the environment specific config settings
+confighash = {}
+if File.exist?(CONFIGFILE)
+  IO.foreach(CONFIGFILE) do |line|
+    line.chomp!
+    next if (line =~ /^\s*$/);  # Skip blank lines
+    next if (line =~ /^\s*#/);  # Skip comments
+    key, value = line.split(/\s*=\s*/, 2)
+    confighash[key] = value
+  end
+  confighash['ldap_server'] ? (LDAP_SERVER = confighash['ldap_server']) : (LDAP_SERVER = false)
+  confighash['ldap_servers'] ? (LDAP_SERVERS = confighash['ldap_servers'].split(',')) : (LDAP_SERVERS = false)
+  confighash['ldap_base'] ? (LDAP_BASE = confighash['ldap_base']) : (LDAP_BASE = false)
+  confighash['ldap_dns_name'] ? (LDAP_DNS_NAME = confighash['ldap_dns_name']) : (LDAP_DNS_NAME = false)
+  confighash['ldap_email_suffix'] ? (LDAP_EMAIL_SUFFIX = confighash['ldap_email_suffix']) : (LDAP_EMAIL_SUFFIX  = false)
+  if confighash['sso_auth_server'] 
+    SSO_AUTH_SERVER = confighash['sso_auth_server']
+    SSO_AUTH_URL = "https://#{SSO_AUTH_SERVER}/users.xml?login="
+    SSO_LOGIN_URL = "https://#{SSO_AUTH_SERVER}/login"
+  else
+    SSO_AUTH_SERVER = false
+    SSO_AUTH_URL = false
+    SSO_LOGIN_URL = false
+  end
+  confighash['sso_proxy_server'] ? (SSO_PROXY_SERVER = confighash['sso_proxy_server']) : (SSO_PROXY_SERVER = false)
+  confighash['sso_proxy_port'] ? (SSO_PROXY_PORT = confighash['sso_proxy_port']) : (SSO_PROXY_PORT = false)
+  confighash['help_url'] ? (HELP_URL = confighash['help_url']) : (HELP_URL = 'http://sourceforge.net/apps/trac/nventory/wiki')
+  confighash['prod_users_email'] ? ($prod_users_email= confighash['prod_users_email']) : ($prod_users_email = "nventory@#{EMAIL_SUFFIX}")
+  confighash['dev_users_email'] ? ($dev_users_email= confighash['dev_users_email']) : ($dev_users_email = "nventory@#{EMAIL_SUFFIX}")
+  confighash['mail_from'] ? ($mail_from = confighash['mail_from']) : ($mail_from = "nventory@#{EMAIL_SUFFIX}")
+  confighash['email_suffix'] ? (EMAIL_SUFFIX = confighash['email_suffix']) : (EMAIL_SUFFIX  = false)
+  confighash['admin_email'] ? ($admin_email = confighash['admin_email']) : ($admin_email = "admin@#{EMAIL_SUFFIX}")
+end
+
+# Email receipients for the exception_notification plugin
+ExceptionNotifier.exception_recipients = $admin_email

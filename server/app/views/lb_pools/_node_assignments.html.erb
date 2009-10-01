@@ -1,13 +1,14 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if lb_pool.nodes.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of all vips this lb_pool belongs to">
   <caption>Nodes</caption>
   <thead>
   <tr>
-      <th>Name</th>
-      <th>IP Address</th>
-      <th>Status</th>
-      <th>Hardware Profile</th>
-      <th>OS</th>
+      <th><%= tooltip(Node,:name) %></th>
+      <th><%= tooltip(Node,:ip_address) %></th>
+      <th><%= tooltip(Node,:status) %></th>
+      <th><%= tooltip(Node,:hardware_profile) %></th>
+      <th><%= tooltip(Node,:operating_system,'OS') %></th>
       <th>&nbsp;</th>
   </tr>
   </thead>
@@ -31,3 +32,5 @@
 <%- else -%>
   <p>There aren't any Nodes belonging to this LB Pool.</p>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

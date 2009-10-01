@@ -1,15 +1,16 @@
-<%- @page_title = "Vip LbPool Assignment: " + h(@vip_lb_pool_assignment.lb_pool.name) + '<->' + h(@vip_lb_pool_assignment.vip.name) %>
+<%- @tooltips = [] %>
+<%- @page_title = "Vip LB Pool Assignment: " + h(@vip_lb_pool_assignment.lb_pool.name) + '<->' + h(@vip_lb_pool_assignment.vip.name) %>
 
 <div class="record_view">
 
-<h1>Vip LbPool Assignment</h1>
+<h1><%= tooltip(Vip,:vip_lb_pool_assignments) %></h1>
 
-<p><strong>LbPool:</strong> <%= link_to @vip_lb_pool_assignment.lb_pool.name, lb_pool_path(@vip_lb_pool_assignment.lb_pool) %><br />
-<strong>Vip:</strong> <%= link_to @vip_lb_pool_assignment.vip.name, vip_path(@vip_lb_pool_assignment.vip) %><br />
-<strong>Assigned at:</strong> <%= h(@vip_lb_pool_assignment.assigned_at.to_formatted_s(:long)) %></p>
+<p><strong><%= tooltip(VipLbPoolAssignment,:lb_pool) %>:</strong> <%= link_to @vip_lb_pool_assignment.lb_pool.name, lb_pool_path(@vip_lb_pool_assignment.lb_pool) %><br />
+<strong><%= tooltip(VipLbPoolAssignment,:vip) %>:</strong> <%= link_to @vip_lb_pool_assignment.vip.name, vip_path(@vip_lb_pool_assignment.vip) %><br />
+<strong><%= tooltip(VipLbPoolAssignment,:assigned_at) %>:</strong> <%= h(@vip_lb_pool_assignment.assigned_at.to_formatted_s(:long)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@vip_lb_pool_assignment.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@vip_lb_pool_assignment.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(VipLbPoolAssignment,:created_at) %>:</strong> <%= h(@vip_lb_pool_assignment.created_at) %><br />
+<strong><%= tooltip(VipLbPoolAssignment,:updated_at) %>:</strong> <%= h(@vip_lb_pool_assignment.updated_at) %></p>
 
 </div>
 
@@ -18,3 +19,5 @@
 <%= link_to 'Delete', vip_lb_pool_assignment_path(@vip_lb_pool_assignment), :confirm => confirm_message, :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @vip_lb_pool_assignment} %>
+
+<%= @tooltips %>

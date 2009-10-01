@@ -1,7 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr class="<%= cycle('odd', 'even') -%>">
 <td nowrap="nowrap" width="5%">
 <%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / 
 <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
 <td><%= link_to index_row.name, self.send(index_row.class.to_s.underscore + '_path', index_row) %></td>
+<td><%= index_row.nodes.count %></th>
 <td><%= mail_to index_row.owner %></td>
 </tr>
+
+<%= @tooltips if ttflag %>

@@ -1,7 +1,8 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Visualization of Datacenter: " + h(@datacenter.name) %>
 
 <%- column_count = 3 -%>
-<%- row_count = (@datacenter.racks.count / column_count).to_i + 1 -%>
+<%- row_count = (@datacenter.node_racks.count / column_count).to_i + 1 -%>
 <%- rack_index = 0 -%>
 <table style="width:100%">
 <tbody>
@@ -9,8 +10,8 @@
 <tr>
   <%- column_count.times do -%>
     <td>
-    <%- if rack_index < @datacenter.racks.count -%>
-      <%= render :partial => 'racks/rack_visualization', :locals => { :rack => @datacenter.racks.fetch(rack_index) } %>
+    <%- if rack_index < @datacenter.node_racks.count -%>
+      <%= render :partial => 'node_racks/rack_visualization', :locals => { :node_rack => @datacenter.node_racks.fetch(rack_index) } %>
     <%- else -%>
     &nbsp;
     <%- end -%>
@@ -21,3 +22,5 @@
 <%- end -%>
 </tbody>
 </table>
+
+<%= @tooltips %>

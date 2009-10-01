@@ -1,16 +1,21 @@
 class DashboardController < ApplicationController
 
   def index
+    UtilizationMetricsGlobal.last.nil? ? @percent_cpu_node_count = 0 : @percent_cpu_node_count = UtilizationMetricsGlobal.last.node_count.to_i
     respond_to do |format|
       format.html {
         @nodes_over_time_chart = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'nodes_over_time_chart', :format => :json ))
-        @operating_systems_pie = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'operating_systems_pie', :format => :json )) unless !@operating_systems_pie
-        @hardware_profiles_pie = open_flash_chart_object(700,400, url_for( :action => 'index', :graph => 'hardware_profiles_pie', :format => :json )) unless !@hardware_profiles_pie
+        @operating_systems_pie = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'operating_systems_pie', :format => :json ))
+        @hardware_profiles_pie = open_flash_chart_object(700,400, url_for( :action => 'index', :graph => 'hardware_profiles_pie', :format => :json ))
+        @global_cpu_percent_chart = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'global_cpu_percent_chart', :format => :json ))        
       } # format.html
       format.json {
         case params[:graph]
           when 'nodes_over_time_chart'
             chart = nodes_over_time_chart_method
+            render :text => chart.to_s
+          when 'global_cpu_percent_chart'
+            chart = global_cpu_percent_chart_method
             render :text => chart.to_s
           when 'hardware_profiles_pie'
             chart = hardware_profiles_pie_method
@@ -32,7 +37,6 @@ class DashboardController < ApplicationController
       data[hwp.name] = hwp.nodes.size
     end
     sum = data.values.inject(0) { |s,v| s += v }
-    if sum == 0 then return false end
     data.each_pair do |hwp,count|
       if (percent[(count * 100)/sum].nil?) || (percent[(count * 100)/sum].empty?) 
         percent[(count * 100)/sum] = [hwp]
@@ -100,9 +104,54 @@ class DashboardController < ApplicationController
     line.text = "Nodes"
     line.set_values(data[:values])
     y = YAxis.new
-    y.set_range(0,2000,200)
+    y.set_range(0,3000,300)
     x = XAxis.new
     x.set_labels(data[:months])
+
+    chart = OpenFlashChart.new
+    chart.set_title(title)
+    chart.add_element(line)
+    chart.x_axis = x
+    chart.y_axis = y
+
+    return chart
+  end
+  
+  def global_cpu_percent_chart_method
+    data = {}
+    data[:days] = []
+    data[:values] = []
+
+    # Create datapoints for the past 12 months and keep them in array so that their order is retained
+    counter = 10
+    while counter > 0
+      day = counter
+      data[:days] << day.days.ago.strftime("%m/%d")
+      values = UtilizationMetricsGlobal.find(
+          :all, :include => {:utilization_metric_name => {}},
+          :conditions => ["assigned_at like ? and utilization_metric_names.name = ?", "%#{day.days.ago.strftime("%Y-%m-%d")}%", 'percent_cpu'])
+      # each day should only have 1 value, if not then create an averageA
+      if values.size == 0 
+        value = 0 
+      elsif values.size == 1
+        value = values.first.value
+      else
+        value = values.collect{|a| a.value.to_i }.sum / values.size
+      end
+      data[:values] << value.to_i
+      counter -= 1
+    end
+    PP.pp data
+    # Create Graph
+    title = Title.new("Global CPU% Utilization")
+    title.set_style('{font-size: 20px; color: #778877}')
+    line = Line.new
+    line.text = "%"
+    line.set_values(data[:values])
+    y = YAxis.new
+    y.set_range(0,100,10)
+    x = XAxis.new
+    x.set_labels(data[:days])
 
     chart = OpenFlashChart.new
     chart.set_title(title)
@@ -122,7 +171,6 @@ class DashboardController < ApplicationController
       data[os.name] = os.nodes.size
     end
     sum = data.values.inject(0) { |s,v| s += v }
-    if sum == 0 then return false end
     data.each_pair do |os,count|
       if (percent[(count * 100)/sum].nil?) || (percent[(count * 100)/sum].empty?) 
         percent[(count * 100)/sum] = [os]
@@ -131,7 +179,7 @@ class DashboardController < ApplicationController
       end
     end 
     order = percent.keys.sort
-    # only take the top 7 hw profiles otherwise pie graph is ugly
+    # only take the top hw profiles otherwise pie graph is ugly
     counter = 10
     while counter > 0
       highest_percent = order.pop
@@ -139,7 +187,13 @@ class DashboardController < ApplicationController
       percent[highest_percent].each do |os|
         if counter > 0
           if (os =~ /windows/i) 
-            shortname = os.gsub(/standard edition/i, 'SE').gsub(/service pack/i, 'SP').gsub(/Microsoft.*Windows.*Server/, "Windows Server\n").gsub(/enterprise edition/i, 'EE')
+            shortname = os.gsub(/standard edition/i, 'SE')
+            shortname.gsub!(/service pack/i, 'SP')
+            shortname.gsub!(/Microsoft.*Windows.*Server/, "Windows\n")
+            shortname.gsub!(/enterprise edition/i, 'EE')
+            shortname.gsub!(/enterprise x64 edition/i, 'EE x64')
+            shortname.gsub!(/standard x64 edition/i, 'SE x64')
+            shortname.gsub!(/windows\s/i, 'Win')
           elsif (os =~ /red *hat.*centos/i)
             shortname = os.gsub(/red *hat.*centos/i, 'CentOS').gsub(/\sLinux/i, '')
           elsif (os =~ /red *hat.*enterprise/i)
@@ -177,7 +231,7 @@ class DashboardController < ApplicationController
   end # def 
 
   def setup_sample_data
-	if !Datacenter.find(:first) && !Rack.find(:first) && !Node.find(:first)
+	if !Datacenter.find(:first) && !NodeRack.find(:first) && !Node.find(:first)
       
       hp1 = HardwareProfile.new
       hp1.name = 'Sun Microsystems Sun Fire X4100'
@@ -267,9 +321,9 @@ class DashboardController < ApplicationController
       
       hardware_profiles = HardwareProfile.find(:all,:include => {:nodes => {}})
       
-      rack = Rack.new(:name => "NY-Rack 001")
-      rack.save
-      dra = DatacenterRackAssignment.new(:datacenter => ny, :rack => rack)
+      node_rack = NodeRack.new(:name => "NY-Rack 001")
+      node_rack.save
+      dra = DatacenterNodeRackAssignment.new(:datacenter => ny, :node_rack => node_rack)
       dra.save
       
       node_count = 0
@@ -282,16 +336,16 @@ class DashboardController < ApplicationController
         node.hardware_profile = HardwareProfile.find_by_name('Sun Microsystems Sun Fire X4100')
         node.operating_system = OperatingSystem.find(:first)
         node.save
-        rna = RackNodeAssignment.new(:rack => rack, :node => node)
+        rna = NodeRackNodeAssignment.new(:node_rack => node_rack, :node => node)
         rna.save
         ngna = NodeGroupNodeAssignment.new(:node_group => ng2, :node => node)
         ngna.save
       end
       
       (2..9).to_a.each do |n|
-        rack = Rack.new(:name => "NY-Rack 00"+n.to_s)
-        rack.save
-        dra = DatacenterRackAssignment.new(:datacenter => ny, :rack => rack)
+        node_rack = NodeRack.new(:name => "NY-Rack 00"+n.to_s)
+        node_rack.save
+        dra = DatacenterNodeRackAssignment.new(:datacenter => ny, :node_rack => node_rack)
         dra.save
         
         (1..9).to_a.each do |i|
@@ -303,7 +357,7 @@ class DashboardController < ApplicationController
           node.hardware_profile = hardware_profiles[rand(hardware_profiles.length)]
           node.operating_system = OperatingSystem.find(:first)
           node.save
-          rna = RackNodeAssignment.new(:rack => rack, :node => node)
+          rna = NodeRackNodeAssignment.new(:node_rack => node_rack, :node => node)
           rna.save
 		  ngna = NodeGroupNodeAssignment.new(:node_group => ng3, :node => node)
 		  ngna.save

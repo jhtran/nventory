@@ -1,9 +1,13 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr class="<%= cycle('odd', 'even') -%>">
 <td nowrap="nowrap" width="5%">
 <%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / 
 <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+<td><%= link_to index_row.lb_pool.name, index_row.lb_pool %></td>
 <td><%= index_row.port %></td>
 <td><%= index_row.protocol %></td>
 <td><%= index_row.lbmethod %></td>
 <td><%= index_row.healthcheck %></td>
 </tr>
+
+<%= @tooltips if ttflag %>

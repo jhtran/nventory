@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th <%= sort_td_class_helper "name" %> > <%= sort_link_helper "Name", "name" %></th>
+  <th><%= tooltip(Service,:nodes) %></th>
+  <th><%= tooltip(Service,:parent_services,'Parents') %></th>
+  <th><%= tooltip(Service,:child_services,'Clients') %></th>
+  <th nowrap="nowrap" width="20%">Owner</th>
+</tr>
+
+<%= @tooltips if ttflag %>

@@ -1,113 +1,92 @@
-<%- @page_title = "Node Group: " + h(@node_group.name) %>
+<%- @tooltips = [] %>
+<%- @page_title = "Node Group: #{@node_group.name}" %>
 
 <div class="record_view">
 
-<h1>Node Group: <%=h @node_group.name %></h1>
-<%= "<p><strong><font color='green'>(Load Balancer Service group)</font></strong></p>" if @node_group.lb_profile %>
-<p><strong>Owner:</strong><br />
-<%= @node_group.owner %></p>
-<p><strong>Description:</strong><br />
-<%= textilize_without_paragraph(h(@node_group.description)) %></p>
-
-<p>
-<strong>Children:</strong>
-<ul>
-<%- @node_group.assignments_as_parent.sort {|a,b| a.child_group.name <=> b.child_group.name}.each do |assignment| -%>
-  <li><%= link_to assignment.child_group.name, :controller => 'node_groups', :action => 'show', :id => assignment.child_group.id %></li>
-  <ul>
-  <div id="child_node_group_assignments">
-    <%= render :partial => 'shared/child_node_group_assignment', :collection => assignment.child_group.assignments_as_parent.sort {|a,b| a.child_group.name <=> b.child_group.name } %>
-  </div>
-  </ul>
-<%- end -%>
-</ul>
-</p>
-<p>
-
-<strong>Parents:</strong>
-<ul>
-<%- @node_group.assignments_as_child.sort{|a,b| a.parent_group.name <=> b.parent_group.name}.each do |assignment| -%>
-  <li><%= link_to assignment.parent_group.name, :controller => 'node_groups', :action => 'show', :id => assignment.parent_group.id %></li>
-  <ul>
-  <div id="parent_node_group_assignments">
-     <%= render :partial => 'shared/parent_node_group_assignment', :collection => assignment.parent_group.assignments_as_child.sort {|a,b| a.parent_group.name <=> b.parent_group.name} %>
-  </div>
-  </ul>
-<%- end -%>
-</ul>
-</p>
-
-<p>
-<strong>Nodes:</strong>
-<ul>
-<%- @node_group.real_node_group_node_assignments.sort{|a,b| a.node.name <=> b.node.name}.each do |ngna| -%>
-  <li><%= link_to ngna.node.name, node_group_node_assignment_url(ngna) %></li>
-<%- end -%>
-</ul>
-</p>
-
-<p>
-<strong>Virtual Nodes: (from child groups)</strong>
-<ul>
-<%- all_child_ng_ids = @node_group.all_child_groups.collect{|cng| cng.id} -%>
-<%- @node_group.virtual_node_group_node_assignments.sort{|a,b| a.node.name <=> b.node.name}.each do |ngna| -%>
-  <li><%= link_to ngna.node.name, node_path(ngna.node) %> 
-  <%- if !ngna.node.real_node_groups.empty? %>
-    <%- virtual_membership = [] -%>
-    <%- ngna.node.recursive_real_node_groups.each do |ng| %>
-      <%- virtual_membership << ng.name if all_child_ng_ids.include?(ng.id) -%>
-    <%- end -%>
-    <%- if !virtual_membership.empty? -%>
-      <%= " => (#{virtual_membership.join(',')})" %>
-    <%- else -%>
-      <%= "<b><font color='red'> *** DOESN'T BELONG TO ANY NODE GROUPS IN THE CHAIN.  DATABASE INCONSISTENCY! ***</font></b>" %>
-    <%- end -%>
-    <%- virtual_membership.clear -%>
+  <h1><%= tooltip(Node,:node_groups,'Node Group') + ": #{@node_group.name}" %></h1>
+  <%= "<p><strong><font color='green'>(" + tooltip(Vip,:lb_pools,'Load Balancer Service Group') + ")</font></strong></p>" if @node_group.lb_profile -%>
+  <%- if @node_group.is_service? -%>
+    <%= button_to 'View as Application Service Group', @node_group.to_service, :method => 'get' -%>
   <%- else -%>
-    <%= "<b><font color='red'>** DOESN'T BELONG TO ANY CHILD NODE GROUP OF THIS CHAIN!  BAD RECORD IN DATABASE! **</font></b>" %>
+    <p><font size=-5><%= button_to 'Convert to Application Service Group', :controller => 'node_groups', :action => 'convert_to_appservice', :id => @node_group %></font></p>
   <%- end -%>
-  </li>
-<%- end -%>
-</ul>
-</p>
-
-
-<p class="metadata"><strong>Created at:</strong> <%= h(@node_group.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@node_group.updated_at) %></p>
+  <br />
+  <p><strong><%= tooltip(NodeGroup,:owner) %>:</strong><br />
+  <%= @node_group.owner %></p>
+  <p>
+    <strong><%= tooltip(NodeGroup,:cpu_percent) %>:</strong>&nbsp&nbsp<font color=green><%= @percent_cpu_today %></font> <small><br />
+    (1 day ago <%= "based on sample data from <font color=green>#{@percent_cpu_node_count}</font> nodes" if @percent_cpu_node_count %>)</small><br />
+  </p>
+  <p><strong><%= tooltip(NodeGroup,:description) %>:</strong><br />
+  <%= textilize_without_paragraph(h(@node_group.description)) %></p>
+  
+  <p class="metadata"><strong><%= tooltip(NodeGroup,:created_at) %>:</strong> <%= h(@node_group.created_at) %><br />
+  <strong><%= tooltip(NodeGroup,:updated_at) %>:</strong> <%= h(@node_group.updated_at) %></p>
 
 </div>
 
-<!-- BEGIN SERVICES RELATIONSHIPS -->
+<script type="text/javascript" src="/javascripts/swfobject.js"></script>
+<p><%= @cpu_percent_chart %><br /><br />
+
+<!-- BEGIN NG RELATIONSHIPS -->
 <div class="relationship">
+  <div id="child_group_assgns">
+    <%= render :partial => 'child_group_assignments', :locals => { :node_group => @node_group} %>
+  </div>
+  <div id="create_child_assignment">
+    <%= render :partial => 'create_child_assignment' %>
+  </div>
+  <p id="add_child_link">
+    <%= render :partial => 'add_child_link' %>
+  </p>
 
-  <strong>Services Clients (depend on this node group):</strong>
-  <%- if @node_group.child_services.size > 0 -%>
-    <ul>
-    <div id="parent_service_assignments">
-      <%= render :partial => 'shared/child_service_assignment', :collection => @node_group.service_assignments_as_parent %>
-    </div>
-    </ul>
-  <%- else -%>
-    <p>There are no child services for this node </p>
-  <%- end -%>
-
-  <strong>Service Dependencies (this node group depends upon):</strong>
-<%- @g = File.open('/tmp/test','w') -%>
-
-  <%- if @node_group.parent_services.size > 0 -%>
-    <ul>
-    <div id="client_service_assignments">
-    <%= render :partial => 'shared/parent_service_assignment', :collection => @node_group.service_assignments_as_child %>
-    </div>
-    </ul>
-  <%- else -%>
-    <p>There are no parent service dependencies for this node </p>
-  <%- end -%>
-
-<%- @g.close -%>
+  <div id="parent_group_assgns">
+    <%= render :partial => 'parent_group_assignments', :locals => { :node_group => @node_group} %>
+  </div>
+  <div id="create_parent_assignment">
+    <%= render :partial => 'create_parent_assignment' %>
+  </div>
+  <p id="add_parent_link">
+    <%= render :partial => 'add_parent_link' %>
+  </p>
 </div>
-<!-- END SERVICES RELATIONSHIPS -->
+<!-- END NG RELATIONSHIPS -->
 
+<!-- BEGIN NG TREE -->
+<div class="relationship">
+  <%= link_to 'View Diagram', :action => "graph_node_groups", :id => @node_group %><br /><br />
+  <strong><%= tooltip(NodeGroup,:child_groups) %>:</strong>
+    <ul>
+    <div id="child_group_assignments">
+      <%= render :partial => 'shared/child_node_group_assignment', :collection => @node_group.assignments_as_parent %>
+    </div>
+    </ul>
+
+  <strong><%= tooltip(NodeGroup,:parent_groups) %>:</strong>
+    <ul>
+    <div id="parent_group_assignments">
+    <%= render :partial => 'shared/parent_node_group_assignment', :collection => @node_group.assignments_as_child %>
+    </div>
+    </ul>
+</div>
+<!-- END NG TREE -->
+
+<!-- BEGIN NODE RELATIONSHIPS -->
+<div class="relationship">
+  <div id="real_nodes">
+    <%= render :partial => 'real_node_assignments', :locals => { :node_group => @node_group} %>
+  </div>
+  <div id="create_node_assignment">
+    <%= render :partial => 'create_node_assignment' %>
+  </div>
+  <p id="add_node_link">
+    <%= render :partial => 'add_node_link' %>
+  </p>
+  <div id="virtual_nodes">
+    <%= render :partial => 'virtual_node_assignments', :locals => { :node_group => @node_group, :virtuals_through => @virtuals_through } %>
+  </div>
+</div>
+<!-- END NODE RELATIONSHIPS -->
 
 <div class="relationship">
 
@@ -119,4 +98,8 @@
 <%= link_to 'Delete', node_group_path(@node_group), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @node_group} %>
-<%= javascript_tag "Element.hide('create_service_assignment')" %>
+<%= javascript_tag "Element.hide('create_parent_assignment')" %>
+<%= javascript_tag "Element.hide('create_child_assignment')" %>
+<%= javascript_tag "Element.hide('create_node_assignment')" %>
+
+<%= @tooltips %>

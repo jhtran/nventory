@@ -1,7 +1,10 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr>
   <th nowrap="nowrap" width="5%">&nbsp;</th>
-  <th>Datacenter</th>
-  <th>VIP</th>
-  <th>Priority</th>
+  <th><%= tooltip(DatacenterVipAssignment,:datacenter) %></th>
+  <th><%= tooltip(DatacenterVipAssignment,:vip,'VIP') %></th>
+  <th><%= tooltip(DatacenterVipAssignment,:priority) %></th>
   <th <%= sort_td_class_helper "assigned_at" %> > <%= sort_link_helper "Assigned At", "assigned_at" %></th>
 </tr>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,14 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :node_group_node_assignment, :url => self.send('node_group_node_assignments_path') ) do |f| %>
+  <p><%= tooltip(NodeGroup,:node) %>:
+  
+  <%- node_array = Node.def_scope.find(:all, :order => :name).collect { |r| [ r.name, r.id ] } -%>
+  
+  <%= f.select( :node_id, node_array, { :include_blank => true } ) %>
+  <%= f.hidden_field( :node_group_id, { :value => @node_group.id } ) %>
+
+  <%= submit_tag "Assign", :onclick => "$('node_group_assignment_id').value = _node_group_id" %> | <%= link_to_function 'Cancel', "Element.show('add_node_link');Element.hide('create_node_assignment')"%></p>
+
+<% end %>
+
+<%= @tooltips if ttflag %>

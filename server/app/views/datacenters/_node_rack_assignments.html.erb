@@ -1,0 +1,29 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if datacenter.datacenter_node_rack_assignments.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the server racks assigned to this datacenter.">
+  <caption>Node Racks</caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(NodeRack,:name,'Rack') %></th>
+      <th><%= tooltip(DatacenterNodeRackAssignment,:assigned_at) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in datacenter.datacenter_node_rack_assignments.sort { |a,b| a.node_rack.name <=> b.node_rack.name } %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.node_rack.name, node_rack_path(assignment.node_rack) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), datacenter_node_rack_assignment_path(assignment) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => datacenter_node_rack_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p>No server racks are assigned to this datacenter.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

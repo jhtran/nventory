@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if @node.number_of_physical_nics > 0 -%>
   <p>This node has <%= h(@node.number_of_physical_nics.to_s) %> NICS that consume bandwidth. Connected producers are:</p>
   <ul>
@@ -54,3 +55,5 @@
   <%- i = i + 1 -%>
 <%- end -%>
 </ul>
+
+<%= @tooltips if ttflag %>

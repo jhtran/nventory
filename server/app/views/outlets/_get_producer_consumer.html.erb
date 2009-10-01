@@ -1,8 +1,9 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if @producers.empty? -%>
 <strong><font color="red">No producers with that outlet type found.</font></strong>
 <%- else -%>
 <p>
-Producer:
+<%= tooltip(Outlet,:producer,'Producers') %>:
   <%= select_tag "outlet[producer_id]", options_for_select(@producers) %>
 </p>
 <%- end -%>
@@ -11,9 +12,11 @@ Producer:
 <strong><font color="red">No consumers with that outlet type found.</font></strong>
 <%- else -%>
 <p>
-Consumers:
+<%= tooltip(Outlet,:consumer,'Consumers') %>:
   <%= select_tag "outlet[consumer_id]", options_for_select(@consumers) %>
 </p>
 <%- end -%>
 
 <%= hidden_field(:outlet, :consumer_type, :value => @consumer_type) %>
+
+<%= @tooltips if ttflag %>

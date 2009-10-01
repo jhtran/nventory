@@ -1,6 +1,9 @@
-<p><strong>Name:</strong> <em>*</em> <br /> <%= f.text_field :name %> </p>
-<p><strong>Vendor:</strong> <br /> <%= f.text_field :vendor %> </p>
-<p><strong>Variant:</strong> <br /> <%= f.text_field :variant %> </p>
-<p><strong>Version Number:</strong> <br /> <%= f.text_field :version_number %> </p>
-<p><strong>Architecture:</strong> <br /> <%= f.text_field :architecture %> </p>
-<p><strong>Description:</strong> <br /><%= f.text_area :description, {"cols" => 60, "rows" => 4} %> </p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(OperatingSystem,:name) %>:</strong> <em>*</em> <br /> <%= f.text_field :name %> </p>
+<p><strong><%= tooltip(OperatingSystem,:vendor) %>:</strong> <br /> <%= f.text_field :vendor %> </p>
+<p><strong><%= tooltip(OperatingSystem,:variant) %>:</strong> <br /> <%= f.text_field :variant %> </p>
+<p><strong><%= tooltip(OperatingSystem,:version_number) %>:</strong> <br /> <%= f.text_field :version_number %> </p>
+<p><strong><%= tooltip(OperatingSystem,:architecture) %>:</strong> <br /> <%= f.text_field :architecture %> </p>
+<p><strong><%= tooltip(OperatingSystem,:description) %>:</strong> <br /><%= f.text_area :description, {"cols" => 60, "rows" => 4} %> </p>
+
+<%= @tooltips if ttflag %>

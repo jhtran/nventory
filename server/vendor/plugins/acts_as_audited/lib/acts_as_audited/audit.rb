@@ -23,7 +23,7 @@ class Audit < ActiveRecord::Base
   def self.default_search_attribute
     'created_at'
   end
-  
+
   # Allows user to be set to either a string or an ActiveRecord object
   def user_as_string=(user) #:nodoc:
     # reset both either way

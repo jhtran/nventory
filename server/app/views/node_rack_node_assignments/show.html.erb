@@ -1,0 +1,23 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Rack Node Assignment " + h(@node_rack_node_assignment.node_rack.name) + '<->' + h(@node_rack_node_assignment.node.name) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(NodeRack,:node_rack_node_assignments,'Rack Node Assignment') %></h1>
+
+<p><strong><%= tooltip(NodeRackNodeAssignment,:node_rack,'Rack') %>:</strong> <%= h(@node_rack_node_assignment.node_rack.name) %><br />
+<strong><%= tooltip(NodeRackNodeAssignment,:node) %>:</strong> <%= h(@node_rack_node_assignment.node.name) %><br />
+<strong><%= tooltip(NodeRackNodeAssignment,:position) %>:</strong> <%= h(@node_rack_node_assignment.position) %><br />
+<strong><%= tooltip(NodeRackNodeAssignment,:assigned_at) %>:</strong> <%= h(@node_rack_node_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong><%= tooltip(NodeRackNodeAssignment,:created_at) %>:</strong> <%= h(@node_rack_node_assignment.created_at) %><br />
+<strong><%= tooltip(NodeRackNodeAssignment,:updated_at) %>:</strong> <%= h(@node_rack_node_assignment.updated_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_node_rack_node_assignment_path(@node_rack_node_assignment) %> | 
+<%= link_to 'Delete', node_rack_node_assignment_path(@node_rack_node_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @node_rack_node_assignment} %>
+
+<%= @tooltips %>

@@ -24,3 +24,14 @@ config.action_view.debug_rjs                         = true
 
 # Don't care if the mailer can't send
 config.action_mailer.raise_delivery_errors = false
+confighash = {}
+if File.exist?(CONFIGFILE)
+  IO.foreach(CONFIGFILE) do |line|
+    line.chomp!
+    next if (line =~ /^\s*$/);  # Skip blank lines
+    next if (line =~ /^\s*#/);  # Skip comments
+    key, value = line.split(/\s*=\s*/, 2)
+    confighash[key] = value
+  end
+  confighash['prod_users_email'] ? ($users_email= confighash['prod_users_email']) : ($users_email = "nventory@#{EMAIL_SUFFIX}")
+end

@@ -1,25 +1,26 @@
-<%- @page_title = "VIP: " + h(@vip.name) %>
+<%- @tooltips = [] %>
+<%- @page_title = "Vip: " + h(@vip.name) %>
 
 <div class="record_view">
 
-<h1>VIP: <%=h @vip.name %></h1>
+<h1><%= tooltip(VipLbPoolAssignment,:vip) %>: <%=h @vip.name %></h1>
 
-<p><strong>IP Address:</strong> <%= @vip.ip_address %></strong><br />
-<strong>Protocol:</strong> <%= @vip.protocol %></strong><br />
-<strong>Port:</strong> <%= @vip.port %></strong><br /></p>
+<p><strong><%= tooltip(Vip,:ip_address) %>:</strong> <%= @vip.ip_address %></strong><br />
+<strong><%= tooltip(Vip,:protocol) %>:</strong> <%= @vip.protocol %></strong><br />
+<strong><%= tooltip(Vip,:port) %>:</strong> <%= @vip.port %></strong><br /></p>
 
-<p><strong>Load Balancer:</strong> <%= link_to @vip.load_balancer.name, @vip.load_balancer %></strong><br />
-<strong>Datacenter:</strong> 
-<%- unless ( @vip.load_balancer.rack.nil? || @vip.load_balancer.rack.datacenter.nil? ) -%>
-  <%= link_to @vip.load_balancer.rack.datacenter.name, @vip.load_balancer.rack.datacenter %>
+<p><strong><%= tooltip(Vip,:load_balancer) %>:</strong> <%= link_to @vip.load_balancer.name, @vip.load_balancer %></strong><br />
+<strong><%= tooltip(NodeRack,:datacenter) %>:</strong> 
+<%- unless ( @vip.load_balancer.node_rack.nil? || @vip.load_balancer.node_rack.datacenter.nil? ) -%>
+  <%= link_to @vip.load_balancer.node_rack.datacenter.name, @vip.load_balancer.node_rack.datacenter %>
 <%- end -%>
 </strong></p>
 
-<p><strong>Description:</strong><br />
+<p><strong><%= tooltip(Vip,:description) %>:</strong><br />
 <%= textilize_without_paragraph(h(@vip.description)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@vip.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@vip.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(Vip,:created_at) %>:</strong> <%= h(@vip.created_at) %><br />
+<strong><%= tooltip(Vip,:updated_at) %>:</strong> <%= h(@vip.updated_at) %></p>
 
 </div>
 
@@ -59,3 +60,5 @@
 <%- end -%>
 
 <%= javascript_tag "_vip_id = "+@vip.id.to_s %>
+
+<%= @tooltips %>

@@ -1,0 +1,10 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(VolumeNodeAssignment,:volume) %>:</strong> <br /><%= f.select :volume_id, Volume.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] }, { :include_blank => true } %></p>
+
+<p><strong><%= tooltip(VolumeNodeAssignment,:node) %>:</strong> <br /><%= f.select :node_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+
+<p><strong><%= tooltip(VolumeNodeAssignment,:mount) %>:</strong> <br /><%= f.text_field :mount %></p>
+
+<p><strong><%= tooltip(VolumeNodeAssignment,:assigned_at) %>:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+
+<%= @tooltips if ttflag %>

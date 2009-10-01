@@ -1,19 +1,20 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Network Interface: " + h(@network_interface.name) %>
 
 <div class="record_view">
 
 <h1>Name: <%=h @network_interface.name %></h1>
 
-<p><strong>Node:</strong> <%= link_to h(@network_interface.node.name), node_url(@network_interface.node_id) if !@network_interface.node_id.nil? %></p>
+<p><strong><%= tooltip(NetworkInterface,:node) %>:</strong> <%= link_to h(@network_interface.node.name), node_url(@network_interface.node_id) if !@network_interface.node_id.nil? %></p>
 
-<p><strong>Interface type:</strong> <%= h(@network_interface.interface_type) %></p>
-<p><strong>Physical:</strong> <%= h(@network_interface.physical) %></p>
-<p><strong>Hardware address:</strong> <%= h(@network_interface.hardware_address) %></p>
-<p><strong>Up:</strong> <%= h(@network_interface.up) %></p>
-<p><strong>Link:</strong> <%= h(@network_interface.link) %></p>
-<p><strong>Speed:</strong> <%= h(@network_interface.speed) %></p>
-<p><strong>Full duplex:</strong> <%= h(@network_interface.full_duplex) %></p>
-<p><strong>Auto-negotiate:</strong> <%= h(@network_interface.autonegotiate) %></p>
+<p><strong><%= tooltip(NetworkInterface,:interface_type) %>:</strong> <%= h(@network_interface.interface_type) %></p>
+<p><strong><%= tooltip(NetworkInterface,:physical) %>:</strong> <%= h(@network_interface.physical) %></p>
+<p><strong><%= tooltip(NetworkInterface,:hardware_address) %>:</strong> <%= h(@network_interface.hardware_address) %></p>
+<p><strong><%= tooltip(NetworkInterface,:up) %>:</strong> <%= h(@network_interface.up) %></p>
+<p><strong><%= tooltip(NetworkInterface,:link) %>:</strong> <%= h(@network_interface.link) %></p>
+<p><strong><%= tooltip(NetworkInterface,:speed) %>:</strong> <%= h(@network_interface.speed) %></p>
+<p><strong><%= tooltip(NetworkInterface,:full_duplex) %>:</strong> <%= h(@network_interface.full_duplex) %></p>
+<p><strong><%= tooltip(NetworkInterface,:autonegotiate) %>:</strong> <%= h(@network_interface.autonegotiate) %></p>
 
 <p>
 <strong>IP addresses:</strong>
@@ -24,8 +25,8 @@
 </ul>
 </p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@network_interface.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@network_interface.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(NetworkInterface,:created_at) %>:</strong> <%= h(@network_interface.created_at) %><br />
+<strong><%= tooltip(NetworkInterface,:updated_at) %>:</strong> <%= h(@network_interface.updated_at) %></p>
 
 </div>
 
@@ -39,3 +40,5 @@
 <%= link_to 'Delete', network_interface_path(@network_interface), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @network_interface} %>
+
+<%= @tooltips %>

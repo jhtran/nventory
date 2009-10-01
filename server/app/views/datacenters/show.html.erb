@@ -1,43 +1,44 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Datacenter: " + h(@datacenter.name) %>
 
 <div class="record_view">
 
-<h1>Datacenter: <%=h @datacenter.name %></h1>
+<h1><%= tooltip(NodeRack,:datacenter) %>: <%=h @datacenter.name %></h1>
 
 <p><%= link_to 'Visualization', visualization_datacenter_path(@datacenter) %>
 
-<p><strong>Manager:</strong> <%=h @datacenter.manager %><br />
-<strong>Support phone number:</strong> <%=h @datacenter.support_phone_number %><br />
-<strong>Support email:</strong> <%=h @datacenter.support_email %><br />
-<strong>Support url:</strong> <%=h @datacenter.support_url %></p>
+<p><strong><%= tooltip(Datacenter,:manager) %>:</strong> <%=h @datacenter.manager %><br />
+<strong><%= tooltip(Datacenter,:support_phone_number) %>:</strong> <%=h @datacenter.support_phone_number %><br />
+<strong><%= tooltip(Datacenter,:support_email) %>:</strong> <%=h @datacenter.support_email %><br />
+<strong><%= tooltip(Datacenter,:support_url) %>:</strong> <%=h @datacenter.support_url %></p>
 
-<p><strong>Physical address:</strong><br />
+<p><strong><%= tooltip(Datacenter,:physical_address) %>:</strong><br />
 <%= textilize_without_paragraph(h(@datacenter.physical_address)) %></p>
 
-<p><strong>Shipping address:</strong><br />
+<p><strong><%= tooltip(Datacenter,:shipping_address) %>:</strong><br />
 <%= textilize_without_paragraph(h(@datacenter.shipping_address)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@datacenter.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@datacenter.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(Datacenter,:created_at) %>:</strong> <%= h(@datacenter.created_at) %><br />
+<strong><%= tooltip(Datacenter,:updated_at) %>:</strong> <%= h(@datacenter.updated_at) %></p>
 
 </div> 
 
 <div class="relationship">
 
-<div id="datacenter_rack_assignments">
-<%= render :partial => 'rack_assignments', :locals => { :datacenter => @datacenter} %>
-</div> <!-- end datacenter_rack_assignments -->
+<div id="datacenter_node_rack_assignments">
+<%= render :partial => 'node_rack_assignments', :locals => { :datacenter => @datacenter} %>
+</div> <!-- end datacenter_node_rack_assignments -->
 
 <div id="create_rack_assignment">
-<%= render :partial => 'shared/create_assignment', :locals => { :from => 'datacenter', :to => 'rack'} %>
+<%= render :partial => 'shared/create_assignment', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
 </div>
 
-<p id="new_rack">
+<p id="new_node_rack">
 
 </p>
 
 <p id="add_rack_assignment_link">
-<%= render :partial => 'shared/add_inline_link', :locals => { :from => 'datacenter', :to => 'rack'} %>
+<%= render :partial => 'shared/add_inline_link', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
 </p>
 
 </div> <!-- end relationship -->
@@ -87,3 +88,5 @@
 <%= javascript_tag "Element.hide('create_vip_assignment')" %>
 
 <%= javascript_tag "_datacenter_id = "+@datacenter.id.to_s %>
+
+<%= @tooltips %>

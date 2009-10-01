@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%form_tag('/csv/export', :method => :get) do -%>
    <%= submit_tag 'Export CSV File' %>
    <%= link_to_function 'Cancel', "Element.show('basic_csv_export');Element.show('csv_inline_link');Element.hide('advanced_csv_export')" %><br>
@@ -7,3 +8,5 @@
    <% size = all_attr_names.size; size = 10 if size >= 10 %>
    <%= select_tag 'attributes[]', options_for_select(all_attr_names.sort.uniq), :multiple => true, :size => size %>
 <% end -%>
+
+<%= @tooltips if ttflag %>

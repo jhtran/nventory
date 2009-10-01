@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <h3>Version History | <%= link_to_function 'Show/Hide', "Element.toggle('version_table')" %></h3> 
 
 <table cellspacing="0" class="arversions" summary="A version history of this object." id="version_table">
@@ -67,3 +68,5 @@
     <%- end %>
   </tbody>
 </table>
+
+<%= @tooltips if ttflag %>

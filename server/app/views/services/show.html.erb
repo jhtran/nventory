@@ -1,0 +1,121 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Service: " + h(@service.name) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(Node,:services,'Service') %>: <%=h @service.name %></h1>
+<%= button_to 'View as Node Group', @service.to_node_group, :method => 'get' -%>
+<br />
+<p>
+<strong><%= tooltip(Service,:owner) %>:</strong><br />
+<%= mail_to @service.owner %><br />
+<strong><%= tooltip(Service,:contact,'Emergency Contact') %>:</strong><br />
+<%= mail_to @service.service_profile.contact%>
+</p>
+<p>
+ <%- @app_locs.each_pair do |name, location| -%>
+     <%- if location =~ /^http.:\/\//i  -%>
+       <%= "<strong>" + tooltip(ServiceProfile,name) + "</strong>: #{link_to "#{location}"}<br />" %>
+     <%- elsif location.kind_of?(Node) -%>
+       <%= "<strong>" + tooltip(ServiceProfile,name) + "</strong>: #{link_to location.name, location}<br />" %>
+     <%- elsif location.kind_of?(String) && !location.empty? -%>
+       <%= "<strong>" + tooltip(ServiceProfile,name) + "</strong>: #{location}<br />" %>
+     <%- end -%>
+ <%- end -%>
+</p>
+<p> <strong><%= tooltip(ServiceProfile,:codelang,'Code Language') %>:</strong><br />
+<%= @service.service_profile.codelang%></p>
+<p><strong><%= tooltip(ServiceProfile,:external) %>:</strong>
+<%= @service.service_profile.external%><br />
+<strong><%= tooltip(ServiceProfile,:pciscope) %>:</strong>
+<%= @service.service_profile.pciscope%><br /> </p>
+<p><strong><%= tooltip(ServiceProfile,:description) %>:</strong><br />
+<%= textilize_without_paragraph(h(@service.description)) %></p>
+
+<p class="metadata"><strong><%= tooltip(Service,:created_at) %>:</strong> <%= h(@service.created_at) %><br />
+<strong><%= tooltip(Service,:updated_at) %>:</strong> <%= h(@service.updated_at) %></p>
+</div>
+
+
+<!-- BEGIN SERVICES RELATIONSHIPS -->
+<div class="relationship">
+  <div id="child_service_assgns">
+    <%= render :partial => 'child_service_assignments', :locals => { :service => @service} %>
+  </div>
+  <div id="create_child_assignment">
+    <%= render :partial => 'create_child_assignment' %>
+  </div>
+  <p id="add_child_link">
+    <%= render :partial => 'add_child_link' %>
+  </p>
+
+  <div id="parent_service_assgns">
+    <%= render :partial => 'parent_service_assignments', :locals => { :service => @service} %>
+  </div>
+  <div id="create_parent_assignment">
+    <%= render :partial => 'create_parent_assignment' %>
+  </div>
+  <p id="add_parent_link">
+    <%= render :partial => 'add_parent_link' %>
+  </p>
+</div>
+<!-- END SERVICES RELATIONSHIPS -->
+
+
+<!-- BEGIN SERVICES TREE -->
+<div class="relationship">
+  <%= link_to 'View Diagram', :action => "graph_services", :id => @service %><br /><br />
+  <strong><%= tooltip(Service,:child_services,'Service Clients') %>:</strong>
+    <ul>
+    <div id="child_service_assignments">
+      <%= render :partial => 'shared/child_service_assignment', :collection => @service.service_assignments_as_parent %>
+    </div>
+    </ul>
+
+  <strong><%= tooltip(Service,:parent_services,'Service Parents') %>:</strong>
+    <ul>
+    <div id="parent_service_assignments">
+    <%= render :partial => 'shared/parent_service_assignment', :collection => @service.service_assignments_as_child %>
+    </div>
+    </ul>
+</div>
+<!-- END SERVICES TREE -->
+
+<%- if false -%>
+<!-- BEGIN NODES RELATIONSHIPS -->
+<div class="relationship">
+  <div id="real_node_assignments">
+    <%= render :partial => 'real_node_assignments', :locals => { :service => @service} %>
+  </div>
+<%- if false%>
+  <div id="create_node_assignment">
+    <%= render :partial => 'create_node_assignment' %>
+  </div>
+  <p id="add_node_link">
+    <%= render :partial => 'add_node_link' %>
+  </p>
+
+  <div id="virtual_node_assgns">
+    <%= render :partial => 'virtual_node_assignments', :locals => { :service => @service} %>
+  </div>
+<%- end %>
+</div>
+<!-- END NODES RELATIONSHIPS -->
+<%- end -%>
+
+
+
+<div class="relationship">
+
+<%= render :partial => 'shared/comments', :locals => { :object => @service} %>
+
+</div> <!-- end comments relationship -->
+
+<p><%= link_to 'Edit', edit_service_path(@service) %> | 
+<%= link_to 'Delete', service_path(@service), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @service} %>
+<%= javascript_tag "Element.hide('create_parent_assignment')" %>
+<%= javascript_tag "Element.hide('create_child_assignment')" %>
+
+<%= @tooltips %>

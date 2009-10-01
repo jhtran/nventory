@@ -1,0 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong>Utilization Metrics By Node Group:</strong> <br /><%= f.select :utilization_metric_name_id, UtilizationMetricName.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } %></p>
+
+<p><strong>Node Group:</strong> <br /><%= f.select :node_group_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] } %></p>
+
+<p><strong>Value:</strong> <br /><%= f.text_field :value %></p>
+
+<%= @tooltips if ttflag %>

@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <% remote_form_for( :service_service_assignment, :url => self.send('service_service_assignments_path') ) do |f| %>
   <p>Service:
   
@@ -9,3 +10,5 @@
   <%= submit_tag "Assign", :onclick => "$('service_assignment_id').value = _child_id" %> | <%= link_to_function 'Cancel', "Element.show('add_service_assignment_link');Element.hide('create_service_assignment');Element.hide('new_service_assignment')"%></p>
 
 <% end %>
+
+<%= @tooltips if ttflag %>

@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <% remote_form_for( (from + '_' + to + '_assignment').to_sym, :url => self.send(from + '_' + to + '_assignments_path') ) do |f| %>
   <p><%= from.underscore.titleize %>:
   
@@ -8,3 +9,5 @@
   
   <%= submit_tag "Assign", :onclick => "$('"+from+"_"+to+"_assignment_"+to+"_id').value = _"+to+"_id" %> | <%= link_to_remote "New "+from.titleize, :url => self.send('new_'+ from + '_path'), :update => 'new_'+from, :complete => "Element.show('new_" + from + "')" %> | <%= link_to_function 'Cancel', "Element.show('add_" + from + "_assignment_link');Element.hide('create_" + from + "_assignment');Element.hide('new_" + from + "')"%></p>
 <% end %>
+
+<%= @tooltips if ttflag %>

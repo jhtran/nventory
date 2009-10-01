@@ -1,11 +1,12 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if datacenter.datacenter_vip_assignments.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of the VIPs assigned to this datacenter.">
   <caption>VIPs</caption>
   <thead>
   <tr>
-      <th>Name</th>
-      <th>Priority</th>
-      <th>Assigned at</th>
+      <th><%= tooltip(Vip,:name) %></th>
+      <th><%= tooltip(DatacenterVipAssignment,:priority) %></th>
+      <th><%= tooltip(DatacenterVipAssignment,:updated_at) %></th>
       <th>&nbsp;</th>
   </tr>
   </thead>
@@ -26,3 +27,5 @@
 <%- else -%>
   <p>No VIPs are assigned to this datacenter.</p>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

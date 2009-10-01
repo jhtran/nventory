@@ -2,26 +2,21 @@ class VirtualAssignmentsController < ApplicationController
   # GET /virtual_assignments
   # GET /virtual_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "virtual_assignments.assigned_at"
-           when "assigned_at_reverse" then "virtual_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = VirtualAssignment.default_search_attribute
-      sort = 'virtual_assignments.' + VirtualAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = VirtualAssignment.find(:all, :order => sort)
-    else
-      @objects = VirtualAssignment.paginate(:all,
-                                                   :order => sort,
-                                                   :page => params[:page])
-    end
+    # The default display index_row columns (node_groups model only displays local table name)
+    default_includes = []
+    special_joins = {}
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = VirtualAssignment
+    allparams[:webparams] = params
+    allparams[:default_includes] = default_includes
+    allparams[:special_joins] = special_joins
 
+    results = SearchController.new.search(allparams)
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    @objects = results[:search_results]
+    
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
@@ -64,7 +59,7 @@ class VirtualAssignmentsController < ApplicationController
         format.js { 
           render(:update) { |page| 
             
-            page.replace_html 'virtual_assignments', :partial => 'nodes/virtual_assignments', :locals => { :node => @virtual_assignment.node }
+            page.replace_html 'virtual_assignments', :partial => 'nodes/virtual_assignments', :locals => { :node => @virtual_assignment.virtual_host }
             page.hide 'create_virtual_assignment'
             page.show 'add_virtual_assignment_link'
           }

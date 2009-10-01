@@ -1,106 +1,163 @@
+<% @tooltips = [] %>
 <%- @page_title = "Node: " + h(@node.name) %>
 
 <div class="record_view">
 
-<h1>Node: <%=h @node.name %></h1>
+<h1><%= tooltip(nil,:nodes,'Node',nodes_tooltip) %>: <%=h @node.name %></h1>
 
-<strong>Alternate Names:</strong> <%= h(@node.alternate_names) %><br />
+<p>
+<strong><%= tooltip(@node.class,:name_aliases,'Aliases') %></strong> 
+</p>
+<div id="name_aliases">
+  <%= render :partial => 'name_aliases', :locals => { :node => @node } %>
+</div>
+<div id="create_name_alias">
+  <%= render :partial => 'create_name_alias' %>
+</div>
+<p id="add_name_alias_link">
+  <%= render :partial => 'add_name_alias_link' %>
+</p>
 
-<p><strong>Status:</strong> <%= link_to h(@node.status.name), status_url(@node.status) %><br />
-<strong>Contacts:</strong> 
-<ul>
+<p><strong><%= tooltip(@node.class,:status)%>:</strong> <%= link_to h(@node.status.name), status_url(@node.status) %><br />
+<strong><%= tooltip(@node.class,:contact) %>:</strong> 
 <%- unless @node.contact.nil? %>
+  <%- contacts = [] %>
   <%- @node.contact.split(',').each do |login| -%>
-    <%= "<li>" %>
-    <%= link_to login,Account.find_by_login(login) %>
-    <%= "</li>" %>
+    <%- SSO_AUTH_SERVER ? (contacts << link_to(login,"https://#{SSO_AUTH_SERVER}/users?login=#{login}")) : (contacts << login) %>
   <%- end -%>
 <%- end -%>
-</ul>
+<%= contacts.join(', ') unless contacts.nil? || contacts.empty? %>
 </br>
-<p><strong>Expiration:</strong> <%= @node.expiration %><br />
+<p><strong><%= tooltip(@node.class,:config_mgmt_tag,'Configuration Management Tag')%>: <font color=brown> <%= @node.config_mgmt_tag %></font></strong></p>
+<p>
+<strong><%= tooltip(@node.class,:logins,'Logins Today') %>:</strong> <%= @logins_today %><br />
+<strong><%= tooltip(@node.class,:cpu_percent,'CPU % (Today)') %>:</strong> <%= @percent_cpu_today %><br />
+</p>
+<p><strong><%= tooltip(@node.class,:expiration) %>:</strong> <%= @node.expiration %><br />
 
-<strong>Hardware Profile:</strong> <%= link_to h(@node.hardware_profile.name), hardware_profile_url(@node.hardware_profile) %><br />
+<strong><%= tooltip(@node.class,:hardware_profile)%></strong> <%= link_to h(@node.hardware_profile.name), hardware_profile_url(@node.hardware_profile) %><br /></p>
+
+<p>
 <%- if ( @node.virtual_guest? || @node.virtual_host? || (!@node.virtualarch.nil? && !@node.virtualarch.empty?) ) -%>
-  <%- if @node.virtualarch.nil? -%>
-    <%= "<strong><font color=purple>Virtual Architecture: Unknown</font></strong><br />" %>
-  <%- else -%>
-    <%= "<strong><font color=purple>Virtual Architecture: #{@node.virtualarch.capitalize}</font></strong><br />" %>
-  <%- end -%>
-  <%- unless (@node.virtual_guest? || @node.virtual_host?) -%>
-    <%= "<strong><font color=purple>Virtual Mode: Unknown</strong></font><br />" %>
-  <%- else -%>
-    <%= "<strong><font color=purple>Virtual Mode: " %>
-    <%- if (@node.virtual_guest?) -%>
-      <%= "Guest<br />Virtual Host: #{link_to @node.virtual_host.name,@node.virtual_host}</strong></font><br />" %>
-    <%- elsif (@node.virtual_host?) -%>
-      <%= "Host</strong></font><br />" %>
-    <%- end -%>
-  <%- end -%>
+<%- if @node.virtualarch.nil? -%>
+<%= "<strong><font color=purple>" + tooltip(@node.class,:virtualarch,'Virtual Architecture') +":</strong> Unknown</font><br />" %>
+<%- else -%>
+<%= "<strong><font color=purple>" + tooltip(@node.class,:virtualarch,'Virtual Architecture') + ":</strong> #{@node.virtualarch.capitalize}</font><br />" %>
 <%- end -%>
+<%- unless (@node.virtual_guest? || @node.virtual_host?) -%>
+<%= "<strong><font color=purple>" + tooltip(@node.class,:virtualmode, 'Virtual Mode') + ":</strong> Unknown</font><br />" %>
+<%- else -%>
+<%= "<strong><font color=purple>" + tooltip(@node.class,:virtualmode, 'Virtual Mode') + ":</strong> " %>
+<%- if (@node.virtual_guest?) -%>
+<%= "Guest<br /><strong>" + tooltip(@node.class,:virtual_host) + ":</strong> #{link_to @node.virtual_host.name,@node.virtual_host}</font><br />" %>
+<%= "<strong><font color=purple>" + tooltip(@node.class,:vmimg_size,'VM Image Size') + ":</strong> #{@node.vmimg_size.to_i / 1024 } MB</font><br />" unless @node.vmimg_size.nil? %>
+<%= "<strong><font color=purple>" + tooltip(@node.class,:vmspace_used,'VM Space Used') + ":</strong> #{@node.vmspace_used.to_i / 1024 } MB</font><br />" unless @node.vmspace_used.nil? %>
+<%- elsif (@node.virtual_host?) -%>
+<%= "Host</strong></font><br />" %>
+<%- end -%>
+<%- end -%>
+<%- end -%>
+</p>
 
-<strong>Serial Number:</strong> <%= h(@node.serial_number) %><br />
-<strong>Asset Tag:</strong> <%= h(@node.asset_tag) %><br />
-<strong>Unique ID:</strong> <%= h(@node.uniqueid) %><br />
+<p>
+<strong><%= tooltip(@node.class,:used_space,'Diskspace Used') %>:</strong> 
+<%= "#{@node.used_space.to_i / 1024} MB" unless @node.used_space.nil? %>
+<%= "(#{ @node.used_space.to_i * 100 / (@node.avail_space.to_i + @node.used_space.to_i)}%)" unless (@node.used_space.nil? || @node.avail_space.nil?) %><br />
+<strong><%= tooltip(@node.class,:avail_space,'Diskspace Avail') %> :</strong>
+<%= "#{@node.avail_space.to_i / 1024  } MB" unless @node.avail_space.nil? %>
+<%= "(#{ @node.avail_space.to_i * 100 / (@node.avail_space.to_i + @node.used_space.to_i)}%)" unless (@node.used_space.nil? || @node.avail_space.nil?) %><br />
+<small><i>(Disk space info only reflects "/" and "/home")</i></small>
+</p>
 
-<strong>Processor manufacturer:</strong> <%=h @node.processor_manufacturer %><br />
-<strong>Processor model:</strong> <%=h @node.processor_model %><br />
-<strong>Processor speed:</strong> <%=h @node.processor_speed %><br />
-<strong>Processor socket count:</strong> <%=h @node.processor_socket_count %><br />
-<strong>Processor count:</strong> <%=h @node.processor_count %><br />
-<strong>Processor core count:</strong> <%=h @node.processor_core_count %><br />
-<strong>OS processor count:</strong> <%=h @node.os_processor_count %><br />
+<p>
+<strong><%= tooltip(@node.class,:serial_number) %>:</strong> <%= h(@node.serial_number) %><br />
+<strong><%= tooltip(@node.class,:asset_tag) %>:</strong> <%= h(@node.asset_tag) %><br />
+<strong><%= tooltip(@node.class,:uniqueid,'Unique ID') %>:</strong> <%= h(@node.uniqueid) %><br />
 
-<strong>Physical memory:</strong> <%=h @node.physical_memory %><br />
-<strong>Physical memory sizes:</strong> <%=h @node.physical_memory_sizes %><br />
-<strong>OS memory:</strong> <%=h @node.os_memory %><br />
-<strong>Swap:</strong> <%=h @node.swap %><br />
+<strong><%= tooltip(@node.class,:processor_manufacturer) %>:</strong> <%=h @node.processor_manufacturer %><br />
+<strong><%= tooltip(@node.class,:processor_model) %>:</strong> <%=h @node.processor_model %><br />
+<strong><%= tooltip(@node.class,:processor_speed) %>:</strong> <%=h @node.processor_speed %><br />
+<strong><%= tooltip(@node.class,:processor_socket_count) %>:</strong> <%=h @node.processor_socket_count %><br />
+<strong><%= tooltip(@node.class,:processor_count) %>:</strong> <%=h @node.processor_count %><br />
+<strong><%= tooltip(@node.class,:processor_core_count) %>:</strong> <%=h @node.processor_core_count %><br />
+<strong><%= tooltip(@node.class,:os_processor_count) %>:</strong> <%=h @node.os_processor_count %><br />
+<strong><%= tooltip(@node.class,:os_virtual_processor_count) %>:</strong> <%=h @node.os_virtual_processor_count %><br />
 
-<strong>Power supply count:</strong> <%=h @node.power_supply_count %><br />
+<strong><%= tooltip(@node.class,:physical_memory) %>:</strong> <%=h @node.physical_memory %><br />
+<strong><%= tooltip(@node.class,:physical_memory_sizes) %>:</strong> <%=h @node.physical_memory_sizes %><br />
+<strong><%= tooltip(@node.class,:os_memory) %>:</strong> <%=h @node.os_memory %><br />
+<strong><%= tooltip(@node.class,:swap) %>:</strong> <%=h @node.swap %><br />
 
-<strong>Console type:</strong> <%=h @node.console_type %><br />
+<strong><%= tooltip(@node.class,:power_supply_count) %>:</strong> <%=h @node.power_supply_count %><br />
 
-<strong>Operating System:</strong> 
+<strong><%= tooltip(@node.class,:console_type) %>:</strong> <%=h @node.console_type %><br />
+
+<strong><%= tooltip(@node.class,:operating_system) %>:</strong> 
 <%- if @node.operating_system -%>
-  <%= link_to h(@node.operating_system.name), operating_system_url(@node.operating_system) %>
+<%= link_to h(@node.operating_system.name), operating_system_url(@node.operating_system) %>
 <%- end -%>
 <br />
-<strong>Preferred Operating System:</strong> 
+<strong><%= tooltip(@node.class,:preferred_operating_system) %>:</strong> 
 <%- if @node.preferred_operating_system -%>
-  <%= link_to h(@node.preferred_operating_system.name), operating_system_url(@node.preferred_operating_system) %>
+<%= link_to h(@node.preferred_operating_system.name), operating_system_url(@node.preferred_operating_system) %>
 <%- end -%>
 <br />
 
-<strong>Kernel version:</strong> <%=h @node.kernel_version %><br />
+<strong><%= tooltip(@node.class,:kernel_version) %>:</strong> <%=h @node.kernel_version %><br />
 
-<strong>Timezone:</strong> <%=h @node.timezone %><br />
+<strong><%= tooltip(@node.class,:timezone,'Time Zone') %>:</strong> <%=h @node.timezone %><br />
 
-<p><strong>Description:</strong><br />
+<p><strong><%= tooltip(@node.class,:description) %>:</strong><br />
 <%= textilize_without_paragraph(h(@node.description)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@node.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@node.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(@node.class,:created_at) %>:</strong> <%= h(@node.created_at) %><br />
+<strong><%= tooltip(@node.class,:updated_at) %>:</strong> <%= h(@node.updated_at) %></p>
 
 </div>
+
+<script type="text/javascript" src="/javascripts/swfobject.js"></script>
+<p><%= @cpu_percent_chart %></p><br /><br />
 
 <div class="relationship">
-
-<div id="node_group_node_assignments">
-<%= render :partial => 'node_group_assignments', :locals => { :node => @node} %>
+<div id="no_volumes">
+<%= "<strong>" + tooltip(VolumeNodeAssignment,:volume,'Network Volumes') + "</strong>" if ( @node.volumes_served.empty? ) && (@node.volumes_mounted.empty?) %>
 </div>
+<div id="volume_served">
+<%= render :partial => 'volume_served', :locals => { :node => @node } %>
+  </div>
+  <div id="create_volume_served">
+    <%= render :partial => 'create_volume_served' %>
+  </div>
+  <p id="add_volume_served_link">
+    <%= render :partial => 'add_volume_served_link' %>
+  </p>
 
-<div id="create_node_group_assignment">
-<%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'node_group', :to => 'node'} %>
-</div>
+  <div id="volume_mounted">
+    <%= render :partial => 'volume_mounted', :locals => { :node => @node } %>
+  </div>
+  <div id="create_volume_mounted">
+    <%= render :partial => 'create_volume_mounted' %>
+  </div>
+  <p id="add_volume_mounted_link">
+    <%= render :partial => 'add_volume_mounted_link' %>
+  </p>
+</div> <!-- end relationship -->
 
-<p id="new_node_group">
-
-</p>
-
-<p id="add_node_group_assignment_link">
-<%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'node_group', :to => 'node'} %>
-</p>
-
+<div class="relationship">
+  <div id="node_group_node_assignments">
+  <%= render :partial => 'node_group_assignments', :locals => { :node => @node} %>
+  </div>
+  
+  <div id="create_node_group_assignment">
+  <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'node_group', :to => 'node'} %>
+  </div>
+  <p id="new_node_group">
+  
+  </p>
+  
+  <p id="add_node_group_assignment_link">
+  <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'node_group', :to => 'node'} %>
+  </p>
 </div> <!-- end relationship -->
 
 <!-- List Guest VMs if this is a VM host -->
@@ -109,20 +166,28 @@
     <div id="virtual_assignments">
       <%= render :partial => 'virtual_assignments', :locals => { :node => @node} %>
     </div> <!-- end virtual_assignments -->
+
+    <div id="create_virtual_assignment">
+      <%= render :partial => 'shared/create_virtual_assignment', :locals => { :node => @node } %>
+    </div>
+
+    <p id="add_virtual_assignment_link">
+      <%= render :partial => 'shared/add_virtual_inline_link', :locals => { :node => @node } %>
+    </p>
   </div> <!-- end relationship -->
 <%- end -%>
 
-<!-- BEGIN SERVICES RELATIONSHIOPS -->
+<!-- BEGIN SERVICES RELATIONSHIPS -->
 <div class="relationship">
   <%- if @node.services? %>
-    <strong>Services Tree</strong><br /><br />
-    <%= link_to 'View Diagram', :action => "graph_services", :id => @node %><br /><br />
-    <strong>Services Clients (depend on this node):</strong>
+    <strong><%= tooltip(@node.class,:services,'Service Tree') %></strong><br /><br />
+    <%= link_to 'View Diagram', :action => "graph_services", :id => @node, :title => 'GraphViz diagram of services hierarchy' %><br /><br />
+    <strong><%= tooltip(@node.class, :service_clients) %>:</strong>
     <%- if @child_services.size > 0 -%>
       <ul>
-      <%- @node.node_groups.each do |ng| -%>
+      <%- @node.services.each do |ng| -%>
         <%- if ng.child_services.size > 0 -%>
-          <%= link_to ng.name, node_group_path(ng) %>
+          <%= link_to ng.name, service_path(ng) %>
           <ul>
           <div id="child_service_assignments">
             <%= render :partial => 'shared/child_service_assignment', :collection => ng.service_assignments_as_parent %>
@@ -134,12 +199,12 @@
     <%- else -%>
       <p>There are no child services for this node </p>
     <%- end -%>
-    <strong>Services Dependencies (this node depends upon):</strong>
+    <strong><%= tooltip(@node.class,:service_parents) %>:</strong>
     <%- if @parent_services.size > 0 -%>
       <ul>
-      <%- @node.node_groups.each do |ng| -%>
+      <%- @node.services.each do |ng| -%>
         <%- if ng.parent_services.size > 0 -%>
-          <%= link_to ng.name, node_group_path(ng) %>
+          <%= link_to ng.name, service_path(ng) %>
           <ul>
           <div id="parent_service_assignments">
             <%= render :partial => 'shared/parent_service_assignment', :collection => ng.service_assignments_as_child %>
@@ -149,11 +214,11 @@
       <%- end -%>
       </ul>
     <%- else -%>
-      <p>There are no parent service dependencies for this node </p>
+      <p>There are no parent services for this node </p>
     <%- end -%>
   <%- else -%>
-    <strong>Service Dependencies</strong><br /><br />
-    <p>This node does not have any service dependencies</p>
+    <strong><%= tooltip(@node.class,:services,'Service Tree') %></strong><br /><br />
+    <p>This node does not have any service dependencies.</p>
   <%- end -%>
 </div>
 <!-- END SERVICES RELATIONSHIPS -->
@@ -168,7 +233,7 @@
 <div class="relationship">
 
 <p>
-<strong>NICs:</strong>
+<strong><%= tooltip(@node.class,:network_interfaces) %>:</strong>
 <%- if @node.network_interfaces.length > 0 -%>
   <ul>
   <%- @node.network_interfaces.each do |nic| -%>
@@ -193,23 +258,25 @@
 
 </div> <!-- end relationship -->
 
-<div class="relationship">
-  <div id="rack_node_assignments">
-    <%= render :partial => 'rack_assignment', :locals => { :node => @node} %>
-  </div> <!-- end rack_node_assignments -->
-
-  <div id="create_rack_assignment">
-    <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'rack', :to => 'node'} %>
-  </div>
+<%- unless @node.virtual_guest? -%>
+  <div class="relationship">
+    <div id="node_rack_node_assignments">
+      <%= render :partial => 'node_rack_assignment', :locals => { :node => @node} %>
+    </div> <!-- end node_rack_node_assignments -->
   
-  <p id="new_rack">
-  
-  </p>
-  
-  <p id="add_rack_assignment_link">
-    <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'rack', :to => 'node'} %>
-  </p>
-</div> <!-- end relationship -->
+    <div id="create_node_rack_assignment">
+      <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'node_rack', :to => 'node'} %>
+    </div>
+    
+    <p id="new_node_rack">
+    
+    </p>
+    
+    <p id="add_node_rack_assignment_link">
+      <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'node_rack', :to => 'node'} %>
+    </p>
+  </div> <!-- end relationship -->
+<%- end -%>
 
 
 <!-- This displays all the "outlets" whether network or console ports or power outlets that this node serves to other nodes -->
@@ -233,7 +300,7 @@
 <%- end -%>
 
 <div class="relationship">
-<h3>Smart Relationships</h3>
+<h3><%= tooltip(@node.class,:produced_outlets,'Smart Relationships') %></h3>
   <div id="smart_relationships">
     <%= render :partial => 'smart_relationships', :locals => { :node => @node } %>
   </div>
@@ -247,9 +314,14 @@
 
 <%= javascript_tag "Element.hide('create_node_group_assignment')" %>
 <%= javascript_tag "Element.hide('create_outlet')" %>
-<%= javascript_tag "Element.hide('create_rack_assignment')" %>
-<% if @node.rack %>
-  <%= javascript_tag "Element.hide('add_rack_assignment_link')" %>
+<%= javascript_tag "Element.hide('create_virtual_assignment')" %>
+<%= javascript_tag "Element.hide('create_node_rack_assignment')" %>
+<%= javascript_tag "Element.hide('create_volume_served')" %>
+<%= javascript_tag "Element.hide('create_volume_mounted')" %>
+<%= javascript_tag "Element.hide('create_name_alias')" %>
+<% if @node.node_rack %>
+  <%= javascript_tag "Element.hide('add_node_rack_assignment_link')" %>
 <% end %>
-
 <%= javascript_tag "_node_id = "+@node.id.to_s %>
+
+<%= @tooltips %>

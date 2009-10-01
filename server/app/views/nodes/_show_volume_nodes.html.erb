@@ -1,0 +1,5 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= tooltip(VolumeNodeAssignment,:node) %>:
+  <%= select_tag :volume_server_id, options_for_select(@nodes) %>
+
+<%= @tooltips if ttflag %>

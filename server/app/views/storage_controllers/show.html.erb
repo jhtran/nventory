@@ -1,0 +1,48 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Storage Controller: " + h(@storage_controller.name) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(StorageController,:name) %>: <%=h @storage_controller.name %></h1>
+
+<p><strong><%= tooltip(StorageController,:node) %>:</strong> <%= link_to h(@storage_controller.node.name), node_url(@storage_controller.node_id) if !@storage_controller.node_id.nil? %></p>
+
+<p><strong><%= tooltip(StorageController,:controller_type) %>:</strong> <%= h(@storage_controller.controller_type) %></p>
+<p><strong><%= tooltip(StorageController,:physical) %>:</strong> <%= h(@storage_controller.physical) %></p>
+<p><strong><%= tooltip(StorageController,:bus_interface) %>:</strong> <%= h(@storage_controller.bus_interface) %></p>
+<p><strong><%= tooltip(StorageController,:slot) %>:</strong> <%= h(@storage_controller.slot) %></p>
+<p><strong><%= tooltip(StorageController,:firmware) %>:</strong> <%= h(@storage_controller.firmware) %></p>
+<p><strong><%= tooltip(StorageController,:cache_size) %>:</strong> <%= h(@storage_controller.cache_size) + 'MB' %></p>
+<p><strong><%= tooltip(StorageController,:batteries) %>:</strong> <%= h(@storage_controller.batteries) %></p>
+
+<%- if false -%>
+  <!-- to be replaced with logical volume/physical disks info -->
+  <p>
+  <strong>IP addresses:</strong>
+  <ul>
+  <%- @storage_controller.ip_addresses.each do |ip| -%>
+    <li><%= link_to ip.address, ip_address_url(ip) %></li>
+  <%- end -%>
+  </ul>
+  </p>
+<%- end -%>
+
+<p class="metadata"><strong><%= tooltip(StorageController,:created_at) %>:</strong> <%= h(@storage_controller.created_at) %><br />
+<strong><%= tooltip(StorageController,:updated_at) %>:</strong> <%= h(@storage_controller.updated_at) %></p>
+
+</div>
+
+<%- if false -%>
+  <div class="relationship">
+  
+  <%= render :partial => 'shared/comments', :locals => { :object => @storage_controller} %>
+  
+  </div> <!-- end relationship -->
+<%- end -%>
+
+<p><%= link_to 'Edit', edit_storage_controller_path(@storage_controller) %> | 
+<%= link_to 'Delete', storage_controller_path(@storage_controller), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @storage_controller} %>
+
+<%= @tooltips %>

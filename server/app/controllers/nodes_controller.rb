@@ -6,7 +6,7 @@ class NodesController < ApplicationController
     @csvon = "true"
     params[:csv] = true
     # The default display index_row columns
-    default_includes = [:operating_system, :hardware_profile, :node_groups, :status] 
+    default_includes = [:operating_system, :hardware_profile, :node_groups, :status, :name_aliases] 
     special_joins = {
       'preferred_operating_system' =>
         'LEFT OUTER JOIN operating_systems AS preferred_operating_systems ON nodes.preferred_operating_system_id = preferred_operating_systems.id'
@@ -20,6 +20,7 @@ class NodesController < ApplicationController
     allparams[:special_joins] = special_joins
     
     results = SearchController.new.search(allparams)
+    
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
     @objects = results[:search_results]
@@ -56,14 +57,34 @@ class NodesController < ApplicationController
   def show
     includes = process_includes(Node, params[:include])
     @node = Node.find(params[:id], :include => includes)
-    @parent_services = @node.node_groups.collect { |ng| ng.parent_services }.flatten
-    @child_services = @node.node_groups.collect { |ng| ng.child_services }.flatten
+    @parent_services = @node.services.collect { |ng| ng.parent_services }.flatten
+    @child_services = @node.services.collect { |ng| ng.child_services }.flatten
+    login_obj = UtilizationMetricName.find_by_name('login_count')
+    logins = UtilizationMetric.find(:all,:include => {:node => {},:utilization_metric_name=> {}}, 
+					:conditions => ["nodes.id = ? and utilization_metric_names.id = ? and assigned_at like ?", @node.id, login_obj.id, "%#{Time.now.strftime("%Y-%m-%d")}%"])
+    @logins_today = logins.collect{|login| login.value.to_i}.sum
+    percent_cpu_obj = UtilizationMetricName.find_by_name('percent_cpu')
+    percent_cpus = UtilizationMetric.find(:all,:include => {:node => {},:utilization_metric_name=> {}}, 
+					:conditions => ["nodes.id = ? and utilization_metric_names.id = ? and assigned_at like ?", @node.id, percent_cpu_obj.id, "%#{Time.now.strftime("%Y-%m-%d")}%"])
+    unless percent_cpus.empty? 
+      @percent_cpu_today = percent_cpus.collect{|each| each.value.to_i}.sum.to_i / percent_cpus.size.to_i 
+    else
+      @percent_cpu_today = "No data"
+    end
 
     respond_to do |format|
-      format.html # show.html.erb
+      format.html { @cpu_percent_chart = open_flash_chart_object(500,300, url_for( :action => 'show', :graph => 'cpu_percent_chart', :format => :json )) }
       format.xml  { render :xml => @node.to_xml(:include => convert_includes(includes),
-                                                :dasherize => false) }
+                                                      :dasherize => false) }
+      format.json {
+        case params[:graph]
+          when 'cpu_percent_chart'
+            chart = cpu_percent_chart_method
+            render :text => chart.to_s
+        end
+      } # format.json
     end
+
   end
 
   # GET /nodes/new
@@ -83,7 +104,9 @@ class NodesController < ApplicationController
   # POST /nodes
   # POST /nodes.xml
   def create
-
+    # PS-441 & PS-306 legacy field no longer used
+    params[:node].delete(:virtual_client_ids) if params[:node][:virtual_client_ids]
+    params[:node].delete(:virtual_parent_node_id) if params[:node][:virtual_parent_node_id]
     # If the user didn't specify an operating system id then find or
     # create one based on the OS info they did specify.
     if !params[:node].include?(:operating_system_id)
@@ -136,6 +159,11 @@ class NodesController < ApplicationController
         if outlet_names
           @node.update_outlets(outlet_names)
         end
+        # Process percent_cpu metrics
+        process_utilization_metrics if (params["utilization_metric"])
+	# Process volumes
+	process_volumes if (params["volumes"])
+	process_name_aliases if (params["name_aliases"])
         
         flash[:notice] = 'Node was successfully created.'
         format.html { redirect_to node_url(@node) }
@@ -144,9 +172,9 @@ class NodesController < ApplicationController
             
             # Depending on where the Ajax node creation comes from
             # we do something slightly different.
-            if request.env["HTTP_REFERER"].include? "racks"
-              page.replace_html 'create_node_assignment', :partial => 'shared/create_assignment', :locals => { :from => 'rack', :to => 'node' }
-              page['rack_node_assignment_node_id'].value = @node.id
+            if request.env["HTTP_REFERER"].include? "node_racks"
+              page.replace_html 'create_node_assignment', :partial => 'shared/create_assignment', :locals => { :from => 'node_rack', :to => 'node' }
+              page['node_rack_node_assignment_node_id'].value = @node.id
             end
             
             page.hide 'new_node'
@@ -169,9 +197,35 @@ class NodesController < ApplicationController
   # PUT /nodes/1
   # PUT /nodes/1.xml
   def update
+    # PS-441 & PS-306 legacy field no longer used
+    if params[:node]
+      params[:node].delete(:virtual_client_ids) if params[:node][:virtual_client_ids]
+      params[:node].delete(:virtual_parent_node_id) if params[:node][:virtual_parent_node_id]
+    end
+
     xmloutput = {}
     xmlinfo = [""]
     @node = Node.find(params[:id])
+    # Send email notification if change has been made to STATUS
+    if ((defined? params[:node][:status_id]) && (!params[:node][:status_id].nil?)) || ((defined? params[:status][:name]) && (!params[:status][:name].nil?))
+      mailer_params = {}
+      mailer_params[:nodename] = @node.name
+      mailer_params[:username] = current_user.name
+      mailer_params[:changetype] = 'status'
+      mailer_params[:oldvalue] = @node.status.name
+      mailer_params[:time] = Time.now
+      if (defined? params[:node][:status_id]) && (!params[:node][:status_id].nil?)
+        if(!params[:node][:status_id].empty?) && (@node.status.id != params[:node][:status_id].to_i)
+          mailer_params[:changevalue] = Status.find(params[:node][:status_id]).name
+          Mailer.deliver_notify_node_change($users_email, mailer_params)
+        end
+      elsif (defined? params[:status][:name]) && (!params[:status][:name].nil?)
+        if(!params[:status][:name].empty?) && (@node.status.name != params[:status][:name])
+          mailer_params[:changevalue] = params[:status][:name]
+          Mailer.deliver_notify_node_change($users_email, mailer_params)
+        end
+      end
+    end
 
     # If the user is just setting a value related to one of the
     # associated models then params might not include the :node
@@ -240,32 +294,39 @@ class NodesController < ApplicationController
             xmlinfo << "Was unable to find a vmhost associated to the switch and switch port."
           end
         elsif params[:node][:virtualmode] == 'host'
+	  # due to old legacy method, kept for backward compatibility during migration to new method.  Safe to delete after 07/29/09
+	  params[:node].delete(:vmguests)
           # register all guest vms from value passed from cli
-          vmguests = params[:node][:vmguests].split(',')
-          # clear this out of hash or will try to register a non-existing table column
-          params[:node].delete(:vmguests)
-          # try to find each node if exists in nventory, if does then see if virtual assign exists to this vm host, if not create it
-          vmguests.each do |vmguest|
-            vmresults = Node.find(:all,:conditions => ["name like ?","#{vmguest}%"])
-            if vmresults.size == 1
-              vmnode = vmresults.first
-              vmassign_results = VirtualAssignment.find(:all,:conditions => ["child_id = ?", vmnode.id])
-              if vmassign_results.size > 1
-                xmlinfo << "#{vmguest} already registered to MULTIPLE vm hosts\n    (Illegal registration!) Should only belong to one vm assignment at any given time."
-              elsif vmassign_results.size == 1
-                xmlinfo << "#{vmguest} already registered to vmhost #{vmassign_results.first.virtual_host.name}\n    - Skipping vm guest assignment registration."
-              elsif vmassign_results.empty?
-                xmlinfo << "#{vmguest} not registered to vmhost #{@node.name}.  Registering..."
-                VirtualAssignment.create(
-                  :parent_id => @node.id,
-                  :child_id => vmnode.id)
+          if params[:vmguest].kind_of?(Hash)
+            vmguests = params[:vmguest]
+            # clear this out of hash or will try to register a non-existing table column
+            # try to find each node if exists in nventory, if does then see if virtual assign exists to this vm host, if not create it
+            vmguests.keys.each do |vmguest|
+              vmresults = Node.find(:all,:conditions => ["name like ?","#{vmguest}%"])
+              if vmresults.size == 1
+                vmnode = vmresults.first
+                # Update fs size if diff
+                vmnode.update_attributes(:vmimg_size => vmguests[vmguest]["vmimg_size"].to_i) 
+                vmnode.update_attributes(:vmspace_used => vmguests[vmguest]["vmspace_used"].to_i) 
+                # Check if a virtual machine assignment (host <=> guest) previously exists
+                vmassign_results = VirtualAssignment.find(:all,:conditions => ["child_id = ?", vmnode.id])
+                if vmassign_results.size > 1
+                  xmlinfo << "#{vmguest} already registered to MULTIPLE vm hosts\n    (Illegal registration!) Should only belong to one vm assignment at any given time."
+                elsif vmassign_results.size == 1
+                  xmlinfo << "#{vmguest} already registered to vmhost #{vmassign_results.first.virtual_host.name}\n    - Skipping vm guest assignment registration."
+                elsif vmassign_results.empty?
+                  xmlinfo << "#{vmguest} not registered to vmhost #{@node.name}.  Registering..."
+                  VirtualAssignment.create(
+                    :parent_id => @node.id,
+                    :child_id => vmnode.id)
+                end
+              elsif vmresults.size > 1
+                xmlinfo << "#{vmguest}: More than 1 nodes found with that name.  Unable to register."
+              elsif vmresults.empty?
+                xmlinfo << "#{vmguest}: No nodes found with that name.  Unable to register"
               end
-            elsif vmresults > 1
-              xmlinfo << "#{vmguest}: More than 1 nodes found with that name.  Unable to register."
-            elsif vmresults.empty?
-              xmlinfo << "#{vmguest}: No nodes found with that name.  Unable to register"
             end
-          end
+          end # if params[:vmguest] == Hash
         end
         params[:node].delete(:virtualmode)
       end
@@ -287,8 +348,12 @@ class NodesController < ApplicationController
       @node.update_outlets(params[:node][:outlet_names])
       params[:node].delete(:outlet_names)
     end
-
+    # Process percent_cpu metrics
+    process_utilization_metrics if (params["utilization_metric"])
     xmloutput[:info] = xmlinfo.join("\n").to_s 
+    # Process volumes
+    process_volumes if (params["volumes"])
+    process_name_aliases if (params["name_aliases"])
 
     respond_to do |format|
       if @node.update_attributes(params[:node])
@@ -371,6 +436,19 @@ class NodesController < ApplicationController
     return os
   end
   private :find_or_create_operating_system
+  
+  def process_utilization_metrics
+    metrics = %w(percent_cpu login_count)
+    metrics.each do |metric_name|
+      if (defined?(params['utilization_metric'][metric_name]['value']))
+        unless (params['utilization_metric'][metric_name]['value'] =~ /\D/)
+          utilization_metric_name = UtilizationMetricName.find_by_name(metric_name)
+          UtilizationMetric.create({:utilization_metric_name => utilization_metric_name,
+              :node => @node, :value => params['utilization_metric'][metric_name]['value'].to_i})
+        end
+      end
+    end
+  end
 
   def find_or_create_hardware_profile
     hwprof = HardwareProfile.find_by_name(params[:hardware_profile][:name].to_s)
@@ -425,19 +503,122 @@ class NodesController < ApplicationController
           return nil
         end
         # now that we have the port obj, we can determine who the node attached to it is
-        vmhost[:node] = port_obj.consumer.node
+        vmhost[:node] = port_obj.consumer.node unless port_obj.consumer.nil?
       end
       return vmhost[:node] unless vmhost[:node].nil? 
     else
       return nil
     end
   end
-  
+
+  def process_name_aliases
+    if defined?(params["name_aliases"])
+      reg_aliases = params["name_aliases"]["name"].split(',')
+      return if reg_aliases.nil?
+      node_aliases = @node.name_aliases.collect{|na| na.name}
+      reg_aliases.each do |na|
+        unless node_aliases.include?(na)
+          new_alias = NameAlias.new
+          new_alias.source_type = "Node"
+          new_alias.source = @node
+          new_alias.name = na
+          new_alias.save
+        end
+      end
+    end
+  end
+
+  def process_volumes
+    if defined?(params["volumes"]) 
+
+      ## MOUNTED VOLUMES ##
+
+      all_mounted = params["volumes"]["mounted"]
+      unless all_mounted.nil? || all_mounted.empty?
+        all_mounted.keys.each do |mounted_vol|
+          # First we need to search if the volume already exists, based on the volume name and the server name.  
+          volume_server_name = all_mounted[mounted_vol]["volume_server"]
+          logger.info "Processing volume #{mounted_vol} hosted on server #{volume_server_name}..."
+          # Search server by name, if more than 1 match, then we cannot process
+          results = Node.find(:all, :conditions => ["name like ?", "%#{volume_server_name}%"])
+  	if results.size == 1
+            volume_server = results.first
+            volume_name = all_mounted[mounted_vol]["volume"]
+            volume_type = all_mounted[mounted_vol]["type"]
+            volume_config = all_mounted[mounted_vol]["config"]
+            # now try to find the volume
+            result = Volume.find(:all, :conditions => ["name = ? and volume_server_id = ?", volume_name, volume_server.id])
+            if result.size == 1
+              # check if volume type is the same else update it
+              volume = result.first
+              unless volume.volume_type.to_s == volume_type
+                volume.volume_type = volume_type
+                volume.save
+              end # unless volume.volume_tpe.to_s
+            elsif result.size == 0
+              # Volume doesn't exist but we have all the data, so create the volume w/ the server's info
+              volume = Volume.new
+              volume.volume_server = volume_server
+              volume.name = volume_name
+              volume.volume_type = volume_type
+              volume.save
+            else
+              logger.info "Found more than 1 volume results for #{mounted_vol} on #{volume_server_name}:#{volume_type}"
+              next
+            end # if result == 1
+            # now that we have the volume object, we want to find or create a volume<=>node assignment
+            vna_result = VolumeNodeAssignment.find(:all, :conditions => ["node_id = ? and volume_id = ? and mount = ?", @node.id, volume.id, mounted_vol] )
+            if  vna_result.size == 0 
+              # Didn't find, thus create
+              vna = VolumeNodeAssignment.new
+              vna.node = @node
+              vna.volume = volume
+              vna.mount = mounted_vol
+              vna.configf = volume_config
+              vna.save
+            else
+              logger.info "\n\n\nFound 1 or more volume_node_assignments for #{@node.name}:#{mounted_vol} from #{volume_server_name}, skipping\n\n\n"
+              next
+            end
+          else
+            logger.info "  - More than 1 match found for #{volume_server_name}"
+            next
+          end # unless results.size == 1
+        end # all_mounted.keys.each
+      end # unless (all_mounted.nil? ||
+
+      ## SERVED VOLUMES ##
+      all_served = params["volumes"]["served"]
+      unless all_served.nil? || all_served.empty?
+        all_served.keys.each do |served_vol|
+          volume_config = all_served[served_vol]["config"] 
+          volume_type = all_served[served_vol]["type"] 
+          result = Volume.find(:all, :conditions => ["volume_server_id = ? and volume_type = ? and name = ?",@node.id, volume_type, served_vol ])
+          if result.size == 0
+            volume = Volume.new
+            volume.name = served_vol
+            volume.volume_server = @node
+            volume.configf = volume_config
+            volume.volume_type = volume_type
+            volume.save
+          elsif result.size == 1
+            logger.info "Volume already exists.  Will update if necessary.."
+            volume = result.first
+            volume.volume_type = volume_type unless (volume.volume_type == volume_type)
+          else
+            logger.info "More than one volume found.  Skipping.."
+            next
+          end # if results.size == 0
+        end # all_served.keys.each
+      end # unless (all_served.nil? ||
+    end # if defined?(params["volumes"])
+  end
+
   def process_network_interfaces(flag='')
     info = []
     # If the user specified some network interface info then handle that
     if params.include?(:network_interfaces)
-      logger.info "User included NIC info, handling it"
+      logger.info "User included Storage Controller info, handling it"
 
       authoritative = false
       nichashes = []
@@ -454,8 +635,8 @@ class NodesController < ApplicationController
       
       nichashes.each do |nichash|
 
-        # Temporarily remove any IP data from the NIC data so as not
-        # to confuse the NIC model
+        # Temporarily remove any IP data from the Storage Controller data so as not
+        # to confuse the Storage Controller model
         iphashes = []
         if nichash.include?(:ip_addresses)
           logger.info "User included IP info, saving it"
@@ -523,11 +704,11 @@ class NodesController < ApplicationController
             end
         end # if interface_type == "Ethernet"
 
-        # Create/update the NIC
-        logger.info "Search for NIC #{nichash[:name]}"
+        # Create/update the Storage Controller
+        logger.info "Search for Storage Controller #{nichash[:name]}"
         nic = @node.network_interfaces.find_by_name(nichash[:name])
         if nic.nil?
-          logger.info "NIC #{nichash[:name]} doesn't exist, creating it" + nichash.to_yaml
+          logger.info "Storage Controller #{nichash[:name]} doesn't exist, creating it" + nichash.to_yaml
           nic = @node.network_interfaces.create(nichash)
         else
           logger.info "User #{nichash[:name]} already exists, updating it" + nichash.to_yaml
@@ -552,8 +733,8 @@ class NodesController < ApplicationController
       end # nichashes.each
     
       # If the client indicated that they were sending us an authoritative
-      # set of NIC info (for example, a client in registration mode) then
-      # remove any NICs and IPs stored in the database which the client
+      # set of Storage Controller info (for example, a client in registration mode) then
+      # remove any Storage Controllers and IPs stored in the database which the client
       # didn't include in the info it sent
       if authoritative
         nic_names_from_client = []
@@ -583,6 +764,57 @@ class NodesController < ApplicationController
     end # if params.include?(:network_interfaces)
   end
   private :process_network_interfaces
+  
+  def process_storage_controllers(flag='')
+    info = []
+    # If the user specified some network interface info then handle that
+    if params.include?(:storage_controllers)
+      logger.info "User included storage controller info, handling it"
+
+      authoritative = false
+      schashes = []
+      if params[:storage_controllers].kind_of?(Hash)
+        # Pull out the authoritative flag if the user specified it
+        if params[:storage_controllers].include?(:authoritative)
+          authoritative = params[:storage_controllers][:authoritative]
+          params[:storage_controllers].delete(:authoritative)
+        end
+        schashes = params[:storage_controllers].values
+      elsif params[:storage_controllers].kind_of?(Array)
+        schashes = params[:storage_controllers]
+      end
+      
+      schashes.each do |schash|
+        # Create/update the Storage Controller
+        logger.info "Search for Storage Controller #{schash[:name]}"
+        sc = @node.storage_controllers.find_by_name(schash[:name])
+        if sc.nil?
+          logger.info "Storage Controller #{schash[:name]} doesn't exist, creating it" + schash.to_yaml
+          sc = @node.storage_controllers.create(schash)
+        else
+          logger.info "User #{schash[:name]} already exists, updating it" + schash.to_yaml
+          sc.update_attributes(schash)
+        end
+      end # schashes.each
+    
+      # If the client indicated that they were sending us an authoritative
+      # set of Storage Controller info (for example, a client in registration mode) then
+      # remove any Storage Controllers and volumes/disks stored in the database which the client
+      # didn't include in the info it sent
+      if authoritative
+        sc_names_from_client = []
+        schashes.each { |schash| sc_names_from_client.push(schash[:name]) }
+        @node.storage_controllers.each{ |sc| sc.destroy unless sc_names_from_client.include?(sc.name) }
+      end
+      
+      # process and RETURN the info msgs into one big string 
+      output = String.new
+      info.each { |msg| output << msg + "\n" }
+      output
+
+    end # if params.include?(:storage_controllers)
+  end
+  private :process_storage_controllers
 
   def graph_node_groups
     @node = Node.find(params[:id])
@@ -608,6 +840,18 @@ class NodesController < ApplicationController
     @graph.output( :output => 'gif',:file => "public/images/#{@node.name}_nodegroups.gif" )
     respond_to do |format|
       format.html # graph_node_groups.html.erb
+    end
+  end
+
+  def reset_ngs
+    @node = Node.find(params[:id])
+    @node.reset_node_groups
+    respond_to do |format|
+      format.js {
+        render(:update) { |page|
+          page.replace_html 'node_group_node_assignments', :partial => 'nodes/node_group_assignments', :locals => { :node => @node }
+        }
+      }
     end
   end
 
@@ -669,7 +913,8 @@ class NodesController < ApplicationController
     end
   end
 
-  def dot_child_services(ng)
+  def dot_child_services(rng)
+    ng = Service.find(rng.id)
     ng.child_services.each do |child_service|
       @graphobjs[child_service.name.gsub(/[-.]/,'')] = @graph.add_node(child_service.name.gsub(/[-.]/,''), :label => "#{child_service.name}", :shape => 'rectangle')
       @dots[ng.name.gsub(/[-.]/,'')] = [] unless @dots[ng.name.gsub(/[-.]/,'')]
@@ -681,7 +926,8 @@ class NodesController < ApplicationController
   end
   private :dot_child_services
 
-  def dot_parent_services(ng)
+  def dot_parent_services(rng)
+    ng = Service.find(rng.id)
     ng.parent_services.each do |parent_service|
       @graphobjs[parent_service.name.gsub(/[-.]/,'')] = @graph.add_node(parent_service.name.gsub(/[-.]/,''), :label => "#{parent_service.name}", :shape => 'rectangle')
       @dots[parent_service.name.gsub(/[-.]/,'')] = [] unless @dots[parent_service.name.gsub(/[-.]/,'')]
@@ -697,35 +943,88 @@ class NodesController < ApplicationController
     # If the user specified a rack assignment then handle that
     if params.include?(:rack)
       logger.info "User included rack assignment, handling it"
-      existing = RackNodeAssignment.find_by_node_id(@node.id)
+      existing = NodeRackNodeAssignment.find_by_node_id(@node.id)
       if !existing.nil?
         # Check to see if the existing assignment is correct
-        rack = nil
-        if !params[:rack][:id].blank?
-          if params[:rack][:id] != existing.rack.id
-            rack = Rack.find(params[:rack][:id])
+        node_rack = nil
+        if !params[:node_rack][:id].blank?
+          if params[:node_rack][:id] != existing.rack.id
+            node_rack = NodeRack.find(params[:node_rack][:id])
           end
-        elsif !params[:rack][:name].blank?
-          if params[:rack][:name] != existing.rack.name
-            rack = Rack.find_by_name(params[:rack][:name])
+        elsif !params[:node_rack][:name].blank?
+          if params[:node_rack][:name] != existing.node_rack.name
+            node_rack = NodeRack.find_by_name(params[:node_rack][:name])
           end
         end
-        if !rack.nil?
-          existing.update_attributes(:rack => rack, :assigned_at => Time.now)
+        if !node_rack.nil?
+          existing.update_attributes(:node_rack => node_rack, :assigned_at => Time.now)
         end
       else
         # Create a new assignment
-        rack = nil
-        if !params[:rack][:id].blank?
-          rack = Rack.find(params[:rack][:id])
-        elsif !params[:rack][:name].blank?
-          rack = Rack.find_by_name(params[:rack][:name])
+        node_rack = nil
+        if !params[:node_rack][:id].blank?
+          node_rack = NodeRack.find(params[:node_rack][:id])
+        elsif !params[:node_rack][:name].blank?
+          node_rack = NodeRack.find_by_name(params[:node_rack][:name])
         end
-        if !rack.nil?
-          RackNodeAssignment.create(:rack => rack, :node => @node)
+        if !node_rack.nil?
+          NodeRackNodeAssignment.create(:node_rack => node_rack, :node => @node)
         end
       end
     end
   end
   private :process_rack_assignment
+
+  def cpu_percent_chart_method
+    @node = Node.find(params[:id])
+    data = {}
+    data[:days] = []
+    data[:values] = []
+
+    # Create datapoints for the past 12 months and keep them in array so that their order is retained
+    counter = 10
+    while counter > 0 
+      day = counter
+      values = UtilizationMetric.find(
+          :all, :include => {:utilization_metric_name => {}, :node => {}},
+          :conditions => ["nodes.id = ? and assigned_at like ? and utilization_metric_names.name = ?", @node.id, "%#{day.days.ago.strftime("%Y-%m-%d")}%", 'percent_cpu'])
+      # each day should only have 1 value, if not then create an average
+      if values.size == 0 
+        counter -=1
+        next
+      elsif values.size == 1
+        value = values.first.value
+      else
+        value = values.collect{|a| a.value.to_i }.sum / values.size
+      end 
+      data[:days] << day.days.ago.strftime("%m/%d")
+      data[:values] << value.to_i
+      counter -= 1
+    end 
+    PP.pp data
+    # Create Graph
+    title = Title.new("#{@node.name.gsub(/\..*/,'')} CPU% Utilization")
+    title.set_style('{font-size: 20px; color: #778877}')
+    line = Line.new
+    line.text = "%" 
+    line.set_values(data[:values])
+    y = YAxis.new
+    y.set_range(0,100,10)
+    x = XAxis.new
+    x.set_labels(data[:days])
+
+    chart = OpenFlashChart.new
+    chart.set_title(title)
+    chart.add_element(line)
+    chart.x_axis = x 
+    chart.y_axis = y 
+
+    return chart
+  end 
+
+  def get_volume_nodes
+    @nodes = Node.find(:all, :order => :name).collect{|node| [node.name,node.id]}
+    render :partial => 'show_volume_nodes'
+  end
+
 end

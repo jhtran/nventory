@@ -1,7 +1,10 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr>
   <th nowrap="nowrap" width="5%">&nbsp;</th>
-  <th>Database (From)</th>
+  <th><%= tooltip(DatabaseInstanceRelationship,:from,'Database (From)') %></th>
   <th <%= sort_td_class_helper "name" %> > <%= sort_link_helper "has a relationship of", "name" %></th>
-  <th>Database (To)</th>
+  <th><%= tooltip(DatabaseInstanceRelationship,:to,'Database (To)') %></th>
   <th <%= sort_td_class_helper "assigned_at" %> > <%= sort_link_helper "Assigned At", "assigned_at" %></th>
 </tr>
+
+<%= @tooltips if ttflag %>

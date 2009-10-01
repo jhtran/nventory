@@ -1,15 +1,16 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Virtual Assignment: " + h(@virtual_assignment.virtual_host.name) + '<->' + h(@virtual_assignment.virtual_guest.name) %>
 
 <div class="record_view">
 
-<h1>Virtual Assignment</h1>
+<h1><%= tooltip(Node,:virtual_host) %></h1>
 
-<p><strong>Virtual Host:</strong> <%= link_to @virtual_assignment.virtual_host.name, node_path(@virtual_assignment.virtual_host) %><br />
-<strong>Virtual Guest:</strong> <%= link_to @virtual_assignment.virtual_guest.name, node_path(@virtual_assignment.virtual_host) %><br />
-<strong>Assigned at:</strong> <%= h(@virtual_assignment.assigned_at.to_formatted_s(:long)) %></p>
+<p><strong><%= tooltip(Node,:virtual_host) %>:</strong> <%= link_to @virtual_assignment.virtual_host.name, node_path(@virtual_assignment.virtual_host) %><br />
+<strong><%= tooltip(Node,:virtual_guest) %>:</strong> <%= link_to @virtual_assignment.virtual_guest.name, node_path(@virtual_assignment.virtual_host) %><br />
+<strong><%= tooltip(Node,:assigned_at) %>:</strong> <%= h(@virtual_assignment.assigned_at.to_formatted_s(:long)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@virtual_assignment.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@virtual_assignment.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(Node,:created_at) %>:</strong> <%= h(@virtual_assignment.created_at) %><br />
+<strong><%= tooltip(Node,:updated_at) %>:</strong> <%= h(@virtual_assignment.updated_at) %></p>
 
 </div>
 
@@ -17,3 +18,5 @@
 <%= link_to 'Delete', virtual_assignment_path(@virtual_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @virtual_assignment} %>
+
+<%= @tooltips %>

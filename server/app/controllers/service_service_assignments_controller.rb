@@ -54,20 +54,30 @@ class ServiceServiceAssignmentsController < ApplicationController
   def create
     @service_service_assignment = ServiceServiceAssignment.new(params[:service_service_assignment])
 
+    if request.env["HTTP_REFERER"] =~ /http:\/\/.*?\/(\w+)\/(\d+)/
+      ref_class = $1.singularize
+      ref_id = $2.to_i
+    end
     respond_to do |format|
       if @service_service_assignment.save
-        
         format.html { 
           flash[:notice] = 'ServiceServiceAssignment was successfully created.'
           redirect_to service_service_assignment_url(@service_service_assignment) 
         }
-        format.js { 
-          render(:update) { |page| 
-            
-            page.replace_html 'service_service_assignments', :partial => 'nodes/service_service_assignments', :locals => { :node => @service_service_assignment.node }
-            page.hide 'create_service_service_assignment'
-            page.show 'add_service_service_assignment_link'
-          }
+        format.js {
+          if ( (ref_class == 'service' && ref_id) && ( ref_obj = ref_class.camelize.constantize.find(ref_id) ) )
+            render(:update) { |page|
+              page.replace_html 'parent_service_assgns', :partial => 'services/parent_service_assignments', :locals => { :service => ref_obj }
+              page.replace_html 'child_service_assgns', :partial => 'services/child_service_assignments', :locals => { :service => ref_obj }
+              page.replace_html 'child_service_assignments', :partial => 'shared/child_service_assignment', :collection => ref_obj.service_assignments_as_parent
+              page.replace_html 'parent_service_assignments', :partial => 'shared/parent_service_assignment', :collection => ref_obj.service_assignments_as_child
+              
+              page.hide 'create_parent_assignment'
+              page.hide 'create_child_assignment'
+              page.show 'add_parent_link'
+              page.show 'add_child_link'
+            }
+          end
         }
         format.xml  { head :created, :location => service_service_assignment_url(@service_service_assignment) }
       else
@@ -117,13 +127,26 @@ class ServiceServiceAssignmentsController < ApplicationController
     end
     
     # Success!
+    if request.env["HTTP_REFERER"] =~ /http:\/\/.*?\/(\w+)\/(\d+)/
+      ref_class = $1.singularize
+      ref_id = $2.to_i
+    end
     respond_to do |format|
       format.html { redirect_to service_service_assignments_url }
       format.js {
-        render(:update) { |page|
-          
-          page.replace_html 'service_service_assignments', {:partial => 'nodes/service_service_assignments', :locals => { :node => @node} }
-        }
+        if ( (ref_class == 'service' && ref_id) && ( ref_obj = ref_class.camelize.constantize.find(ref_id) ) )
+          render(:update) { |page|
+            page.replace_html 'parent_service_assgns', :partial => 'services/parent_service_assignments', :locals => { :service => ref_obj }
+            page.replace_html 'child_service_assgns', :partial => 'services/child_service_assignments', :locals => { :service => ref_obj }
+            page.replace_html 'child_service_assignments', :partial => 'shared/child_service_assignment', :collection => ref_obj.service_assignments_as_parent
+            page.replace_html 'parent_service_assignments', :partial => 'shared/parent_service_assignment', :collection => ref_obj.service_assignments_as_child
+            
+            page.hide 'create_parent_assignment'
+            page.hide 'create_child_assignment'
+            page.show 'add_parent_link'
+            page.show 'add_child_link'
+          }
+        end
       }
       format.xml  { head :ok }
     end

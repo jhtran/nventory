@@ -9,7 +9,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 50) do
+ActiveRecord::Schema.define(:version => 91) do
 
   create_table "accounts", :force => true do |t|
     t.string   "name"
@@ -38,8 +38,8 @@ ActiveRecord::Schema.define(:version => 50) do
   end
 
   add_index "audits", ["auditable_id", "auditable_type"], :name => "auditable_index"
-  add_index "audits", ["user_id", "user_type"], :name => "user_index"
   add_index "audits", ["created_at"], :name => "index_audits_on_created_at"
+  add_index "audits", ["user_id", "user_type"], :name => "user_index"
 
   create_table "comments", :force => true do |t|
     t.string   "title",            :limit => 50, :default => ""
@@ -50,8 +50,8 @@ ActiveRecord::Schema.define(:version => 50) do
     t.integer  "user_id",                        :default => 0,  :null => false
   end
 
-  add_index "comments", ["user_id"], :name => "fk_comments_user"
   add_index "comments", ["commentable_id", "commentable_type"], :name => "index_comments_on_commentable_id_and_commentable_type"
+  add_index "comments", ["user_id"], :name => "fk_comments_user"
 
   create_table "database_instance_relationships", :force => true do |t|
     t.string   "name"
@@ -62,11 +62,11 @@ ActiveRecord::Schema.define(:version => 50) do
     t.datetime "updated_at"
   end
 
+  add_index "database_instance_relationships", ["assigned_at"], :name => "index_database_instance_relationships_on_assigned_at"
+  add_index "database_instance_relationships", ["from_id"], :name => "index_database_instance_relationships_on_from_id"
   add_index "database_instance_relationships", ["id"], :name => "index_database_instance_relationships_on_id"
   add_index "database_instance_relationships", ["name"], :name => "index_database_instance_relationships_on_name"
-  add_index "database_instance_relationships", ["from_id"], :name => "index_database_instance_relationships_on_from_id"
   add_index "database_instance_relationships", ["to_id"], :name => "index_database_instance_relationships_on_to_id"
-  add_index "database_instance_relationships", ["assigned_at"], :name => "index_database_instance_relationships_on_assigned_at"
 
   create_table "database_instances", :force => true do |t|
     t.string   "name"
@@ -78,18 +78,18 @@ ActiveRecord::Schema.define(:version => 50) do
   add_index "database_instances", ["id"], :name => "index_database_instances_on_id"
   add_index "database_instances", ["name"], :name => "index_database_instances_on_name"
 
-  create_table "datacenter_rack_assignments", :force => true do |t|
+  create_table "datacenter_node_rack_assignments", :force => true do |t|
     t.integer  "datacenter_id"
-    t.integer  "rack_id"
+    t.integer  "node_rack_id"
     t.datetime "assigned_at"
     t.datetime "created_at"
     t.datetime "updated_at"
   end
 
-  add_index "datacenter_rack_assignments", ["id"], :name => "index_datacenter_rack_assignments_on_id"
-  add_index "datacenter_rack_assignments", ["datacenter_id"], :name => "index_datacenter_rack_assignments_on_datacenter_id"
-  add_index "datacenter_rack_assignments", ["rack_id"], :name => "index_datacenter_rack_assignments_on_rack_id"
-  add_index "datacenter_rack_assignments", ["assigned_at"], :name => "index_datacenter_rack_assignments_on_assigned_at"
+  add_index "datacenter_node_rack_assignments", ["assigned_at"], :name => "index_datacenter_rack_assignments_on_assigned_at"
+  add_index "datacenter_node_rack_assignments", ["datacenter_id"], :name => "index_datacenter_rack_assignments_on_datacenter_id"
+  add_index "datacenter_node_rack_assignments", ["id"], :name => "index_datacenter_rack_assignments_on_id"
+  add_index "datacenter_node_rack_assignments", ["node_rack_id"], :name => "index_datacenter_rack_assignments_on_rack_id"
 
   create_table "datacenter_vip_assignments", :force => true do |t|
     t.integer  "datacenter_id", :null => false
@@ -100,9 +100,9 @@ ActiveRecord::Schema.define(:version => 50) do
     t.datetime "updated_at"
   end
 
+  add_index "datacenter_vip_assignments", ["assigned_at"], :name => "index_datacenter_vip_assignments_on_assigned_at"
   add_index "datacenter_vip_assignments", ["datacenter_id", "vip_id"], :name => "index_datacenter_vip_assignments_on_datacenter_id_and_vip_id"
   add_index "datacenter_vip_assignments", ["vip_id"], :name => "index_datacenter_vip_assignments_on_vip_id"
-  add_index "datacenter_vip_assignments", ["assigned_at"], :name => "index_datacenter_vip_assignments_on_assigned_at"
 
   create_table "datacenters", :force => true do |t|
     t.string   "name"
@@ -150,8 +150,8 @@ ActiveRecord::Schema.define(:version => 50) do
 
   create_table "ip_addresses", :force => true do |t|
     t.integer  "network_interface_id"
-    t.string   "address",              :default => "", :null => false
-    t.string   "address_type",         :default => "", :null => false
+    t.string   "address",              :null => false
+    t.string   "address_type",         :null => false
     t.string   "netmask"
     t.string   "broadcast"
     t.datetime "created_at"
@@ -168,12 +168,33 @@ ActiveRecord::Schema.define(:version => 50) do
     t.string   "healthcheck"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.integer  "lb_pool_id"
   end
 
+  add_index "lb_profiles", ["created_at"], :name => "index_lb_profiles_on_created_at"
+  add_index "lb_profiles", ["healthcheck"], :name => "index_lb_profiles_on_healthcheck"
   add_index "lb_profiles", ["id"], :name => "index_lb_profiles_on_id"
+  add_index "lb_profiles", ["lbmethod"], :name => "index_lb_profiles_on_lbmethod"
+  add_index "lb_profiles", ["port"], :name => "index_lb_profiles_on_port"
+  add_index "lb_profiles", ["updated_at"], :name => "index_lb_profiles_on_updated_at"
+
+  create_table "name_aliases", :force => true do |t|
+    t.string   "name"
+    t.integer  "source_id"
+    t.string   "source_type"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "name_aliases", ["created_at"], :name => "index_name_aliases_on_created_at"
+  add_index "name_aliases", ["id"], :name => "index_name_aliases_on_id"
+  add_index "name_aliases", ["name"], :name => "index_name_aliases_on_name"
+  add_index "name_aliases", ["source_id"], :name => "index_name_aliases_on_source_id"
+  add_index "name_aliases", ["source_type"], :name => "index_name_aliases_on_source_type"
+  add_index "name_aliases", ["updated_at"], :name => "index_name_aliases_on_updated_at"
 
   create_table "network_interfaces", :force => true do |t|
-    t.string   "name",             :default => "", :null => false
+    t.string   "name",             :null => false
     t.string   "interface_type"
     t.boolean  "physical"
     t.string   "hardware_address"
@@ -198,10 +219,10 @@ ActiveRecord::Schema.define(:version => 50) do
     t.datetime "updated_at"
   end
 
+  add_index "node_database_instance_assignments", ["assigned_at"], :name => "index_node_database_instance_assignments_on_assigned_at"
+  add_index "node_database_instance_assignments", ["database_instance_id"], :name => "index_node_database_instance_assignments_on_database_instance_id"
   add_index "node_database_instance_assignments", ["id"], :name => "index_node_database_instance_assignments_on_id"
   add_index "node_database_instance_assignments", ["node_id"], :name => "index_node_database_instance_assignments_on_node_id"
-  add_index "node_database_instance_assignments", ["database_instance_id"], :name => "index_node_database_instance_assignments_on_database_instance_id"
-  add_index "node_database_instance_assignments", ["assigned_at"], :name => "index_node_database_instance_assignments_on_assigned_at"
 
   create_table "node_group_node_assignments", :force => true do |t|
     t.integer  "node_id",            :null => false
@@ -212,9 +233,10 @@ ActiveRecord::Schema.define(:version => 50) do
     t.boolean  "virtual_assignment"
   end
 
-  add_index "node_group_node_assignments", ["node_id", "node_group_id"], :name => "index_node_group_node_assignments_on_node_id_and_node_group_id"
-  add_index "node_group_node_assignments", ["node_group_id"], :name => "index_node_group_node_assignments_on_node_group_id"
   add_index "node_group_node_assignments", ["assigned_at"], :name => "index_node_group_node_assignments_on_assigned_at"
+  add_index "node_group_node_assignments", ["node_group_id"], :name => "index_node_group_node_assignments_on_node_group_id"
+  add_index "node_group_node_assignments", ["node_id", "node_group_id"], :name => "index_node_group_node_assignments_on_node_id_and_node_group_id"
+  add_index "node_group_node_assignments", ["virtual_assignment"], :name => "index_node_group_node_assignments_on_virtual_assignment"
 
   create_table "node_group_node_group_assignments", :force => true do |t|
     t.integer  "parent_id",   :null => false
@@ -224,21 +246,45 @@ ActiveRecord::Schema.define(:version => 50) do
     t.datetime "updated_at"
   end
 
-  add_index "node_group_node_group_assignments", ["parent_id", "child_id"], :name => "parent_child_index"
-  add_index "node_group_node_group_assignments", ["child_id"], :name => "index_node_group_node_group_assignments_on_child_id"
   add_index "node_group_node_group_assignments", ["assigned_at"], :name => "index_node_group_node_group_assignments_on_assigned_at"
+  add_index "node_group_node_group_assignments", ["child_id"], :name => "index_node_group_node_group_assignments_on_child_id"
+  add_index "node_group_node_group_assignments", ["parent_id", "child_id"], :name => "parent_child_index"
 
   create_table "node_groups", :force => true do |t|
-    t.string   "name",          :default => "", :null => false
+    t.string   "name",        :null => false
     t.text     "description"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "owner"
-    t.integer  "lb_profile_id"
   end
 
   add_index "node_groups", ["name"], :name => "index_node_groups_on_name", :unique => true
   add_index "node_groups", ["owner"], :name => "index_node_groups_on_owner"
+
+  create_table "node_rack_node_assignments", :force => true do |t|
+    t.integer  "node_rack_id"
+    t.integer  "node_id"
+    t.integer  "position"
+    t.datetime "assigned_at"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "node_rack_node_assignments", ["assigned_at"], :name => "index_rack_node_assignments_on_assigned_at"
+  add_index "node_rack_node_assignments", ["id"], :name => "index_rack_node_assignments_on_id"
+  add_index "node_rack_node_assignments", ["node_id"], :name => "index_rack_node_assignments_on_node_id"
+  add_index "node_rack_node_assignments", ["node_rack_id"], :name => "index_rack_node_assignments_on_rack_id"
+
+  create_table "node_racks", :force => true do |t|
+    t.string   "name"
+    t.text     "location"
+    t.text     "description"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "node_racks", ["id"], :name => "index_racks_on_id"
+  add_index "node_racks", ["name"], :name => "index_racks_on_name"
 
   create_table "nodes", :force => true do |t|
     t.string   "name"
@@ -266,21 +312,33 @@ ActiveRecord::Schema.define(:version => 50) do
     t.integer  "processor_core_count"
     t.integer  "os_processor_count"
     t.string   "asset_tag"
-    t.string   "alternate_names"
     t.string   "timezone"
-    t.text     "virtual_client_ids"
-    t.integer  "virtual_parent_node_id"
     t.datetime "expiration"
     t.text     "contact"
     t.string   "virtualarch"
+    t.integer  "vmimg_size"
+    t.integer  "vmspace_used"
+    t.integer  "used_space"
+    t.integer  "avail_space"
+    t.integer  "os_virtual_processor_count"
+    t.string   "config_mgmt_tag"
   end
 
+  add_index "nodes", ["avail_space"], :name => "index_nodes_on_avail_space"
+  add_index "nodes", ["config_mgmt_tag"], :name => "index_nodes_on_config_mgmt_tag"
+  add_index "nodes", ["expiration"], :name => "index_nodes_on_expiration"
+  add_index "nodes", ["hardware_profile_id"], :name => "index_nodes_on_hardware_profile_id"
   add_index "nodes", ["id"], :name => "index_nodes_on_id"
   add_index "nodes", ["name"], :name => "index_nodes_on_name"
+  add_index "nodes", ["os_virtual_processor_count"], :name => "index_nodes_on_os_virtual_processor_count"
   add_index "nodes", ["serial_number"], :name => "index_nodes_on_serial_number"
-  add_index "nodes", ["hardware_profile_id"], :name => "index_nodes_on_hardware_profile_id"
   add_index "nodes", ["status_id"], :name => "index_nodes_on_status_id"
+  add_index "nodes", ["timezone"], :name => "index_nodes_on_timezone"
   add_index "nodes", ["uniqueid"], :name => "index_nodes_on_uniqueid"
+  add_index "nodes", ["used_space"], :name => "index_nodes_on_used_space"
+  add_index "nodes", ["virtualarch"], :name => "index_nodes_on_virtualarch"
+  add_index "nodes", ["vmimg_size"], :name => "index_nodes_on_vmimg_size"
+  add_index "nodes", ["vmspace_used"], :name => "index_nodes_on_vmspace_used"
 
   create_table "operating_systems", :force => true do |t|
     t.string   "name"
@@ -305,36 +363,39 @@ ActiveRecord::Schema.define(:version => 50) do
     t.string   "consumer_type", :default => "Node"
   end
 
+  add_index "outlets", ["consumer_id"], :name => "index_outlets_on_consumer_id"
+  add_index "outlets", ["consumer_type"], :name => "index_outlets_on_consumer_type"
   add_index "outlets", ["id"], :name => "index_outlets_on_id"
   add_index "outlets", ["name"], :name => "index_outlets_on_name"
   add_index "outlets", ["producer_id"], :name => "index_outlets_on_producer_id"
-  add_index "outlets", ["consumer_id"], :name => "index_outlets_on_consumer_id"
-  add_index "outlets", ["consumer_type"], :name => "index_outlets_on_consumer_type"
 
-  create_table "rack_node_assignments", :force => true do |t|
-    t.integer  "rack_id"
-    t.integer  "node_id"
-    t.integer  "position"
-    t.datetime "assigned_at"
+  create_table "service_profiles", :force => true do |t|
+    t.integer  "service_id"
+    t.string   "dev_url"
+    t.string   "qa_url"
+    t.string   "stg_url"
+    t.string   "prod_url"
+    t.string   "repo_url"
+    t.string   "contact"
+    t.string   "codelang"
+    t.boolean  "external"
+    t.boolean  "pciscope"
     t.datetime "created_at"
     t.datetime "updated_at"
   end
 
-  add_index "rack_node_assignments", ["id"], :name => "index_rack_node_assignments_on_id"
-  add_index "rack_node_assignments", ["node_id"], :name => "index_rack_node_assignments_on_node_id"
-  add_index "rack_node_assignments", ["rack_id"], :name => "index_rack_node_assignments_on_rack_id"
-  add_index "rack_node_assignments", ["assigned_at"], :name => "index_rack_node_assignments_on_assigned_at"
-
-  create_table "racks", :force => true do |t|
-    t.string   "name"
-    t.text     "location"
-    t.text     "description"
-    t.datetime "created_at"
-    t.datetime "updated_at"
-  end
-
-  add_index "racks", ["id"], :name => "index_racks_on_id"
-  add_index "racks", ["name"], :name => "index_racks_on_name"
+  add_index "service_profiles", ["codelang"], :name => "index_service_profiles_on_codelang"
+  add_index "service_profiles", ["contact"], :name => "index_service_profiles_on_contact"
+  add_index "service_profiles", ["created_at"], :name => "index_service_profiles_on_created_at"
+  add_index "service_profiles", ["dev_url"], :name => "index_service_profiles_on_dev_url"
+  add_index "service_profiles", ["external"], :name => "index_service_profiles_on_external"
+  add_index "service_profiles", ["pciscope"], :name => "index_service_profiles_on_pciscope"
+  add_index "service_profiles", ["prod_url"], :name => "index_service_profiles_on_prod_url"
+  add_index "service_profiles", ["qa_url"], :name => "index_service_profiles_on_qa_url"
+  add_index "service_profiles", ["repo_url"], :name => "index_service_profiles_on_repo_url"
+  add_index "service_profiles", ["service_id"], :name => "index_service_profiles_on_service_id"
+  add_index "service_profiles", ["stg_url"], :name => "index_service_profiles_on_stg_url"
+  add_index "service_profiles", ["updated_at"], :name => "index_service_profiles_on_updated_at"
 
   create_table "service_service_assignments", :force => true do |t|
     t.integer  "parent_id",   :null => false
@@ -344,9 +405,9 @@ ActiveRecord::Schema.define(:version => 50) do
     t.datetime "updated_at"
   end
 
-  add_index "service_service_assignments", ["parent_id", "child_id"], :name => "parent_child_index"
-  add_index "service_service_assignments", ["child_id"], :name => "child_index"
   add_index "service_service_assignments", ["assigned_at"], :name => "assigned_at_index"
+  add_index "service_service_assignments", ["child_id"], :name => "child_index"
+  add_index "service_service_assignments", ["parent_id", "child_id"], :name => "parent_child_index"
 
   create_table "sessions", :force => true do |t|
     t.string   "session_id"
@@ -367,12 +428,37 @@ ActiveRecord::Schema.define(:version => 50) do
   add_index "statuses", ["id"], :name => "index_statuses_on_id"
   add_index "statuses", ["name"], :name => "index_statuses_on_name"
 
+  create_table "storage_controllers", :force => true do |t|
+    t.string   "name",            :null => false
+    t.string   "controller_type"
+    t.boolean  "physical"
+    t.string   "bus_interface"
+    t.string   "slot"
+    t.string   "firmware"
+    t.integer  "cache_size"
+    t.integer  "batteries"
+    t.integer  "node_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "storage_controllers", ["batteries"], :name => "index_storage_controllers_on_batteries"
+  add_index "storage_controllers", ["bus_interface"], :name => "index_storage_controllers_on_bus_interface"
+  add_index "storage_controllers", ["cache_size"], :name => "index_storage_controllers_on_cache_size"
+  add_index "storage_controllers", ["controller_type"], :name => "index_storage_controllers_on_controller_type"
+  add_index "storage_controllers", ["created_at"], :name => "index_storage_controllers_on_created_at"
+  add_index "storage_controllers", ["firmware"], :name => "index_storage_controllers_on_firmware"
+  add_index "storage_controllers", ["name"], :name => "index_storage_controllers_on_name"
+  add_index "storage_controllers", ["node_id"], :name => "index_storage_controllers_on_node_id"
+  add_index "storage_controllers", ["physical"], :name => "index_storage_controllers_on_physical"
+  add_index "storage_controllers", ["slot"], :name => "index_storage_controllers_on_slot"
+  add_index "storage_controllers", ["updated_at"], :name => "index_storage_controllers_on_updated_at"
+
   create_table "subnets", :force => true do |t|
-    t.string   "network",       :default => "", :null => false
-    t.string   "netmask",       :default => "", :null => false
-    t.string   "gateway",       :default => "", :null => false
-    t.string   "broadcast",     :default => "", :null => false
-    t.string   "resolvers"
+    t.string   "network",                       :null => false
+    t.string   "netmask",                       :null => false
+    t.string   "gateway",       :default => ""
+    t.string   "broadcast",                     :null => false
     t.integer  "node_group_id"
     t.text     "description"
     t.datetime "created_at"
@@ -382,6 +468,82 @@ ActiveRecord::Schema.define(:version => 50) do
   add_index "subnets", ["network"], :name => "index_subnets_on_network", :unique => true
   add_index "subnets", ["node_group_id"], :name => "index_subnets_on_node_group_id"
 
+  create_table "tool_tips", :force => true do |t|
+    t.string   "model"
+    t.string   "attr"
+    t.text     "description"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "tool_tips", ["attr"], :name => "index_tool_tips_on_attr"
+  add_index "tool_tips", ["created_at"], :name => "index_tool_tips_on_created_at"
+  add_index "tool_tips", ["model"], :name => "index_tool_tips_on_model"
+  add_index "tool_tips", ["updated_at"], :name => "index_tool_tips_on_updated_at"
+
+  create_table "utilization_metric_names", :force => true do |t|
+    t.string   "name"
+    t.text     "description"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "utilization_metric_names", ["created_at"], :name => "index_utilization_metric_names_on_created_at"
+  add_index "utilization_metric_names", ["id"], :name => "index_utilization_metric_names_on_id"
+  add_index "utilization_metric_names", ["name"], :name => "index_utilization_metric_names_on_name"
+  add_index "utilization_metric_names", ["updated_at"], :name => "index_utilization_metric_names_on_updated_at"
+
+  create_table "utilization_metrics", :force => true do |t|
+    t.integer  "utilization_metric_name_id"
+    t.integer  "node_id"
+    t.string   "value"
+    t.datetime "assigned_at"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "utilization_metrics", ["assigned_at"], :name => "index_utilization_metrics_on_assigned_at"
+  add_index "utilization_metrics", ["created_at"], :name => "index_utilization_metrics_on_created_at"
+  add_index "utilization_metrics", ["id"], :name => "index_utilization_metrics_on_id"
+  add_index "utilization_metrics", ["node_id"], :name => "index_utilization_metrics_on_node_id"
+  add_index "utilization_metrics", ["updated_at"], :name => "index_utilization_metrics_on_updated_at"
+  add_index "utilization_metrics", ["utilization_metric_name_id"], :name => "index_utilization_metrics_on_utilization_metric_name_id"
+  add_index "utilization_metrics", ["value"], :name => "index_utilization_metrics_on_value"
+
+  create_table "utilization_metrics_by_node_groups", :force => true do |t|
+    t.integer  "utilization_metric_name_id"
+    t.integer  "node_group_id"
+    t.string   "value"
+    t.datetime "assigned_at"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.integer  "node_count"
+  end
+
+  add_index "utilization_metrics_by_node_groups", ["assigned_at"], :name => "index_utilization_metrics_by_node_groups_on_assigned_at"
+  add_index "utilization_metrics_by_node_groups", ["created_at"], :name => "index_utilization_metrics_by_node_groups_on_created_at"
+  add_index "utilization_metrics_by_node_groups", ["id"], :name => "index_utilization_metrics_by_node_groups_on_id"
+  add_index "utilization_metrics_by_node_groups", ["node_group_id"], :name => "index_utilization_metrics_by_node_groups_on_node_group_id"
+  add_index "utilization_metrics_by_node_groups", ["updated_at"], :name => "index_utilization_metrics_by_node_groups_on_updated_at"
+  add_index "utilization_metrics_by_node_groups", ["utilization_metric_name_id"], :name => "index_utilization_metrics_by_node_groups_on_utilz_metric_name_id"
+  add_index "utilization_metrics_by_node_groups", ["value"], :name => "index_utilization_metrics_by_node_groups_on_value"
+
+  create_table "utilization_metrics_globals", :force => true do |t|
+    t.integer  "utilization_metric_name_id"
+    t.string   "value"
+    t.datetime "assigned_at"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.integer  "node_count"
+  end
+
+  add_index "utilization_metrics_globals", ["assigned_at"], :name => "index_utilization_metrics_globals_on_assigned_at"
+  add_index "utilization_metrics_globals", ["created_at"], :name => "index_utilization_metrics_globals_on_created_at"
+  add_index "utilization_metrics_globals", ["id"], :name => "index_utilization_metrics_globals_on_id"
+  add_index "utilization_metrics_globals", ["updated_at"], :name => "index_utilization_metrics_globals_on_updated_at"
+  add_index "utilization_metrics_globals", ["utilization_metric_name_id"], :name => "index_utilization_metrics_globals_on_utilization_metric_name_id"
+  add_index "utilization_metrics_globals", ["value"], :name => "index_utilization_metrics_globals_on_value"
+
   create_table "vip_lb_pool_assignments", :force => true do |t|
     t.integer  "vip_id",      :null => false
     t.integer  "lb_pool_id",  :null => false
@@ -390,12 +552,12 @@ ActiveRecord::Schema.define(:version => 50) do
     t.datetime "updated_at"
   end
 
-  add_index "vip_lb_pool_assignments", ["vip_id", "lb_pool_id"], :name => "vip_lb_pool_index"
-  add_index "vip_lb_pool_assignments", ["lb_pool_id"], :name => "lb_pool_index"
   add_index "vip_lb_pool_assignments", ["assigned_at"], :name => "assigned_at_index"
+  add_index "vip_lb_pool_assignments", ["lb_pool_id"], :name => "lb_pool_index"
+  add_index "vip_lb_pool_assignments", ["vip_id", "lb_pool_id"], :name => "vip_lb_pool_index"
 
   create_table "vips", :force => true do |t|
-    t.string   "name",             :default => "", :null => false
+    t.string   "name",             :null => false
     t.text     "description"
     t.datetime "created_at"
     t.datetime "updated_at"
@@ -405,7 +567,11 @@ ActiveRecord::Schema.define(:version => 50) do
     t.integer  "port"
   end
 
+  add_index "vips", ["ip_address"], :name => "index_vips_on_ip_address"
+  add_index "vips", ["load_balancer_id"], :name => "index_vips_on_load_balancer_id"
   add_index "vips", ["name"], :name => "index_vips_on_name", :unique => true
+  add_index "vips", ["port"], :name => "index_vips_on_port"
+  add_index "vips", ["protocol"], :name => "index_vips_on_protocol"
 
   create_table "virtual_assignments", :force => true do |t|
     t.integer  "parent_id",   :null => false
@@ -415,8 +581,40 @@ ActiveRecord::Schema.define(:version => 50) do
     t.datetime "updated_at"
   end
 
-  add_index "virtual_assignments", ["parent_id", "child_id"], :name => "parent_child_index"
-  add_index "virtual_assignments", ["child_id"], :name => "child_index"
   add_index "virtual_assignments", ["assigned_at"], :name => "assigned_at_index"
+  add_index "virtual_assignments", ["child_id"], :name => "child_index"
+  add_index "virtual_assignments", ["parent_id", "child_id"], :name => "parent_child_index"
+
+  create_table "volume_node_assignments", :force => true do |t|
+    t.integer  "volume_id"
+    t.integer  "node_id"
+    t.string   "mount"
+    t.string   "configf"
+    t.datetime "assigned_at"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "volume_node_assignments", ["assigned_at"], :name => "index_volume_node_assignments_on_assigned_at"
+  add_index "volume_node_assignments", ["id"], :name => "index_volume_node_assignments_on_id"
+  add_index "volume_node_assignments", ["mount"], :name => "index_volume_node_assignments_on_mount"
+  add_index "volume_node_assignments", ["node_id"], :name => "index_volume_node_assignments_on_node_id"
+  add_index "volume_node_assignments", ["volume_id"], :name => "index_volume_node_assignments_on_volume_id"
+
+  create_table "volumes", :force => true do |t|
+    t.string   "name"
+    t.string   "volume_type"
+    t.string   "configf"
+    t.integer  "volume_server_id"
+    t.text     "description"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "volumes", ["configf"], :name => "index_volumes_on_configf"
+  add_index "volumes", ["id"], :name => "index_volumes_on_id"
+  add_index "volumes", ["name"], :name => "index_volumes_on_name"
+  add_index "volumes", ["volume_server_id"], :name => "index_volumes_on_volume_server_id"
+  add_index "volumes", ["volume_type"], :name => "index_volumes_on_volume_type"
 
 end

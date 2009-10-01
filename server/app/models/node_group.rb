@@ -21,17 +21,6 @@ class NodeGroup < ActiveRecord::Base
   has_many :parent_groups, :through => :assignments_as_child
   has_many :child_groups,  :through => :assignments_as_parent
 
-  has_many :service_assignments_as_parent,
-           :foreign_key => 'parent_id',
-           :class_name => 'ServiceServiceAssignment',
-           :dependent => :destroy
-  has_many :service_assignments_as_child,
-           :foreign_key => 'child_id',
-           :class_name => 'ServiceServiceAssignment',
-           :dependent => :destroy
-  has_many :parent_services, :through => :service_assignments_as_child
-  has_many :child_services,  :through => :service_assignments_as_parent
-
   # This is used by the edit page in the view
   # http://lists.rubyonrails.org/pipermail/rails/2006-August/059801.html
   def child_group_ids
@@ -60,7 +49,7 @@ class NodeGroup < ActiveRecord::Base
       :message => 'must be a valid email address',
       :allow_nil => true,
       :allow_blank => true
-  
+      
   def self.default_search_attribute
     'name'
   end
@@ -271,18 +260,16 @@ class NodeGroup < ActiveRecord::Base
     child_nodes.keys
   end
 
-  def recursive_child_services
-    @all_child_services = []
-    recurse_child_services(self)
-    @all_child_services
+  def is_service?
+    Service.find(self.id).service_profile.nil? ? (return false) : (return true)
   end
 
-  def recurse_child_services(ng)
-    @all_child_services << ng
-    if ng.child_services.size > 0
-      ng.child_services.each do |child|
-        recurse_child_services(child)
-      end
+  def to_service
+    svc = Service.find(self.id)
+    if svc.service_profile.nil?
+      return nil
     end
+    return svc
   end
+
 end

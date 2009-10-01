@@ -121,6 +121,7 @@ class VipLbPoolAssignmentsController < ApplicationController
           # which we do something slightly different.
           if request.env["HTTP_REFERER"].include? "vips"
             page.replace_html 'vip_lb_pool_assignments', :partial => 'vips/lb_pool_assignments', :locals => { :vip => @vip }
+            page.replace_html 'node_assignments', :partial => 'vips/node_assignments', :locals => { :vip => @vip }
             page.hide 'create_lb_pool_assignment'
             page.show 'add_lb_pool_assignment_link'
           elsif request.env["HTTP_REFERER"].include? "lb_pools"

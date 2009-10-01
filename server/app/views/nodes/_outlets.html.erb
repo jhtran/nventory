@@ -1,12 +1,13 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if node.hardware_profile.outlet_count.nil? || node.hardware_profile.outlet_count <= 0 %>
-  <p><strong>Outlets:</strong></p>
+  <p><strong><%= tooltip(@node.class,:outlets) %>:</strong></p>
   <p>
     <%= "Although this node is a <strong>#{node.hardware_profile.outlet_type.downcase}</strong> outlet type," %>
     <%= "its <strong>HardwareProfile</strong> (#{link_to node.hardware_profile.name, node.hardware_profile})" %>
     <%= " 'outlet count' #{ node.hardware_profile.outlet_count.nil? ? "is not configured for any ports" : "is configured for 0 ports"}" %>
   </p>
 <%- elsif (node.hardware_profile.outlet_count > 0 && (node.produced_outlets.empty? || node.produced_outlets.size <= 0)) -%>
-  <p><strong>Outlets:</strong></p>
+  <p><strong><%= tooltip(@node.class,:outlets) %>:</strong></p>
   <p>
     <%= "Although this node hosts <strong>#{node.hardware_profile.outlet_count} #{node.hardware_profile.outlet_type.downcase}" %>
     <%= "</strong> outlets, there aren't any consumers assigned to it." %>
@@ -16,8 +17,8 @@
   <caption><%= node.hardware_profile.outlet_type %> Outlets</caption>
   <thead>
   <tr>
-      <th>Name</th>
-      <th>Consumer</th>
+      <th><%= tooltip(Outlet,:name) %></th>
+      <th><%= tooltip(Outlet,:consumer) %></th>
       <th>&nbsp;</th>
       <th>&nbsp;</th>
   </tr>
@@ -47,3 +48,5 @@
   </tbody>
   </table>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

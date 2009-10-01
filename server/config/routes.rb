@@ -1,15 +1,16 @@
 ActionController::Routing::Routes.draw do |map|
   map.resources :accounts,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :audits  ,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
-  map.resources :comments
+  map.resources :comments,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :database_instance_relationships,                                                             :member => { :version_history => :get }
   map.resources :database_instances,                :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
-  map.resources :datacenter_rack_assignments,                                                                 :member => { :version_history => :get }
+  map.resources :datacenter_node_rack_assignments,                                                            :member => { :version_history => :get }
   map.resources :datacenter_vip_assignments,                                                                  :member => { :version_history => :get }
   map.resources :datacenters,                       :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :hardware_profiles,                 :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :ip_addresses,                      :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :network_interfaces,                :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :storage_controllers,               :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :node_database_instance_assignments,                                                          :member => { :version_history => :get }
   map.resources :node_group_node_assignments,                                                                 :member => { :version_history => :get }
   map.resources :node_group_node_group_assignments,                                                           :member => { :version_history => :get }
@@ -17,23 +18,34 @@ ActionController::Routing::Routes.draw do |map|
   map.resources :virtual_assignments,                                                                         :member => { :version_history => :get }
   map.resources :vip_lb_pool_assignments,                                                                     :member => { :version_history => :get }
   map.resources :lb_pool_node_assignments,                                                                    :member => { :version_history => :get }
+  map.resources :utilization_metrics,                                                                         :member => { :version_history => :get }
+  map.resources :utilization_metrics_by_node_groups,                                                          :member => { :version_history => :get }
   map.resources :node_groups,                       :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :services   ,                       :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :nodes,                             :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :name_aliases,                      :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :operating_systems,                 :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :outlets,                           :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
-  map.resources :rack_node_assignments,                                                                       :member => { :version_history => :get }
-  map.resources :racks,                             :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :node_rack_node_assignments,                                                                  :member => { :version_history => :get }
+  map.resources :node_racks,                        :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :racks, :controller=> "node_racks", :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :volume_node_assignments,                                                                     :member => { :version_history => :get }
+  map.resources :volumes,                           :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :statuses,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :utilization_metric_names,          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :subnets,                           :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :vips,                              :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :lb_pools,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :lb_profiles,                       :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :service_profiles,                  :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :tool_tips,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
 
   # add get method that will return the consumer on this outlet (used in AJAX on Node page)
   map.resources :outlets, :member => { :consumer => :get } 
   
   # add get method that will return the visualization of this rack
-  map.resources :racks,       :member => { :visualization => :get } 
+  map.resources :node_racks,  :member => { :visualization => :get } 
+  map.resources :racks, :controller => 'node_racks', :member => { :visualization => :get } 
   map.resources :datacenters, :member => { :visualization => :get } 
 
   # The priority is based upon order of creation: first created -> highest priority.

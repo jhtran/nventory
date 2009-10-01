@@ -1,8 +1,11 @@
-<p><strong>Name</strong> <em>*</em> <br /> <%= f.text_field :name %></p>
-<p><strong>IP Address</strong> <em>*</em> <br /> <%= f.text_field :ip_address %><br />
-<strong>Protocol:</strong> <em>*</em> <br /><%= f.select :protocol, $protocols %><br />
-<strong>Port</strong> <em>*</em> <br /> <%= f.text_field :port %></p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(Vip,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+<p><strong><%= tooltip(Vip,:ip_address) %></strong> <em>*</em> <br /> <%= f.text_field :ip_address %><br />
+<strong><%= tooltip(Vip,:protocol) %>:</strong> <em>*</em> <br /><%= f.select :protocol, $protocols %><br />
+<strong><%= tooltip(Vip,:port) %></strong> <em>*</em> <br /> <%= f.text_field :port %></p>
 
-<p><strong>Load Balancer:</strong> <em>*</em> <br /><%= f.select :load_balancer_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(Vip,:load_balancer) %>:</strong> <em>*</em> <br /><%= f.select :load_balancer_id, Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
 
-<p><strong>Description</strong> <br /> <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %></p>
+<p><strong><%= tooltip(Vip,:description) %></strong> <br /> <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %></p>
+
+<%= @tooltips if ttflag %>

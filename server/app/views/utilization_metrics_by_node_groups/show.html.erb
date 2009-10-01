@@ -1,0 +1,23 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Utilization Metrics By Node Group: " + h(@utilization_metrics_by_node_group.utilization_metric_name.name) + '<->' + h(@utilization_metrics_by_node_group.node_group.name) %>
+
+<div class="record_view">
+
+<h1>Utilization Metrics By Node Group</h1>
+
+<p><strong>Utilization Metrics By Node Group:</strong> <%= link_to @utilization_metrics_by_node_group.utilization_metric_name.name, @utilization_metrics_by_node_group.utilization_metric_name  %><br />
+<strong>NodeGroup:</strong> <%= link_to @utilization_metrics_by_node_group.node_group.name, @utilization_metrics_by_node_group.node_group %><br />
+<strong>Value:</strong> <%= h(@utilization_metrics_by_node_group.value ) %><br />
+<strong>Assigned at:</strong> <%= h(@utilization_metrics_by_node_group.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong>Created at:</strong> <%= h(@utilization_metrics_by_node_group.created_at) %><br />
+<strong>Updated at:</strong> <%= h(@utilization_metrics_by_node_group.updated_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_utilization_metrics_by_node_group_path(@utilization_metrics_by_node_group) %> | 
+<%= link_to 'Delete', utilization_metrics_by_node_group_path(@utilization_metrics_by_node_group), :confirm => 'Are you sure?', :method => :delete %></p>
+
+<%= render :partial => 'shared/version_information', :locals => { :object => @utilization_metrics_by_node_group} %>
+
+<%= @tooltips %>

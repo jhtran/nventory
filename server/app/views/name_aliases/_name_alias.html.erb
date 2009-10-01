@@ -1,0 +1,23 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(NameAlias,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+<p><strong><%= tooltip(NameAlias,:model) %></strong><em>*</em><br /> <%= select_tag "source_type", options_for_select([[" "]] + @models) %></p>
+
+<div id=indicator_div 
+        style="postition: absolute; left: your_X px; top: your_Y px">
+  <%= image_tag("spinner.gif", :id => 'spinner_gif_id',
+    :style => 'display:none') %>
+</div>
+
+<div id="source">
+  <p><strong><%= tooltip(NameAlias,:object) %>:<br /></strong>
+    <%= select_tag nil %></p>
+</div>
+
+<%= observe_field("source_type",
+        :frequency => 2,
+        :update => :source,
+        :before => "Element.show('spinner_gif_id')",
+        :success => "Element.hide('spinner_gif_id')",
+        :url => { :action => :get_sources } ) %>
+
+<%= @tooltips if ttflag %>

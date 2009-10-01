@@ -1,14 +1,15 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p>
-  <strong>Name</strong> <em>*</em> <br />
+  <strong><%= tooltip(NodeGroup,:name) %></strong> <em>*</em> <br />
   <%= f.text_field :name %>
 </p>
 <p>
-  <strong>Owner</strong> <br />
+  <strong><%= tooltip(NodeGroup,:owner) %></strong> <br />
   <%= f.text_field :owner %>
 </p>
 
 <p>
-  <strong>Children</strong> <br />
+  <strong><%= tooltip(NodeGroup,:child_groups) %></strong> <br />
   <% # FIXME: This belongs in the CSS %>
   <font size="-1">
   <%- NodeGroup.find(:all, :select => "id, name", :order => NodeGroup.default_search_attribute).each do |ng| -%>
@@ -18,7 +19,7 @@
 </p>
 
 <p>
-  <strong>Nodes</strong> <br />
+  <strong><%= tooltip(NodeGroup,:nodes) %></strong> <br />
   <% # FIXME: This belongs in the CSS %>
   <font size="-1">
   <%- Node.find(:all, :select => "id,name", :order => Node.default_search_attribute).each do |node| -%>
@@ -28,6 +29,8 @@
 </p>
 
 <p>
-  <strong>Description</strong> <br />
+  <strong><%= tooltip(NodeGroup,:description) %></strong> <br />
   <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %>
 </p>
+
+<%= @tooltips if ttflag %>

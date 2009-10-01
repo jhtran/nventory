@@ -43,6 +43,7 @@ class LbPoolsController < ApplicationController
   # GET /lb_pools/new
   def new
     @lb_pool = LbPool.new
+    @lb_pool.build_lb_profile
     respond_to do |format|
       format.html # show.html.erb
       format.js  { render :action => "inline_new", :layout => false }

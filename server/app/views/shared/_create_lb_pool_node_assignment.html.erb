@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <% remote_form_for( :lb_pool_node_assignment, :url => lb_pool_node_assignments_path ) do |f| %>
   <p><%= Node %>:
   
@@ -8,3 +9,5 @@
   
   <%= submit_tag "Assign", :onclick => "$('lb_pool_node_assignment_node_group_id').value = _lb_pool_id" %> | <%= link_to_function 'Cancel', "Element.show('add_node_assignment_link');Element.hide('create_node_assignment');Element.hide('new_node_id')"%></p>
 <% end %>
+
+<%= @tooltips if ttflag %>

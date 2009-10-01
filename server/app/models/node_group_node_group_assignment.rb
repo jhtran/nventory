@@ -21,8 +21,82 @@ class NodeGroupNodeGroupAssignment < ActiveRecord::Base
     # should constitute a directed _acyclic_ graph.
     if child_group == parent_group || child_group.all_child_groups.include?(parent_group) || parent_group.all_child_groups.include?(child_group)
       errors.add :child_id, "new child #{child_group.name} creates a loop in group hierarchy, check that group for connection back to #{parent_group.name}"
+      return false
+    end
+
+    # 2nd wave of tests -- (Child Groups)
+      # obtain parent's child groups and gauge each's depth
+    pcgs_depth = {}
+    parent_group.child_groups.each do |pcg|
+      pcgs_depth[pcg] = 0
+      cgs_results = _cgs_depth(pcg)
+      cgs_results.each_pair { |k,v| pcgs_depth[k] = v }
+    end
+    # now check the child's child groups and gauge each's depth
+    ccgs_depth = {}
+    child_group.child_groups.each do |ccg|
+      ccgs_depth[ccg] = 0
+      cgs_results = _cgs_depth(ccg)
+      cgs_results.each_pair { |k,v| ccgs_depth[k] = v }
+    end
+
+    ccgs_depth.keys.each do |cg| 
+      if pcgs_depth[cg] 
+        unless pcgs_depth[cg] == (ccgs_depth[cg] +=1)
+          errors.add :child_id, "new child #{child_group.name} creates a loop in group hierarchy due to #{cg.name}, check that group for connection back to #{parent_group.name}"
+          return false
+        end
+      end
+    end
+
+    # 2nd wave of tests -- (Parent Groups)
+      # obtain parent's pARENT groups and gauge each's depth
+    ppgs_depth = {}
+    parent_group.parent_groups.each do |ppg|
+      ppgs_depth[ppg] = 0
+      pgs_results = _pgs_depth(ppg)
+      pgs_results.each_pair { |k,v| ppgs_depth[k] = v }
+    end
+    # now check the parent's PARENT groups and gauge each's depth
+    cpgs_depth = {}
+    child_group.parent_groups.each do |cpg|
+      cpgs_depth[cpg] = 0
+      pgs_results = _pgs_depth(cpg)
+      pgs_results.each_pair { |k,v| cpgs_depth[k] = v }
+    end
+
+    cpgs_depth.keys.each do |cg| 
+      if ppgs_depth[cg] 
+        unless ppgs_depth[cg] == (cpgs_depth[cg] +=1)
+          errors.add :parent_id, "new parent #{parent_group.name} creates a loop in group hierarchy due to #{cg.name}, check that group for connection back to #{parent_group.name}"
+          return false
+        end
+      end
     end
   end
+
+  def _pgs_depth(ng,depth=0)
+    depth += 1
+    pgs_depth = {}
+    ng.parent_groups.each do |pgs|
+      pgs_depth[pgs] = depth
+      pgs_results = _pgs_depth(pgs,depth)
+      pgs_results.each_pair { |k,v| pgs_depth[k] = v }
+    end
+    return pgs_depth
+  end
+
+  def _cgs_depth(ng,depth=0)
+    depth += 1
+    cgs_depth = {}
+    ng.child_groups.each do |cgs|
+      cgs_depth[cgs] = depth
+      cgs_results = _cgs_depth(cgs,depth)
+      cgs_results.each_pair { |k,v| cgs_depth[k] = v }
+    end
+    return cgs_depth
+  end
+  private :_cgs_depth
 
   def after_validation
     # When a new NGNGA is created we need to walk up the parent tree and add

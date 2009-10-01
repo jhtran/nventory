@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+  <td><%= link_to index_row.name, self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Visualize', visualization_node_rack_path(index_row) %></td>
+  <td><%= link_to(index_row.datacenter.name, datacenter_path(index_row.datacenter)) unless !index_row.datacenter %></td>
+  <td><%= index_row.nodes.size %></td>
+  <td><%= index_row.used_u_height %>U</td>
+  <td><%= index_row.free_u_height %>U</td>
+</tr>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,19 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(ToolTip,:model) %></strong> <br /> <%= select_tag :model, options_for_select([[" "]] + @models) %></p>
+<div id="attr"><p><strong><%= tooltip(ToolTip,:attr) %></strong> <br /> <%= select_tag nil %></p></div>
+<p><strong><%= tooltip(ToolTip,:description) %></strong> <font size=-1> <i>( in html format )</i></font><br /> <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %></p>
+
+<div id=indicator_div 
+        style="postition: absolute; left: your_X px; top: your_Y px">
+  <%= image_tag("spinner.gif", :id => 'spinner_gif_id',
+    :style => 'display:none') %>
+</div>
+
+<%= observe_field("model",
+        :frequency => 2,
+        :update => :attr,
+        :before => "Element.show('spinner_gif_id')",
+        :success => "Element.hide('spinner_gif_id')",
+        :url => { :action => :get_unused_model_attrs } ) %>
+
+<%= @tooltips if ttflag %>

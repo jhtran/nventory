@@ -1,5 +1,6 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- @page_title = objects.first.class.to_s.underscore.titleize.pluralize %>
-<h1><%= objects.first.class.to_s.underscore.titleize.pluralize %></h1>
+<h1><%= root_model_tooltip(objects.first.class) || objects.first.class.to_s.underscore.titleize.pluralize %></h1>
 
 <table width="100%">
 <tr>
@@ -39,3 +40,5 @@
    </div>
 <% end %>
 <%= javascript_tag "Element.hide('advanced_csv_export')" -%>
+
+<%= @tooltips if ttflag %>

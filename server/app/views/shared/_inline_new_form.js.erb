@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%= error_messages_for object.class.to_s.underscore.to_sym %>
 
 <% remote_form_for(object.class.to_s.underscore.to_sym, :url => self.send(object.class.to_s.tableize + '_path'), :update => "posts", :html => { :class => 'edit_record_form' }) do |f| %>
@@ -12,3 +13,5 @@
 <div><%= submit_tag 'Create' %> | <%= link_to_function 'Cancel', "Element.hide('new_" + object.class.to_s.underscore + "')" %></div>
 
 <% end -%>
+
+<%= @tooltips if ttflag %>

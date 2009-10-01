@@ -3,10 +3,18 @@ class Node < ActiveRecord::Base
   
   acts_as_reportable
   acts_as_commentable
+  acts_as_audited :except => [:used_space, :avail_space]
 
   has_many :hosted_vips, :foreign_key => "load_balancer_id", :class_name => "Vip"
-  has_one :rack_node_assignment, :dependent => :destroy
-  has_one :rack, :through => :rack_node_assignment
+  has_one :node_rack_node_assignment, :dependent => :destroy
+  has_one :node_rack, :through => :node_rack_node_assignment
+
+  has_many :lb_pool_node_assignments, :dependent => :destroy
+  has_many :lb_pools, :through => :lb_pool_node_assignments
+
+  has_many :volumes_served, :dependent => :destroy, :foreign_key => 'volume_server_id', :class_name => 'Volume'
+  has_many :volume_node_assignments, :dependent => :destroy
+  has_many :volumes_mounted, :through => :volume_node_assignments, :source => :volume
   
   belongs_to :hardware_profile
   belongs_to :operating_system
@@ -17,15 +25,20 @@ class Node < ActiveRecord::Base
   
   has_many :node_group_node_assignments, :dependent => :destroy
   has_many :node_groups, :through => :node_group_node_assignments
+  # Services is an alias of node_groups
+  has_many :services, :source => :service, :through => :node_group_node_assignments
   
   has_many :node_database_instance_assignments
   has_many :database_instances, :through => :node_database_instance_assignments
   
   has_many :produced_outlets, :class_name => "Outlet", :foreign_key => "producer_id", :order => "name", :dependent => :destroy
+  has_many :name_aliases, :foreign_key => "source_id", :order => "name", :dependent => :destroy
 
   has_many :network_interfaces, :dependent => :destroy
   has_many :ip_addresses, :through => :network_interfaces
   has_many :consumed_outlets, :class_name => "Outlet", :as => :consumer, :dependent => :destroy
+  
+  has_many :utilization_metrics, :dependent => :destroy
 
   # Virtual Assignments
   has_many :virtual_assignments_as_host, 
@@ -65,6 +78,7 @@ class Node < ActiveRecord::Base
                             "types: #{CONSOLE_TYPES.join(',')}"
 
   def validate
+    validates_contact
     validates_virtualarch
   end
 
@@ -76,6 +90,33 @@ class Node < ActiveRecord::Base
         errors.add(:virtualarch, "#{virtualarch} - invalid.  Can only be \"xen\" or \"vmware\"\n")
         return false
       end
+    end
+  end
+
+  def validates_contact
+    if (contact.blank? || contact.nil?)
+      return true
+    else
+      flag = []
+      users = contact.split(',')
+      users.each do |user|
+        user.strip!
+        uri = URI.parse("https://sso.yellowpages.com/users.xml?login=#{user}")
+        http = Net::HTTP::Proxy('proxy.yellowpages.local',8080).new(uri.host,uri.port)
+        http.use_ssl = true
+        sso_xmldata = http.get(uri.request_uri).body
+        sso_xmldoc = Hpricot::XML(sso_xmldata)
+        kind = (sso_xmldoc/:kind).innerHTML
+        unless kind == "employee"
+          flag << user
+        end
+      end
+    end
+    if (flag.nil? || flag.empty?)
+      return true 
+    else
+      errors.add(:contact, "Unknown user #{flag.join(' ')} or invalid format specified in contact field.\n(Example: jsmith,mjones,kgates)\n")
+      return false
     end
   end
 
@@ -280,10 +321,18 @@ class Node < ActiveRecord::Base
   end
 
   def services?
-    self.real_node_groups.each do |ng|
-      return true unless (ng.parent_services.empty? || ng.child_services.empty?)
+    self.services.each do |ng|
+      return true unless (ng.parent_services.empty? && ng.child_services.empty?)
     end
     return false
+  end
+
+  def reset_node_groups
+    self.real_node_group_node_assignments.each { |rngna| rngna.destroy }
+  end
+
+  def names
+    self.name_aliases.collect {|na| na.name}.push(self.name).sort
   end
   
 end

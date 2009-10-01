@@ -1,15 +1,17 @@
-<%- @page_title = "LB Pool Profile: " + "[#{ @lb_profile.port}:#{@lb_profile.protocol} / #{@lb_profile.lbmethod} #{ '/ ' + @lb_profile.healthcheck unless @lb_profile.healthcheck.nil? }]" %>
+<%- @tooltips = [] %>
+<%- @page_title = "LB Profile for: #{@lb_profile.lb_pool.name} " %>
 
 <div class="record_view">
 
-<h1>LB Pool Profile: <font color='blue'> <%= " #{ @lb_profile.port}:#{@lb_profile.protocol} , #{@lb_profile.lbmethod} #{ (@lb_profile.healthcheck.blank? || @lb_profile.healthcheck.nil?) ? ', no healthcheck ' : (', ' + @lb_profile.healthcheck) }"  %></font></h1>
-<p><strong>Port: </strong><%= @lb_profile.port%><br />
-<strong>Protocol: </strong><%= @lb_profile.protocol%><br />
-<strong>LBMethod: </strong><%= @lb_profile.lbmethod%><br />
-<strong>Health Check: </strong><%= @lb_profile.healthcheck%><br /></p>
+<h1><%= tooltip(LbPool,:lb_profile) %> for: <%= @lb_profile.lb_pool.name %></font></h1>
+<p><strong><%= tooltip(LbProfile,:lb_pool) %>: </strong><%= @lb_profile.lb_pool.name %><br />
+<p><strong><%= tooltip(LbProfile,:port) %>: </strong><%= @lb_profile.port%><br />
+<strong><%= tooltip(LbProfile,:protocol) %>: </strong><%= @lb_profile.protocol%><br />
+<strong><%= tooltip(LbProfile,:lbmethod,'Load Balancer Method') %>: </strong><%= @lb_profile.lbmethod%><br />
+<strong><%= tooltip(LbProfile,:healthcheck,'Health Check') %>: </strong><%= @lb_profile.healthcheck%><br /></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@lb_profile.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@lb_profile.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(LbProfile,:created_at) %>:</strong> <%= h(@lb_profile.created_at) %><br />
+<strong><%= tooltip(LbProfile,:updated_at) %>:</strong> <%= h(@lb_profile.updated_at) %></p>
 
 </div>
 
@@ -51,3 +53,5 @@
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @lb_profile} %>
 
+
+<%= @tooltips %>

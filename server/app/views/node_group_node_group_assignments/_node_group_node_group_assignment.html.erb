@@ -1,3 +1,6 @@
-<p><strong>Parent:</strong> <br /><%= f.select :parent_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
-<p><strong>Child:</strong> <br /><%= f.select :child_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
-<p><strong>Assigned at:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(NodeGroupNodeGroupAssignment,:parent_group) %>:</strong> <br /><%= f.select :parent_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(NodeGroupNodeGroupAssignment,:child_group) %>:</strong> <br /><%= f.select :child_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(NodeGroupNodeGroupAssignment,:assigned_at) %>:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+
+<%= @tooltips if ttflag %>

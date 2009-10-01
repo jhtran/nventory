@@ -1,0 +1,21 @@
+<%- @tooltips = [] %>
+<%- @page_title = "ToolTip" %>
+
+<div class="record_view">
+
+<h1>ToolTip</h1>
+
+<strong><%= tooltip(ToolTip,:model) %>:</strong> <%= @tool_tip.model %><br />
+<strong><%= tooltip(ToolTip,:attr) %>:</strong> <%= @tool_tip.attr %><br />
+<p><strong><%= tooltip(ToolTip,:description) %>:</strong><br />
+<%= textilize_without_paragraph(h(@tool_tip.description )) %></p>
+
+<p class="metadata"><strong><%= tooltip(ToolTip,:created_at) %>:</strong> <%= h(@tool_tip.created_at) %></p>
+
+</div>
+
+<p><%= link_to 'Edit', edit_tool_tip_path(@tool_tip) %> | 
+<%= link_to 'Delete', tool_tip_path(@tool_tip), :confirm => 'Are you sure?', :method => :delete %></p>
+
+
+<%= @tooltips %>

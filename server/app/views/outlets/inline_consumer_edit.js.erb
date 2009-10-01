@@ -1,6 +1,9 @@
+<%- @tooltips = [] %>
 <% remote_form_for(:outlet, :url => outlet_path(@outlet), :html => { :method => :put }) do |f| %>
   <%= f.select :consumer_id, @consumers, { :include_blank => true } %> 
   <%= f.hidden_field :id, { :value => @outlet.id } %>
   <%= f.hidden_field :consumer_type, { :value => @consumer_type } %>
   <%= submit_tag "Assign" %> | <%= link_to_remote 'Cancel', :url => consumer_outlet_path(@outlet), :method => :get, :update => dom_id(@outlet) %>
 <% end %>
+
+<%= @tooltips %>

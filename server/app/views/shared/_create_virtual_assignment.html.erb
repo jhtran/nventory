@@ -1,0 +1,13 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :virtual_assignment, :url => virtual_assignments_path ) do |f| %>
+  <p><%= Node %>:
+  
+  <%- to_array = Node.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+  
+  <%= f.select( :child_id, to_array, { :include_blank => true } ) %>
+  <%= f.hidden_field( :parent_id, { :value => @node.id } ) %>
+  
+  <%= submit_tag "Assign", :onclick => "$('virtual_assignment_parent_id').value = _node_id" %> | <%= link_to_function 'Cancel', "Element.show('add_virtual_assignment_link');Element.hide('create_virtual_assignment')"%></p>
+<% end %>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,33 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- unless node.volumes_mounted.empty? -%>
+  <table cellspacing="0" class="styled" summary="A list of all volumes this node mounts">
+  <caption><%= tooltip(@node.class,:volumes_mounted,'Network Volumes Mounted') %></caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(Volume,:name) %></th>
+      <th><%= tooltip(VolumeNodeAssignment,:mount) %></th>
+      <th><%= tooltip(Volume,:server) %></th>
+      <th><%= tooltip(Volume,:volume_type) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in node.volume_node_assignments.sort{|a,b| a.volume.name <=> b.volume.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.volume.name, assignment.volume %></td>
+      <td><%= assignment.mount %></td>
+      <td><%= link_to assignment.volume.volume_server.name %></td>
+      <td><%= assignment.volume.volume_type %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => assignment,
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p>This node does not mount any volumes.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

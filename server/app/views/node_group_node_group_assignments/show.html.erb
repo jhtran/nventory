@@ -1,15 +1,16 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Node Group Node Group Assignment: " + h(@node_group_node_group_assignment.parent_group.name) + '<->' + h(@node_group_node_group_assignment.child_group.name) %>
 
 <div class="record_view">
 
-<h1>Node Group Node Group Assignment</h1>
+<h1><%= tooltip(NodeGroup,:node_group_node_group_assignments,'Node Group Node Group Assignment') %></h1>
 
-<p><strong>Parent:</strong> <%= link_to @node_group_node_group_assignment.parent_group.name, node_group_path(@node_group_node_group_assignment.parent_group) %><br />
-<strong>Child:</strong> <%= link_to @node_group_node_group_assignment.child_group.name, node_group_path(@node_group_node_group_assignment.child_group) %><br />
-<strong>Assigned at:</strong> <%= h(@node_group_node_group_assignment.assigned_at.to_formatted_s(:long)) %></p>
+<p><strong><%= tooltip(NodeGroupNodeGroupAssignment,:parent_group) %>:</strong> <%= link_to @node_group_node_group_assignment.parent_group.name, node_group_path(@node_group_node_group_assignment.parent_group) %><br />
+<strong><%= tooltip(NodeGroupNodeGroupAssignment,:child_group) %>:</strong> <%= link_to @node_group_node_group_assignment.child_group.name, node_group_path(@node_group_node_group_assignment.child_group) %><br />
+<strong><%= tooltip(NodeGroupNodeGroupAssignment,:assigned_at) %>:</strong> <%= h(@node_group_node_group_assignment.assigned_at.to_formatted_s(:long)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@node_group_node_group_assignment.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@node_group_node_group_assignment.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(NodeGroupNodeGroupAssignment,:created_at) %>:</strong> <%= h(@node_group_node_group_assignment.created_at) %><br />
+<strong><%= tooltip(NodeGroupNodeGroupAssignment,:updated_at) %>:</strong> <%= h(@node_group_node_group_assignment.updated_at) %></p>
 
 </div>
 
@@ -17,3 +18,5 @@
 <%= link_to 'Delete', node_group_node_group_assignment_path(@node_group_node_group_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @node_group_node_group_assignment} %>
+
+<%= @tooltips %>

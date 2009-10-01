@@ -1,14 +1,15 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if lb_pool.vip_lb_pool_assignments.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of all vips this lb_pool belongs to">
   <caption>VIPs</caption>
   <thead>
   <tr>
-      <th>Name</th>
-      <th>IP Address</th>
-      <th>Port</th>
-      <th>Protocol</th>
-      <th>Load Balancer</th>
-      <th>Datacenter</th>
+      <th><%= tooltip(Vip,:name) %></th>
+      <th><%= tooltip(Vip,:ip_address) %></th>
+      <th><%= tooltip(Vip,:port) %></th>
+      <th><%= tooltip(Vip,:protocol) %></th>
+      <th><%= tooltip(Vip,:load_balancer) %></th>
+      <th><%= tooltip(Vip,:datacenter) %></th>
       <th>&nbsp;</th>
   </tr>
   </thead>
@@ -21,10 +22,10 @@
       <td><%= assignment.vip.protocol %></td>
       <td><%= link_to assignment.vip.load_balancer.name, assignment.vip.load_balancer %></td>
       <td> 
-          <%- if  (assignment.vip.load_balancer.rack.nil? || assignment.vip.load_balancer.rack.datacenter.nil?) -%>
+          <%- if  (assignment.vip.load_balancer.node_rack.nil? || assignment.vip.load_balancer.node_rack.datacenter.nil?) -%>
              <%= '&nbsp' %>
           <%- else -%>
-            <%= link_to assignment.vip.load_balancer.rack.datacenter.name, assignment.vip.load_balancer.rack.datacenter %>
+            <%= link_to assignment.vip.load_balancer.node_rack.datacenter.name, assignment.vip.load_balancer.node_rack.datacenter %>
           <%- end -%>
       </td>
       <td><%= link_to_remote 'Delete',
@@ -39,3 +40,5 @@
 <%- else -%>
   <p>This Load Balancer Service Pool is not assigned to any VIPs.</p>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

@@ -1,13 +1,14 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Audit" %>
 
 <div class="record_view">
 
-<h1>Audit:</h1>
+<h1><%= tooltip(nil,:audit,nil,audits_tooltip) %>:</h1>
 
 <p>
-<strong>ID:</strong> <%= @audit.id.to_s %><br />
-<strong>Version:</strong> <%= @audit.version.to_s %><br />
-<strong>Object:</strong> 
+<strong><%= tooltip(Audit,:id,'ID')%>:</strong> <%= @audit.id.to_s %><br />
+<strong><%= tooltip(Audit,:version)%>:</strong> <%= @audit.version.to_s %><br />
+<strong><%= tooltip(Audit,:object)%>:</strong> 
     <%- def_attr = @audit.auditable_type.constantize.default_search_attribute -%>
     <%- if !@audit.auditable.nil? -%>
       <%- descript = " : #{@audit.auditable.send(def_attr)}" -%>
@@ -21,11 +22,11 @@
       <%- end -%>
     <%- end -%>
     <br />
-<strong>Who:</strong>
+<strong><%= tooltip(Account,:username)%>:</strong>
     <%= link_to @audit.user.login, self.send('account_path', @audit.user) unless @audit.user.nil? %><br />
-<strong>Type:</strong>
+<strong><%= tooltip(Audit,:action)%>:</strong>
     <%= @audit.action %><br />
-<strong>Attributes:</strong>
+<strong><%= tooltip(Audit,:changes)%>:</strong>
     <table cellspacing="0" class="arattributes" summary="Changes in this version of the model.">
       <%- unless @audit.changes.nil? -%>
         <%- @audit.changes.each do |attribute, oldnew| -%>
@@ -61,6 +62,7 @@
     </table><br/>
 </p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@audit.created_at) %></p>
+<p class="metadata"><strong><%= tooltip(Audit,:created_at)%>:</strong> <%= h(@audit.created_at) %></p>
 
 </div>
+<%= @tooltips %>

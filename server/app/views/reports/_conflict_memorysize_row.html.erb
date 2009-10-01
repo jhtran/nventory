@@ -1,0 +1,12 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%">
+  <%= link_to 'View', self.send(conflict_memorysize_row.class.to_s.underscore + '_path', conflict_memorysize_row) %> / 
+  <%= link_to 'Edit', self.send('edit_' + conflict_memorysize_row.class.to_s.underscore + '_path', conflict_memorysize_row) %>
+  <td><%= link_to conflict_memorysize_row.name, self.send(conflict_memorysize_row.class.to_s.downcase + '_path', conflict_memorysize_row) %></td>
+  <td><%= conflict_memorysize_row.physical_memory %></td>
+  <td><%= conflict_memorysize_row.os_memory %></td>
+  <td><%= conflict_memorysize_row.updated_at.to_s %></td>
+</tr>
+
+<%= @tooltips if ttflag %>

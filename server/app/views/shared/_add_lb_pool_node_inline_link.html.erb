@@ -1,1 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%= link_to_function 'Add Node Assignment', "Element.show('create_node_assignment');Element.hide('add_node_assignment_link');$('lb_pool_node_assignment_node_group_id').value=''" %>
+
+<%= @tooltips if ttflag %>

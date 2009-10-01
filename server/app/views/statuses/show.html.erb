@@ -1,14 +1,15 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Status: " + h(@status.name) %>
 
 <div class="record_view">
 
-<h1>Status: <%=h @status.name %></h1>
+<h1><%= tooltip(Node,:status) %>: <%=h @status.name %></h1>
 
-<p><strong>Description:</strong><br />
+<p><strong><%= tooltip(Status,:description) %>:</strong><br />
 <%= textilize_without_paragraph(h(@status.description)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@status.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@status.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(Status,:created_at) %>:</strong> <%= h(@status.created_at) %><br />
+<strong><%= tooltip(Status,:updated_at) %>:</strong> <%= h(@status.updated_at) %></p>
 
 </div>
 
@@ -22,3 +23,5 @@
 <%= link_to 'Delete', status_path(@status), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @status} %>
+
+<%= @tooltips %>

@@ -1,0 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= link_to_function 'Add Guest VM', "Element.show('create_virtual_assignment');Element.hide('add_virtual_assignment_link');$('virtual_assignment_parent_id').value=''" %>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,18 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr class="<%= cycle('odd', 'even') -%>">
+<td nowrap="nowrap" width="5%">
+<%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / 
+<%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+<td><%= index_row.service.name %></td>
+<td><%= index_row.dev_url %></td>
+<td><%= index_row.qa_url %></td>
+<td><%= index_row.stg_url %></td>
+<td><%= index_row.prod_url %></td>
+<td><%= index_row.repo_url %></td>
+<td><%= index_row.contact %></td>
+<td><%= index_row.codelang %></td>
+<td><%= index_row.external %></td>
+<td><%= index_row.pciscope %></td>
+</tr>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,30 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if node.node_rack -%>
+  <table cellspacing="0" class="styled" summary="Node Rack assignment for this node.">
+  <caption><%= tooltip(@node.class,:node_rack,'Rack') %></caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(NodeRack,:name) %></th>
+      <th><%= tooltip(NodeRack,:assigned_at) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in [node.node_rack_node_assignment] %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.node_rack.name, node_rack_path(assignment.node_rack) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), node_rack_node_assignment_path(assignment) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => node_rack_node_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p><strong><%= tooltip(@node.class,:node_rack,'Rack') %>:</strong></p>
+  <p>This node is not assigned to a server rack.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,14 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<strong><%= tooltip(Service,:child_services,'Service Clients') %>:</strong>
+<%- if @service.child_services.size > 0 -%>
+  <ul>
+  <div id="parent_service_assignments">
+    <%= render :partial => 'shared/child_service_assignment', :collection => @service.service_assignments_as_parent %>
+  </div>
+  </ul>
+<%- else -%>
+  <p>There are no child services for this node </p>
+<%- end -%>
+
+
+<%= @tooltips if ttflag %>

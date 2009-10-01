@@ -1,8 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr>
-  <th>ID</th>
+  <th><%= tooltip(Audit,:id,'ID')%></th>
   <th <%= sort_td_class_helper "version" %> > <%= sort_link_helper "Version (Date)", "created_at" %></th>
-  <th>Object</th>
-  <th>Who</th>
-  <th>Type</th>
-  <th>Attributes</th>
+  <th><%= tooltip(Audit,:auditable_type,'Object Type')%></th>
+  <th><%= tooltip(Account,:username)%></th>
+  <th><%= tooltip(Audit,:action)%></th>
+  <th><%= tooltip(Audit,:changes)%></th>
 </tr>
+
+<%= @tooltips if ttflag %>

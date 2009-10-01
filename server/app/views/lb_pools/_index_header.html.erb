@@ -1,9 +1,12 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr>
   <th nowrap="nowrap" width="5%">&nbsp;</th>
   <th <%= sort_td_class_helper "name" %> > <%= sort_link_helper "Name", "name" %></th>
-  <th>VIPs</th>
-  <th>Port</th>
-  <th>Protocol</th>
-  <th>LBMethod</th>
-  <th>Health Check</th>
+  <th><%= tooltip(LbPool,:vip,'VIP') %></th>
+  <th><%= tooltip(LbPool,:port) %></th>
+  <th><%= tooltip(LbPool,:protocol) %></th>
+  <th><%= tooltip(LbPool,:lbmethod) %></th>
+  <th><%= tooltip(LbPool,:healthcheck) %></th>
 </tr>
+
+<%= @tooltips if ttflag %>

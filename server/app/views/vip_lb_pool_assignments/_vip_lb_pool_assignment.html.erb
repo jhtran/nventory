@@ -1,3 +1,6 @@
-<p><strong>Vip:</strong> <br /><%= f.select :vip_id, Vip.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
-<p><strong>LbPool:</strong> <br /><%= f.select :lb_pool_id, LbPool.def_scope.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
-<p><strong>Assigned at:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(VipLbPoolAssignment,:vip) %>:</strong> <br /><%= f.select :vip_id, Vip.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(VipLbPoolAssignment,:lb_pool) %>:</strong> <br /><%= f.select :lb_pool_id, LbPool.def_scope.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(VipLbPoolAssignment,:assigned_at) %>:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+
+<%= @tooltips if ttflag %>

@@ -89,6 +89,7 @@ class StatusesController < ApplicationController
   def destroy
     @status = Status.find(params[:id])
     @status.destroy
+    flash[:error] = @status.errors.on_base unless @status.errors.empty?
 
     respond_to do |format|
       format.html { redirect_to statuses_url }

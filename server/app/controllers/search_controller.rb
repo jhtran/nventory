@@ -1,6 +1,6 @@
 class SearchController < ApplicationController
 
-  def search(allparams)
+  def search(allparams, disable_includes=false)
     @mainmodel = allparams[:mainmodel]
     @params = allparams[:webparams]
     @special_joins = allparams[:special_joins]
@@ -24,21 +24,21 @@ class SearchController < ApplicationController
     # Set the sort var ; used later in the find query
     if @params['sort'].nil?
       @params['sort'] = @mainmodel.default_search_attribute
-      sort = "#{@mainmodel.to_s.tableize}.#{def_attr}"
+      sort = "#{@mainmodel.table_name}.#{def_attr}"
     elsif @params['sort'] == def_attr.to_s
-      sort = "#{@mainmodel.to_s.tableize}.#{def_attr}"
+      sort = "#{@mainmodel.table_name}.#{def_attr}"
     elsif @params['sort'] == "#{def_attr}_reverse"
-      sort = "#{@mainmodel.to_s.tableize}.#{def_attr} DESC"
+      sort = "#{@mainmodel.table_name}.#{def_attr} DESC"
     elsif @params['sort'] =~ /(.*)_reverse/
       this_model = $1.camelize.constantize
-      sort = "#{this_model.to_s.tableize}.#{this_model.default_search_attribute} DESC"
+      sort = "#{this_model.table_name}.#{this_model.default_search_attribute} DESC"
     else
       @params['sort'] =~ /(.*)/
       this_model = $1.camelize.constantize
-      sort = "#{this_model.to_s.tableize}.#{this_model.default_search_attribute}"
+      sort = "#{this_model.table_name}.#{this_model.default_search_attribute}"
     end
 
-    @content_column_names = @mainmodel.content_columns.collect { |c| c.name }
+    @content_column_names = @mainmodel.columns.collect { |c| c.name }
     
     # extract searchquery and joins
     local_model_results = parse_local_model_params
@@ -86,29 +86,53 @@ class SearchController < ApplicationController
       conditions_values = []
       searchquery_order.each do |key|
         value = searchquery[key]
-        if value.kind_of? Array
-          conditions_tmp = []
-          value.each do |v|
-            conditions_tmp.push(key)
-            conditions_values.push(v)
+        if ( key =~ /(\w+).name LIKE \?/i )  && ($1.classify.constantize.reflections.keys.include?(:name_aliases))
+            @includes['name_aliases'.to_sym] = {}
+            key = "#{$1}.name LIKE ? OR name_aliases.name LIKE ?"
+            if value.kind_of? Array
+              conditions_tmp = []
+              value.each do |v|
+                conditions_tmp.push(key)
+                conditions_values.push(v,v)
+              end
+              conditions_query.push( '(' + conditions_tmp.join(' OR ') + ')' )
+            else
+              conditions_query.push(key)
+              conditions_values.push(value,value)
+            end
+        else 
+          if value.kind_of? Array
+            conditions_tmp = []
+            value.each do |v|
+              conditions_tmp.push(key)
+              conditions_values.push(v)
+            end
+            conditions_query.push( '(' + conditions_tmp.join(' OR ') + ')' )
+          else
+            conditions_query.push(key)
+            conditions_values.push(value)
           end
-          conditions_query.push( '(' + conditions_tmp.join(' OR ') + ')' )
-        else
-          conditions_query.push(key)
-          conditions_values.push(value)
         end
       end
       conditions_string = conditions_query.join(' AND ')
+      ## Ugly hack for PS-412 - too many includes along with the join and conditions for 'node.name like '%blah%' and name_aliases.name like '%blah%' is too much 
+         # and causes massive rails memory spike , when issued via CLI --allfields 
+      if (disable_includes || @includes.keys.size > 15 )
+        search_includes = {}
+        default_includes.each { |include| search_includes[include] = {}}
+      else
+        search_includes = @includes
+      end
       # If the user chose to search for deleted objects
         if (@params[:format]) && (@params[:format] == 'csv')
           search_results = @mainmodel.def_scope.report_table(:all,
-                               :include => convert_includes(@includes),
+                               :include => convert_includes(search_includes),
                                :joins => joins.keys.join(' '),
                                :conditions => [ conditions_string, *conditions_values ],
                                :order => sort)
         else
           search_results = @mainmodel.def_scope.find(:all,
-                               :include => @includes,
+                               :include => search_includes,
                                :joins => joins.keys.join(' '),
                                :conditions => [ conditions_string, *conditions_values ],
                                :order => sort)
@@ -213,7 +237,7 @@ class SearchController < ApplicationController
           value.each { |v| search_values.push('%' + v + '%') }
         # if find webgui 'webregex_*' checkbox tag then conver to REGEXP query
         elsif @params['webregex_' + key]
-          searchquery["#{@mainmodel.to_s.tableize}.#{key} REGEXP ?"] = value
+          searchquery["#{@mainmodel.table_name}.#{key} REGEXP ?"] = value
         # support for range searches (1..121) is 1 through 121.
         elsif value =~ /\[([\d,-]+)\]/
           match = $1
@@ -236,25 +260,25 @@ class SearchController < ApplicationController
           search_values.push('%' + value + '%')
         end
         if !search_values.empty?
-           searchquery["#{@mainmodel.to_s.tableize}.#{key} LIKE ?"] = search_values 
+           searchquery["#{@mainmodel.table_name}.#{key} LIKE ?"] = search_values 
         end
       ## PART 2 - EXACT 'IS' or 'IN' SQL QUERIES ##
       elsif key =~ /^exact_(.+)$/ && @content_column_names.include?($1) && !value.empty?
         if value.kind_of? Hash
-          searchquery["#{@mainmodel.to_s.tableize}.#{$1} IN (?)"] = value.values
+          searchquery["#{@mainmodel.table_name}.#{$1} IN (?)"] = value.values
         elsif value.kind_of? Array
-          searchquery["#{@mainmodel.to_s.tableize}.#{$1} IN (?)"] = value
+          searchquery["#{@mainmodel.table_name}.#{$1} IN (?)"] = value
         else
-          searchquery["#{@mainmodel.to_s.tableize}.#{$1} = ?"] = value
+          searchquery["#{@mainmodel.table_name}.#{$1} = ?"] = value
         end
       ## PART 3 - 'REGEXP' SQL QUERIES ##
       elsif key =~ /^regex_(.+)$/ && @content_column_names.include?($1) && !value.empty?
         if value.kind_of? Hash
-          searchquery["#{@mainmodel.to_s.tableize}.#{$1} REGEXP (?)"] = value.values
+          searchquery["#{@mainmodel.table_name}.#{$1} REGEXP (?)"] = value.values
         elsif value.kind_of? Array
-          searchquery["#{@mainmodel.to_s.tableize}.#{$1} REGEXP (?)"] = value
+          searchquery["#{@mainmodel.table_name}.#{$1} REGEXP (?)"] = value
         else
-          searchquery["#{@mainmodel.to_s.tableize}.#{$1} REGEXP ?"] = value
+          searchquery["#{@mainmodel.table_name}.#{$1} REGEXP ?"] = value
         end
       ## PART 4 - 'NOT LIKE' SQL QUERIES ##
           ## SUPPLEMENTED BY A SECOND COMPARISON QUERY (SEE INF-257) ##
@@ -268,8 +292,8 @@ class SearchController < ApplicationController
           search_values.push('%' + value + '%')
         end
         if !search_values.empty?
-           searchquery["#{@mainmodel.to_s.tableize}.#{$1} NOT LIKE ?"] = search_values 
-           comparequery[:exclude]["#{@mainmodel.to_s.tableize}.#{$1}"] = search_values 
+           searchquery["#{@mainmodel.table_name}.#{$1} NOT LIKE ?"] = search_values 
+           comparequery[:exclude]["#{@mainmodel.table_name}.#{$1}"] = search_values 
         end
       ## PART 5 - SECOND COMPARISON QUERY (SEE INF-248 && INF-257) ##
       elsif key =~ /^and_(.+)$/ && @content_column_names.include?($1) && !value.empty? 
@@ -282,7 +306,7 @@ class SearchController < ApplicationController
           search_values.push('%' + value + '%')
         end
         if !search_values.empty?
-           comparequery[:and]["#{@mainmodel.to_s.tableize}.#{$1}"] = search_values 
+           comparequery[:and]["#{@mainmodel.table_name}.#{$1}"] = search_values 
         end
       ## BONUS -- search_for_assoc doesn't like AUdit because of it's polymorphic nature so this special band-aid in place.
       elsif @mainmodel == Audit && key == 'user_id' && value

@@ -1,10 +1,11 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Dashboard" %>
 
 <div id="dashboard_menu">
 
-<h3>Nodes</h3>
+<h3><%= tooltip(nil,:nodes,nil,nodes_tooltip)%></h3>
 <ul>
-  Search by name: <% form_tag nodes_path, :method => :get do -%>
+  Search by <%= tooltip(Node,:name,'name')%>: <% form_tag nodes_path, :method => :get do -%>
     <%= text_field_tag 'name' -%><br />
   <% end %>
   <br />
@@ -16,7 +17,7 @@
   <li><%= dashboard_pulldown_form_for_model(Node, Status.find(:all, :order => Status.default_search_attribute)) %></li>
 </ul>
 
-<h3>Datacenters</h3>
+<h3><%= tooltip(Rack,:datacenter,'Datacenters')%></h3>
 <ul>
   <li><%= link_to 'Add New Datacenter', new_datacenter_path %></li>
   <li><%= link_to 'View All Datacenters', datacenters_path %></li>
@@ -41,10 +42,10 @@
 <tbody>
 <tr>
     <td valign="top">
-      Datacenters: <%= Datacenter.count %><br/>
-      Racks: <%= Rack.count %><br/>
-      Nodes: <%= Node.count %><br/>
-      VIPs: <%= Vip.count %><br/>
+      <%= root_model_tooltip(Datacenter)%>: <%= Datacenter.count %><br/>
+      <%= root_model_tooltip(NodeRack)%>: <%= NodeRack.count %><br/>
+      <%= root_model_tooltip(Node)%>: <%= Node.count %><br/>
+      <%= root_model_tooltip(Vip)%>: <%= Vip.count %><br/>
     </td>
 </tr>
 </tbody>
@@ -52,12 +53,15 @@
 
 <script type="text/javascript" src="/javascripts/swfobject.js"></script>
 <p><center><%= @nodes_over_time_chart %></center></p>
+<p><center><small>(<%= "based on sample data from <font color=green>#{@percent_cpu_node_count}</font> nodes" if @percent_cpu_node_count %>)</small></center>
+<center><%= @global_cpu_percent_chart %></center></p>
 <p><center><%= @operating_systems_pie %></center></p>
 <p><center><%= @hardware_profiles_pie %></center></p>
 
 </div>
 
 <%- # Don't show the sample data link if the database already has some data -%>
-<%- if !Datacenter.find(:first) && !Rack.find(:first) && !Node.find(:first) -%>
+<%- if !Datacenter.find(:first) && !NodeRack.find(:first) && !Node.find(:first) -%>
   <p><%= link_to "Setup Sample Data", { :action => "setup_sample_data" } %></p>
 <%- end -%>
+<%= @tooltips %>

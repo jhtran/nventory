@@ -1,6 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <div id="version_information">
 <p>
 <%- version_url = self.send('version_history_' + object.class.to_s.underscore + '_path', object) -%>
 <%= link_to_remote 'Fetch Version History', { :url => version_url, :method => :get, :update => 'version_information' }, :href => version_url %>
 </p>
 </div>
+<%= @tooltips if ttflag %>

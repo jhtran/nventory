@@ -1,0 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<ul>
+  <%- node.name_aliases.sort {|a,b| a.name <=> b.name}.each do |nalias| -%>
+    <li><%= link_to nalias.name, nalias %></li>
+  <%- end -%>
+</ul>
+
+<%= @tooltips if ttflag %>

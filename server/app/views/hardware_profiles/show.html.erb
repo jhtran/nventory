@@ -1,34 +1,35 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Hardware Profile: " + h(@hardware_profile.name) %>
 
 <div class="record_view">
 
-<h1>Hardware Profile: <%=h @hardware_profile.name %></h1>
+<h1><%= tooltip(Node,:hardware_profile) %>: <%=h @hardware_profile.name %></h1>
 
-<p><strong>Manufacturer:</strong> <%=h @hardware_profile.manufacturer %><br />
-<strong>Model:</strong> <%=h @hardware_profile.model %><br />
-<strong>Rack size:</strong> <%=h @hardware_profile.rack_size %><br />
-<strong>Memory:</strong> <%=h @hardware_profile.memory %><br />
-<strong>Disk:</strong> <%=h @hardware_profile.disk %><br />
-<strong>NICs:</strong> <%=h @hardware_profile.nics %><br />
-<strong>Power supply slot count:</strong> <%=h @hardware_profile.power_supply_slot_count %><br />
-<strong>Power supply count:</strong> <%=h @hardware_profile.power_supply_count %><br />
-<strong>Power consumption:</strong> <%=h @hardware_profile.power_consumption %><br />
-<strong>Processor manufacturer:</strong> <%=h @hardware_profile.processor_manufacturer %><br />
-<strong>Processor model:</strong> <%=h @hardware_profile.processor_model %><br />
-<strong>Processor speed:</strong> <%=h @hardware_profile.processor_speed %><br />
-<strong>Processor socket count:</strong> <%=h @hardware_profile.processor_socket_count %><br />
-<strong>Processor count:</strong> <%=h @hardware_profile.processor_count %><br />
-<strong>Outlet count:</strong> <%=h @hardware_profile.outlet_count %><br />
-<strong>Outlet type:</strong> <%=h @hardware_profile.outlet_type %><br />
-<strong>Cards:</strong> <%=h @hardware_profile.cards %><br />
-<strong>Visualization Color:</strong> <code style="color:<%=h @hardware_profile.visualization_color %>;"><%=h @hardware_profile.visualization_color %></code><br />
-<strong>Estimated Cost:</strong> <%= number_to_currency(@hardware_profile.estimated_cost) %><br /></p>
+<p><strong><%= tooltip(HardwareProfile,:manufacturer) %>:</strong> <%=h @hardware_profile.manufacturer %><br />
+<strong><%= tooltip(HardwareProfile,:model) %>:</strong> <%=h @hardware_profile.model %><br />
+<strong><%= tooltip(HardwareProfile,:rack_size) %>:</strong> <%=h @hardware_profile.rack_size %><br />
+<strong><%= tooltip(HardwareProfile,:memory) %>:</strong> <%=h @hardware_profile.memory %><br />
+<strong><%= tooltip(HardwareProfile,:disk) %>:</strong> <%=h @hardware_profile.disk %><br />
+<strong><%= tooltip(HardwareProfile,:nics) %>:</strong> <%=h @hardware_profile.nics %><br />
+<strong><%= tooltip(HardwareProfile,:power_supply_slot_count) %>:</strong> <%=h @hardware_profile.power_supply_slot_count %><br />
+<strong><%= tooltip(HardwareProfile,:power_supply_count) %>:</strong> <%=h @hardware_profile.power_supply_count %><br />
+<strong><%= tooltip(HardwareProfile,:power_consumption) %>:</strong> <%=h @hardware_profile.power_consumption %><br />
+<strong><%= tooltip(HardwareProfile,:processor_manufacturer) %>:</strong> <%=h @hardware_profile.processor_manufacturer %><br />
+<strong><%= tooltip(HardwareProfile,:processor_model) %>:</strong> <%=h @hardware_profile.processor_model %><br />
+<strong><%= tooltip(HardwareProfile,:processor_speed) %>:</strong> <%=h @hardware_profile.processor_speed %><br />
+<strong><%= tooltip(HardwareProfile,:processor_socket_count) %>:</strong> <%=h @hardware_profile.processor_socket_count %><br />
+<strong><%= tooltip(HardwareProfile,:processor_count) %>:</strong> <%=h @hardware_profile.processor_count %><br />
+<strong><%= tooltip(HardwareProfile,:outlet_count) %>:</strong> <%=h @hardware_profile.outlet_count %><br />
+<strong><%= tooltip(HardwareProfile,:outlet_type) %>:</strong> <%=h @hardware_profile.outlet_type %><br />
+<strong><%= tooltip(HardwareProfile,:cards) %>:</strong> <%=h @hardware_profile.cards %><br />
+<strong><%= tooltip(HardwareProfile,:visualization_color) %>:</strong> <code style="color:<%=h @hardware_profile.visualization_color %>;"><%=h @hardware_profile.visualization_color %></code><br />
+<strong><%= tooltip(HardwareProfile,:estimated_cost) %>:</strong> <%= number_to_currency(@hardware_profile.estimated_cost) %><br /></p>
 
-<p><strong>Description:</strong><br />
+<p><strong><%= tooltip(HardwareProfile,:description) %>:</strong><br />
 <%= textilize_without_paragraph(h(@hardware_profile.description)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@hardware_profile.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@hardware_profile.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(HardwareProfile,:created_at) %>:</strong> <%= h(@hardware_profile.created_at) %><br />
+<strong><%= tooltip(HardwareProfile,:updated_at) %>:</strong> <%= h(@hardware_profile.updated_at) %></p>
 
 </div>
 
@@ -48,3 +49,5 @@
 <%= link_to 'Delete', hardware_profile_path(@hardware_profile), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @hardware_profile} %>
+
+<%= @tooltips %>

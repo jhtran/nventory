@@ -1,3 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%= will_paginate objects %>
 
 <table cellspacing="0" class="styled">
@@ -8,3 +9,4 @@
 <%= render :partial => objects.first.class.to_s.tableize + '/index_row', :collection => objects %>
 </tbody>
 </table>
+<%= @tooltips if ttflag %>

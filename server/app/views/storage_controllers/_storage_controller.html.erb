@@ -1,0 +1,18 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(StorageController,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+
+<p><strong><%= tooltip(StorageController,:physical) %></strong> <br /> <%= f.check_box :physical%></p>
+
+<p><strong><%= tooltip(StorageController,:controller_type) %></strong> <br /> <%= f.text_field :controller_type%></p>
+
+<p><strong><%= tooltip(StorageController,:bus_interface) %></strong> <br /> <%= f.text_field :bus_interface%></p>
+
+<p><strong><%= tooltip(StorageController,:slot) %></strong> <br /> <%= f.text_field :slot%></p>
+
+<p><strong><%= tooltip(StorageController,:firmware) %></strong> <br /> <%= f.text_field :firmware%></p>
+
+<p><strong><%= tooltip(StorageController,:cache_size) %></strong> <br /> <%= f.text_field :cache_size%></p>
+
+<p><strong><%= tooltip(StorageController,:batteries) %></strong> <br /> <%= f.text_field :batteries%></p>
+
+<%= @tooltips if ttflag %>

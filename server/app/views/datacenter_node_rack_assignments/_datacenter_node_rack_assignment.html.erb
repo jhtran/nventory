@@ -1,0 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(DatacenterNodeRackAssignnment,:datacenter) %>:</strong> <br /><%= f.select :datacenter_id, Datacenter.find(:all, :order => 'name').collect { |d| [ d.name, d.id ] }, { :include_blank => true } %></p>
+
+<p><strong><%= tooltip(DatacenterNodeRackAssignnment,:node_rack,'Rack') %>:</strong> <br /><%= f.select :rack_id, NodeRack.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] }, { :include_blank => true } %></p>
+
+<p><strong><%= tooltip(DatacenterNodeRackAssignnment,:assigned_at) %>:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th><%= tooltip(VolumeNodeAssignment,:volume) %></th>
+  <th><%= tooltip(VolumeNodeAssignment,:node) %></th>
+  <th><%= tooltip(VolumeNodeAssignment,:mount) %></th>
+  <th><%= tooltip(VolumeNodeAssignment,:configf) %></th>
+  <th <%= sort_td_class_helper "assigned_at" %> > <%= sort_link_helper "Assigned At", "assigned_at" %></th>
+</tr>
+
+<%= @tooltips if ttflag %>

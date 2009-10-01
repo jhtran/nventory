@@ -1,1 +1,1 @@
-<strong><%= @csvparams['object_class'].to_s.tableize.capitalize %> export will be emailed to <%= @csvparams[:username] + "@attinteractive.com" %> momentarily.</strong>
+<strong><%= @csvparams['object_class'].to_s.tableize.capitalize %> export will be emailed to <%= @csvparams[:username] + "@#{EMAIL_SUFFIX}" %> momentarily.</strong>

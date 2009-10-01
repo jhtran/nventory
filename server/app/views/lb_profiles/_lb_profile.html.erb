@@ -1,16 +1,23 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p>
-  <strong>Port</strong> <em>*</em> <br />
+  <strong><%= tooltip(LbProfile,:lb_pool) %></strong> <em>*</em> <br />
+  <%= f.select :lb_pool, LbPool.def_scope.find(:all, :select => 'name').collect{|lbpool| lbpool.name} %>
+</p>
+<p>
+  <strong><%= tooltip(LbProfile,:port) %></strong> <em>*</em> <br />
   <%= f.text_field :port %>
 </p>
 <p>
-  <strong>Protocol</strong> <em>*</em> <br />
+  <strong><%= tooltip(LbProfile,:protocol) %></strong> <em>*</em> <br />
   <%= f.select :protocol, $protocols %>
 </p>
 <p>
-  <strong>Load Balancer Method</strong> <em>*</em> <br />
+  <strong><%= tooltip(LbProfile,:lbmethod,'Load Balancer Method') %></strong> <em>*</em> <br />
   <%= f.select :lbmethod, $lbmethods %>
 </p>
 <p>
-  <strong>Health Check (Monitor)</strong><br />
+  <strong><%= tooltip(LbProfile,:healthcheck) %></strong><br />
   <%= f.text_field :healthcheck %>
 </p>
+
+<%= @tooltips if ttflag %>

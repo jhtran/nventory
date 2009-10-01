@@ -1,3 +1,6 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%form_tag('/csv/export', :method => :get) do -%>
    <%= submit_tag 'Export CSV File' %>
 <%end%>
+
+<%= @tooltips if ttflag %>

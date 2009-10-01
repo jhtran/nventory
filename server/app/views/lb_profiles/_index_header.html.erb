@@ -1,7 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr>
   <th nowrap="nowrap" width="5%">&nbsp;</th>
-  <th <%= sort_td_class_helper "Port" %> > <%= sort_link_helper "Port", "port" %></th>
-  <th>Protocol</th>
-  <th>LBMethod</th>
-  <th>Health Check</th>
+  <th <%= sort_td_class_helper "LbPool" %> > <%= sort_link_helper "LbPool", "lb_pool" %></th>
+  <th><%= tooltip(LbProfile,:port) %></th>
+  <th><%= tooltip(LbProfile,:protocol) %></th>
+  <th><%= tooltip(LbProfile,:lbmethod,'LB Method') %></th>
+  <th><%= tooltip(LbProfile,:healthcheck,'Health Check') %></th>
 </tr>
+
+<%= @tooltips if ttflag %>

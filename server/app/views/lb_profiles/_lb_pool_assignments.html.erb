@@ -1,14 +1,15 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if lb_profile.vip_lb_profile_assignments.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of all vips this lb_profile belongs to">
   <caption>VIPs</caption>
   <thead>
   <tr>
-      <th>Name</th>
-      <th>IP Address</th>
-      <th>Port</th>
-      <th>Protocol</th>
-      <th>Load Balancer</th>
-      <th>Datacenter</th>
+      <th><%= tooltip(Vip,:name) %></th>
+      <th><%= tooltip(Vip,:ip_address) %></th>
+      <th><%= tooltip(Vip,:port) %></th>
+      <th><%= tooltip(Vip,:protocol) %></th>
+      <th><%= tooltip(Vip,:load_balancer) %></th>
+      <th><%= tooltip(NodeRack,:datacenter) %></th>
       <th>&nbsp;</th>
   </tr>
   </thead>
@@ -20,7 +21,7 @@
       <td><%= assignment.vip.port %></td>
       <td><%= assignment.vip.protocol %></td>
       <td><%= link_to assignment.vip.load_balancer.name, assignment.vip.load_balancer %></td>
-      <td><%= link_to assignment.vip.load_balancer.rack.datacenter.name, assignment.vip.load_balancer.rack.datacenter %></td>
+      <td><%= link_to assignment.vip.load_balancer.node_rack.datacenter.name, assignment.vip.load_balancer.node_rack.datacenter %></td>
       <td><%= link_to_remote 'Delete',
                               :url => assignment,
                               :confirm => 'Are you sure?',
@@ -33,3 +34,5 @@
 <%- else -%>
   <p>This Load Balancer Service Pool is not assigned to any VIPs.</p>
 <%- end -%>
+
+<%= @tooltips if ttflag %>

@@ -1,15 +1,16 @@
+<%- @tooltips = [] %>
 <%- @page_title = "Service Service Assignment: " + h(@service_service_assignment.parent_service.name) + '<->' + h(@service_service_assignment.child_service.name) %>
 
 <div class="record_view">
 
-<h1>Service Service Assignment</h1>
+<h1><%= tooltip(Service,:service_assignment_as_parent, 'Service Service Assignment') %></h1>
 
-<p><strong>Parent:</strong> <%= link_to @service_service_assignment.parent_service.name, node_group_path(@service_service_assignment.parent_service) %><br />
-<strong>Child:</strong> <%= link_to @service_service_assignment.child_service.name, node_group_path(@service_service_assignment.parent_service) %><br />
-<strong>Assigned at:</strong> <%= h(@service_service_assignment.assigned_at.to_formatted_s(:long)) %></p>
+<p><strong><%= tooltip(ServiceServiceAssignment,:parent_service) %>:</strong> <%= link_to @service_service_assignment.parent_service.name, node_group_path(@service_service_assignment.parent_service) %><br />
+<strong><%= tooltip(ServiceServiceAssignment,:child_service) %>:</strong> <%= link_to @service_service_assignment.child_service.name, node_group_path(@service_service_assignment.parent_service) %><br />
+<strong><%= tooltip(ServiceServiceAssignment,:assigned_at) %>:</strong> <%= h(@service_service_assignment.assigned_at.to_formatted_s(:long)) %></p>
 
-<p class="metadata"><strong>Created at:</strong> <%= h(@service_service_assignment.created_at) %><br />
-<strong>Updated at:</strong> <%= h(@service_service_assignment.updated_at) %></p>
+<p class="metadata"><strong><%= tooltip(ServiceServiceAssignment,:created_at) %>:</strong> <%= h(@service_service_assignment.created_at) %><br />
+<strong><%= tooltip(ServiceServiceAssignment,:updated_at) %>:</strong> <%= h(@service_service_assignment.updated_at) %></p>
 
 </div>
 
@@ -17,3 +18,5 @@
 <%= link_to 'Delete', service_service_assignment_path(@service_service_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @service_service_assignment} %>
+
+<%= @tooltips %>

@@ -1,0 +1,12 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if @allobjects.empty? -%>
+  <strong><font color="red">No <%= @model %> objects found.</font></strong>
+<%- else -%>
+  <p>
+    <%= "#{@model}" %>:<br />
+    <%= select_tag "name_alias[source_id]", options_for_select(@allobjects) %>
+  </p>
+  <%= hidden_field(:name_alias, :source_type, :value => @model) %>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

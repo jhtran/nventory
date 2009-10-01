@@ -1,11 +1,14 @@
-<p><strong>Network</strong> <em>*</em> <br /> <%= f.text_field :network %></p>
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(Subnet,:network) %></strong> <em>*</em> <br /> <%= f.text_field :network %></p>
 
-<p><strong>Netmask</strong> <em>*</em> <br /> <%= f.text_field :netmask %></p>
+<p><strong><%= tooltip(Subnet,:netmask) %></strong> <em>*</em> <br /> <%= f.text_field :netmask %></p>
 
-<p><strong>Broadcast</strong> <em>*</em> <br /> <%= f.text_field :broadcast %></p>
+<p><strong><%= tooltip(Subnet,:broadcast) %></strong> <em>*</em> <br /> <%= f.text_field :broadcast %></p>
 
-<p><strong>Gateway</strong> <br /> <%= f.text_field :gateway %></p>
+<p><strong><%= tooltip(Subnet,:gateway) %></strong> <br /> <%= f.text_field :gateway %></p>
 
-<p><strong>Node group:</strong> <br /><%= f.select :node_group_id, NodeGroup.find(:all, :order => 'name').collect { |o| [ o.name, o.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(Subnet,:node_group) %>:</strong> <br /><%= f.select :node_group_id, NodeGroup.find(:all, :order => 'name').collect { |o| [ o.name, o.id ] }, { :include_blank => true } %></p>
 
-<p><strong>Description</strong> <br /> <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %></p>
+<p><strong><%= tooltip(Subnet,:description) %></strong> <br /> <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %></p>
+
+<%= @tooltips if ttflag %>
