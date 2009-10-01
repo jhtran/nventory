@@ -1,7 +1,7 @@
 #!/bin/sh
 
 MYSQL_CONFIG_DIR="/usr/bin/mysql_config"
-RAILS_VER="2.1.2"
+RAILS_VER="2.3.2"
 
 gem install rails -v $RAILS_VER
 gem install RedCloth -v 3.0.4
