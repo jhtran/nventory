@@ -36,6 +36,9 @@ Usage: nv
     [--exclude field=value1,[value2]]
        Excludes substring from potential matches from get/exactget/regexget.
        Multiple values for an individual field can be specified seperated by commas.
+    [--and field=value1,[value2]]
+       Includes substring from potential matches from get/exactget/regexget.
+       Multiple values for an individual field can be specified seperated by commas.
     [--name value[,value2]]
        Shortcut for --get name=value
     [--allfields [excludefield1[,excludefield2]]]
@@ -59,14 +62,17 @@ Usage: nv
     [--nodegroup | --ng nodegroup]
        Display the members of the given node group, member groups are
        displayed as groups and are not expanded
+    [--get_nodegroup_nodes | --get_ngn | --getnodegroupnodes nodegroup]
+       Display all the members of the given node group including virtuals
     [--nodegroupexpanded | --nge nodegroup]
-       Display the members of the given node group, member groups are
-       expanded
+       Same as --get_nodegroup_nodes
     [--createnodegroup nodegroup1[,nodegroup2]]
        Create one or more node groups
     [--addtonodegroup nodegroup1[,nodegroup2]]
        Add nodes selected via get/exactget to a node group, may be
        specified multiple times to add to multiple groups
+    [--addcomment "some text for comment"]
+       Add comment to object
     [--removefromnodegroup nodegroup1[,nodegroup2]]
        Remove nodes selected via get/exactget from a node group, may be
        specified multiple times to remove from multiple groups
@@ -82,6 +88,10 @@ Usage: nv
     [--username]
        Username to use when authenticating to the server.  If not
        specified defaults to the current user.
+    [--delete]
+       Delete objects 
+    [--server]
+       Specify nventory server if different than the default
     [--debug]
     [--dry-run]
     [--help]
@@ -91,10 +101,12 @@ EOF
 }
 
 my $objecttype;
+my $object;
 my %get;
 my %exactget;
 my %regexget;
 my %exclude;
+my %and;
 my @name;
 my @allfields;
 my @fields;
@@ -104,13 +116,17 @@ my $getfieldnames;
 my @getallvalues;
 my $nodegroup;
 my @nodegroupexpanded;
+my @get_nodegroup_nodes;
 my @createnodegroup;
 my @addtonodegroup;
+my $addcomment;
 my @removefromnodegroup;
 my $addnodegrouptonodegroup;
 my $removenodegroupfromnodegroup;
 my $register;
+my $server;
 my $username = $ENV{LOGNAME};
+my $delete;
 my $debug;
 my $dryrun;
 my $help;
@@ -120,6 +136,7 @@ my $getopt = GetOptions(
 	'exactget:s' => \%exactget,
 	'regexget:s' => \%regexget,
 	'exclude:s' => \%exclude,
+	'and:s' => \%and,
 	'name=s' => \@name,
 	'allfields:s' => \@allfields,
 	'fields=s' => \@fields,
@@ -129,13 +146,17 @@ my $getopt = GetOptions(
 	'getallvalues=s' => \@getallvalues,
 	'nodegroup|ng=s' => \$nodegroup,
 	'nodegroupexpanded|nge=s' => \@nodegroupexpanded,
+	'get_nodegroup_nodes|get_ngn|getnodegroupnodes=s' => \@get_nodegroup_nodes,
 	'createnodegroup=s' => \@createnodegroup,
 	'addtonodegroup=s' => \@addtonodegroup,
+	'addcomment:s' => \$addcomment,
 	'removefromnodegroup=s' => \@removefromnodegroup,
 	'addnodegrouptonodegroup=s' => \$addnodegrouptonodegroup,
 	'removenodegroupfromnodegroup=s' => \$removenodegroupfromnodegroup,
 	'username=s' => \$username,
 	'register' => \$register,
+        'delete' => \$delete,
+        'server:s' => \$server,
 	'debug' => \$debug,
 	'dry-run' => \$dryrun,
 	'help' => \$help,
@@ -143,19 +164,19 @@ my $getopt = GetOptions(
 usage() unless ($getopt);
 usage() if ($help);
 usage() unless (
-	%get || %exactget || %regexget || @name || $getfieldnames || @getallvalues || $register || $nodegroup || @nodegroupexpanded || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup);
+	%get || %exactget || %regexget || @name || $getfieldnames || @getallvalues || $register || $nodegroup || @nodegroupexpanded || @get_nodegroup_nodes || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup);
 # These options are mutually exclusive
 usage() if (@allfields && @fields);
+usage() if ( %set && $delete );
 usage() if ($getfieldnames && (%get || %exactget || %regexget || @name));
 usage() if (@getallvalues && (%get || %exactget || %regexget || @name));
 # FIXME: Should support searches on node group membership and other characteristics
-usage() if (($nodegroup || @nodegroupexpanded) && (%get || %exactget || %regexget || %exclude || @name));
-usage() if ($register && (%get || %exactget || %regexget || %exclude || @name || $getfieldnames || @getallvalues || $nodegroup || @nodegroupexpanded || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup));
+usage() if (($nodegroup || @nodegroupexpanded || @get_nodegroup_nodes) && (%get || %exactget || %regexget || %exclude || @name || %and));
+usage() if ($register && (%get || %exactget || %regexget || %exclude || %and || @name || $getfieldnames || @getallvalues || $nodegroup || @nodegroupexpanded || @get_nodegroup_nodes || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup));
 
 $objecttype = 'nodes' if (!$objecttype);
 
-usage() if
-	((@addtonodegroup || @removefromnodegroup) && $objecttype ne 'nodes');
+usage() if ((@addtonodegroup || @removefromnodegroup) && $objecttype ne 'nodes');
 
 # allfields might contain comma-seperated fields
 # But there's the special case that allfields might contain just one
@@ -172,6 +193,8 @@ unless (scalar @allfields == 1 && $allfields[0] eq '')
 @getallvalues = split(/,/, join(',', @getallvalues));
 # nodegroupexpanded might contain comma-seperated fields
 @nodegroupexpanded = split(/,/, join(',', @nodegroupexpanded));
+# get_nodegroup_nodes might contain comma-seperated fields
+@get_nodegroup_nodes = split(/,/, join(',', @get_nodegroup_nodes));
 # createnodegroup might contain comma-seperated fields
 @createnodegroup = split(/,/, join(',', @createnodegroup));
 # addtonodegroup might contain comma-seperated fields
@@ -200,6 +223,11 @@ foreach my $field (keys %exclude)
 	my @values = split /,/, $exclude{$field};
 	$exclude{$field} = \@values;
 }
+foreach my $field (keys %and)
+{
+	my @values = split /,/, $and{$field};
+	$and{$field} = \@values;
+}
 
 # addnodegrouptonodegroup must contain comma-seperated fields if specified
 my @addnodegrouptonodegroup;
@@ -222,6 +250,8 @@ if (@name)
 }
 
 my %SEARCH_SHORTCUTS = (
+        'datacenter' => 'rack_node_assignment[rack][datacenter_rack_assignment][datacenter][name]',
+        'rack' => 'rack_node_assignment[rack][name]',
 	'hw' => 'hardware_profile[name]',
 	'hwmanuf' => 'hardware_profile[manufacturer]',
 	'hwmodel' => 'hardware_profile[model]',
@@ -232,7 +262,7 @@ my %SEARCH_SHORTCUTS = (
 	'nic' => 'network_interfaces[name]',
 	'nics' => 'network_interfaces[name]',
 	'node_group' => 'node_group[name]',
-	'node_groups' => 'node_group[name]',
+	'node_groups' => 'node_groups[name]',
 	'os' => 'operating_system[name]',
 	'osvendor' => 'operating_system[vendor]',
 	'osvariant' => 'operating_system[variant]',
@@ -256,7 +286,7 @@ foreach my $key (keys %exactget)
 {
 	if (exists $SEARCH_SHORTCUTS{$key})
 	{
-		$get{$SEARCH_SHORTCUTS{$key}} = $exactget{$key};
+		$exactget{$SEARCH_SHORTCUTS{$key}} = $exactget{$key};
 		delete $exactget{$key};
 	}
 }
@@ -274,6 +304,14 @@ foreach my $key (keys %exclude)
 	{
 		$exclude{$SEARCH_SHORTCUTS{$key}} = $exclude{$key};
 		delete $exclude{$key};
+	}
+}
+foreach my $key (keys %and)
+{
+	if (exists $SEARCH_SHORTCUTS{$key})
+	{
+		$and{$SEARCH_SHORTCUTS{$key}} = $and{$key};
+		delete $and{$key};
 	}
 }
 foreach my $key (keys %set)
@@ -309,7 +347,14 @@ if ($dryrun)
 {
 	nVentory::Client::setdryrun(1);
 }
-
+if ($delete)
+{
+	nVentory::Client::setdelete(1);
+}
+if ($server)
+{
+	nVentory::Client::setserver($server);
+}
 #
 # Perform requested actions
 #
@@ -342,7 +387,7 @@ if ($register)
 }
 if ($nodegroup)
 {
-	my %results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$nodegroup]}, {}, {}, ['child_groups', 'nodes']);
+	my %results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$nodegroup]}, {}, {}, {}, ['child_groups', 'nodes']);
         print "Child groups:\n";
 	if ($results{$nodegroup}->{child_groups})
 	{
@@ -395,18 +440,18 @@ if (@createnodegroup)
 }
 if ($addnodegrouptonodegroup)
 {
-	my %child_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[0]]}, {}, {});
+	my %child_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[0]]}, {}, {}, {});
 	die "Child group '$addnodegrouptonodegroup[0]' not found for 'addnodegrouptonodegroup'\n" if (scalar keys %child_results != 1);
-	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]}, {}, {}, ['child_groups']);	
+	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]}, {}, {}, {}, ['child_groups']);	
 	die "Parent group '$addnodegrouptonodegroup[1]' not found for 'addnodegrouptonodegroup'\n" if (scalar keys %parent_results != 1);
 	nVentory::Client::add_nodegroups_to_nodegroups(\%child_results, \%parent_results, $username, \&get_password);
 	exit;
 }
 if ($removenodegroupfromnodegroup)
 {
-	my %child_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[0]]} ,{}, {});
+	my %child_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[0]]} ,{}, {}, {});
 	die "Child group '$removenodegroupfromnodegroup[0]' not found for 'removenodegroupfromnodegroup'\n" if (scalar keys %child_results != 1);
-	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]}, {}, {}, ['child_groups']);	
+	my %parent_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]}, {}, {}, {}, ['child_groups']);	
 	die "Parent group '$removenodegroupfromnodegroup[1]' not found for 'removenodegroupfromnodegroup'\n" if (scalar keys %parent_results != 1);
 	nVentory::Client::remove_nodegroups_from_nodegroups(\%child_results, \%parent_results, $username, \&get_password);
 	exit;
@@ -414,6 +459,15 @@ if ($removenodegroupfromnodegroup)
 
 # Now handle the general case where we fetch a list of objects and then
 # perform operations on them.
+
+sub toomany
+{
+	die <<EOF;
+** Too many results returned **
+'--allfields' can only be used up to 10 objects at a time.
+Please narrow your search.
+EOF
+}
 
 # If the user has requested data which lies outside the base object model
 # then we need to tell the server to include that data in the results it
@@ -427,9 +481,13 @@ if (@fields)
 	my %includes;
 	foreach my $field (@fields)
 	{
-		if ($field =~ /([^[]+)\[.+\]/)
+		if ($field =~ /(.*)\[.+\]/)
 		{
-			$includes{$1} = 1;
+			my $tmpfield = $1;
+			$tmpfield =~ s/\]\[/:/g;
+ 			$tmpfield =~ s/\[/:/g;
+ 			$tmpfield =~ s/\]//g;
+			$includes{$tmpfield} = 1;
 		}
 	}
 	@includes = sort keys %includes;
@@ -437,6 +495,9 @@ if (@fields)
 elsif (@allfields)
 {
 	my %includes;
+	my %allfields_results;
+	%allfields_results= nVentory::Client::get_objects($objecttype, \%get, \%exactget, \%regexget, \%exclude, \%and, []);
+        toomany() if ( (keys %allfields_results) > 10 );
 	my @field_names = nVentory::Client::get_field_names($objecttype);
 	foreach my $field_name_entry (@field_names)
 	{
@@ -453,7 +514,7 @@ my %results;
 my @names;
 if (%get || %exactget || %regexget )
 {
-	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget, \%regexget, \%exclude, \@includes);
+	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget, \%regexget, \%exclude, \%and, \@includes);
 	@names = sort keys %results;
 }
 if (@nodegroupexpanded)
@@ -470,7 +531,24 @@ if (@nodegroupexpanded)
 	if (@allfields || @fields || @getallvalues)
 	{
 		%results = nVentory::Client::get_objects(
-			'nodes', {}, { 'name' => \@names }, \@includes);
+			'nodes', {}, { 'name' => \@names }, {}, {}, {}, \@includes);
+	}
+}
+if (@get_nodegroup_nodes)
+{
+	my %names;
+	foreach my $nge (@get_nodegroup_nodes)
+	{
+		foreach my $name (nVentory::Client::get_expanded_nodegroup($nge))
+		{
+			$names{$name} = 1;
+		}
+	}
+	@names = sort keys %names;
+	if (@allfields || @fields || @getallvalues)
+	{
+		%results = nVentory::Client::get_objects(
+			'nodes', {}, { 'name' => \@names }, {}, {}, {}, \@includes);
 	}
 }
 
@@ -570,10 +648,32 @@ if (!%set && !@addtonodegroup && !@removefromnodegroup)
 	}
 }
 
-if (%set)
+if (%set || $delete)
 {
-	if ((!$yes) && (!$dryrun))
+	if ($delete)
 	{
+
+		my $number_of_matching_entries = scalar(@names);
+		print "\nThis will delete $number_of_matching_entries nodes.\n";
+		print "\n";
+                # iterate through each individual entry prompting verification cannot be bypassed with --yes either
+		foreach my $key (keys(%results)) {
+			# create individual hashes so will iterate through each at a time yet keeping hash structure levels 
+		        my %tmphash;
+			$tmphash{$key} = $results{$key};
+				print "Deleting $key, continue?  [y/N]: \n";
+	
+			my $input = <STDIN>;
+			if ($input !~ /^y/i)
+			{
+				print "Canceled\n";
+				exit;
+			}
+			nVentory::Client::set_objects($objecttype, \%tmphash, \%set, $username, \&get_password);
+		}
+        }
+        elsif ((!$yes) && (!$dryrun))
+        {
 		my $number_of_matching_entries = scalar(@names);
 		my $entrystring = 'entry';
 		$entrystring = 'entries' if ($number_of_matching_entries > 1);
@@ -586,14 +686,29 @@ if (%set)
 			print "Canceled\n";
 			exit;
 		}
+		nVentory::Client::set_objects($objecttype, \%results, \%set, $username, \&get_password);
 	}
-
-	nVentory::Client::set_objects($objecttype, \%results, \%set, $username, \&get_password);
+        else
+        {
+		my $number_of_matching_entries = scalar(@names);
+		my $entrystring = 'entry';
+		$entrystring = 'entries' if ($number_of_matching_entries > 1);
+		print "This will update $number_of_matching_entries",
+			" $entrystring, continue?  [y/N]: ";
+	
+		my $input = <STDIN>;
+		if ($input !~ /^y/i)
+		{
+			print "Canceled\n";
+			exit;
+		}
+		nVentory::Client::set_objects($objecttype, \%results, \%set, $username, \&get_password);
+        }
 }
 
 if (@addtonodegroup)
 {
-	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@addtonodegroup]}, {}, {}, ['nodes']);
+	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@addtonodegroup]}, {}, {}, {}, ['nodes']);
 	if (scalar keys %nodegroup_results != scalar @addtonodegroup)
 	{
 		warn "Not all requested node groups for 'addtonodegroup' were found:\n";
@@ -601,17 +716,57 @@ if (@addtonodegroup)
 		warn "Found:  ", join(', ', sort keys %nodegroup_results), "\n";
 		exit 1;
 	}
+	my $number_of_matching_entries = scalar(@names);
+	my $entrystring = 'entry';
+	$entrystring = 'entries' if ($number_of_matching_entries > 1);
+	print "This will update $number_of_matching_entries",
+		" $entrystring, continue?  [y/N]: ";
+
+	my $input = <STDIN>;
+	if ($input !~ /^y/i)
+	{
+		print "Canceled\n";
+		exit;
+	}
 	nVentory::Client::add_nodes_to_nodegroups(\%results, \%nodegroup_results, $username, \&get_password);
+}
+if ($addcomment)
+{
+	my $number_of_matching_entries = scalar(@names);
+	my $entrystring = 'entry';
+	$entrystring = 'entries' if ($number_of_matching_entries > 1);
+	print "This will update $number_of_matching_entries",
+		" $entrystring, continue?  [y/N]: ";
+
+	my $input = <STDIN>;
+	if ($input !~ /^y/i)
+	{
+		print "Canceled\n";
+		exit;
+	}
+	nVentory::Client::add_comment_to_obj($objecttype, \%results, $addcomment,  $username, \&get_password);
 }
 if (@removefromnodegroup)
 {
-	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@removefromnodegroup]}, {}, {}, ['nodes']);
+	my %nodegroup_results = nVentory::Client::get_objects('node_groups', {}, {'name' => [@removefromnodegroup]}, {}, {}, {}, ['nodes']);
 	if (scalar keys %nodegroup_results != scalar @removefromnodegroup)
 	{
 		warn "Not all requested node groups for 'removefromnodegroup' were found:\n";
 		warn "Requested:  ", join(', ', sort @removefromnodegroup), "\n";
 		warn "Found:  ", join(', ', sort keys %nodegroup_results), "\n";
 		exit 1;
+	}
+        # iterate through each individual entry prompting verification cannot be bypassed with --yes either
+	# create individual hashes so will iterate through each at a time yet keeping hash structure levels 
+        my $numngs = scalar keys %nodegroup_results;
+	my $numnodes = scalar keys %results;
+	print "Deleting $numnodes entries from $numngs node_groups, continue?  [y/N]: \n";
+
+	my $input = <STDIN>;
+	if ($input !~ /^y/i)
+	{
+		print "Canceled\n";
+		exit;
 	}
 	nVentory::Client::remove_nodes_from_nodegroups(\%results, \%nodegroup_results, $username, \&get_password);
 }

@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/ruby -w
 ##############################################################################
 # A client to query a nVentory server
 ##############################################################################
@@ -9,19 +9,6 @@ require 'nventory'
 # Ensure we have a sane path, particularly since we might be run from
 # cron in registration mode.
 ENV['PATH'] = '/bin:/usr/bin:/sbin:/usr/sbin'
-
-module PasswordCallback
-  @@password = nil
-  def self.get_password
-    while !@@password
-      system "stty -echo"
-      print "Password: "
-      @@password = $stdin.gets.chomp
-      system "stty echo"
-    end
-    @@password
-  end
-end
 
 #
 # Process command line options
@@ -191,7 +178,7 @@ opts.on('--register',
         'and register that information into the nVentory database.') do |opt|
   $register = true
 end
-opts.on('--username',
+opts.on('--username value', String,
         'Username to use when authenticating to the server.  If not',
         'specified defaults to the current user.') do |opt|
   $username = opt
@@ -361,7 +348,7 @@ if $nodegroup
 end
 if $createnodegroup
   $createnodegroup.each do |newgroup|
-    nvclient.set_objects('node_groups', nil, {'name' => newgroup}, $username, PasswordCallback)
+    nvclient.set_objects('node_groups', nil, {'name' => newgroup}, $username)
   end
   exit
 end
@@ -370,7 +357,7 @@ if $addnodegrouptonodegroup
   abort "Child group '#{$addnodegrouptonodegroup[0]}' not found for 'addnodegrouptonodegroup'\n" if (child_results.length != 1)
   parent_results = nvclient.get_objects('node_groups', {}, {'name' => [$addnodegrouptonodegroup[1]]}, ['child_groups'])
   abort "Parent group '#{$addnodegrouptonodegroup[1]}' not found for 'addnodegrouptonodegroup'\n" if (parent_results.length != 1)
-  nvclient.add_nodegroups_to_nodegroups(child_results, parent_results, $username, PasswordCallback)
+  nvclient.add_nodegroups_to_nodegroups(child_results, parent_results, $username)
   exit
 end
 if $removenodegroupfromnodegroup
@@ -378,7 +365,7 @@ if $removenodegroupfromnodegroup
   abort "Child group '#{$removenodegroupfromnodegroup[0]}' not found for 'removenodegroupfromnodegroup'\n" if (child_results.length != 1)
   parent_results = nvclient.get_objects('node_groups', {}, {'name' => [$removenodegroupfromnodegroup[1]]}, ['child_groups'])
   abort "Parent group '#{$removenodegroupfromnodegroup[1]}' not found for 'removenodegroupfromnodegroup'\n" if (parent_results.length != 1)
-  nvclient.remove_nodegroups_from_nodegroups(child_results, parent_results, $username, PasswordCallback)
+  nvclient.remove_nodegroups_from_nodegroups(child_results, parent_results, $username)
   exit
 end
 
@@ -512,7 +499,7 @@ if $set
     end
   end
 
-  nvclient.set_objects($objecttype, results, $set, $username, PasswordCallback)
+  nvclient.set_objects($objecttype, results, $set, $username)
 end
 
 if $addtonodegroup
@@ -524,7 +511,7 @@ if $addtonodegroup
     abort
   end
 
-  nvclient.add_nodes_to_nodegroups(results, nodegroup_results, $username, PasswordCallback);
+  nvclient.add_nodes_to_nodegroups(results, nodegroup_results, $username);
 end
 if $removefromnodegroup
   nodegroup_results = nvclient.get_objects('node_groups', {}, {'name' => [$removefromnodegroup]}, ['nodes'])
@@ -534,5 +521,5 @@ if $removefromnodegroup
     warn "Found:  #{nodegroup_results.keys.join(',')}"
     abort
   end
-  nvclient.remove_nodes_from_nodegroups(results, nodegroup_results, $username, PasswordCallback);
+  nvclient.remove_nodes_from_nodegroups(results, nodegroup_results, $username);
 end

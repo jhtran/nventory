@@ -175,7 +175,7 @@ sub get_host_serial
 			open(SP, '-|', 'system_profiler SPHardwareDataType') or die "open: $!";
 			while(<SP>)
 			{
-				if (/Serial Number: (.+)/)
+				if (/Serial Number.*?: (.+)/)
 				{
 					$host_serial = $1;
 				}
@@ -320,9 +320,7 @@ sub get_cpu_model
 			# Some processors seem to put the model information into the
 			# "Version" field.  So if the "Family" field doesn't have
 			# anything interesting and "Version" does then use it.
-			if ($cpu_version ne 'Not Specified' &&
-				(!$cpu_model ||
-					$cpu_model eq 'Other'))
+			if (($cpu_version) && ($cpu_version ne 'Not Specified') && (!$cpu_model || $cpu_model eq 'Other'))
 			{
 				$cpu_model = $cpu_version;
 			}
@@ -410,7 +408,7 @@ sub get_cpu_count
 			%dmidata = _getdmidata();
 			foreach my $socket (@{$dmidata{'Processor Information'}})
 			{
-				if ($socket->{'Status'} =~ /Populated/)
+				if ($socket->{'Status'} && ($socket->{'Status'} =~ /Populated/))
 				{
 					$temp_cpu_count++;
 				}
@@ -1372,12 +1370,14 @@ sub getnicdata
                                 # Run cdpr to discover which switch and switch port
 				# this interface connected to 
 				my $cdprflag = 0;
-				if ($virtualarch =~ /vmware/i)  {
-					$cdprflag = 1;
-				} elsif (($virtualarch eq 'xen') && ($virtualmode eq 'guest')) {
-					$cdprflag = 2;
-				} else {	
-					$cdprflag = 0;
+				if ($virtualarch) {
+					if ($virtualarch =~ /vmware/i)  {
+				  	      	$cdprflag = 1;
+					} elsif (($virtualarch eq 'xen') && ($virtualmode eq 'guest')) {
+						$cdprflag = 2;
+					} else {	
+						$cdprflag = 0;
+					}
 				}
 
 				unless ($cdprflag == 1) {

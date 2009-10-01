@@ -5,6 +5,7 @@ use warnings;
 use nVentory::HardwareInfo;
 use nVentory::OSInfo;
 use LWP::UserAgent;
+use File::stat;
 use URI;
 use HTTP::Cookies;
 use HTTP::Request::Common;  # GET, PUT, POST
@@ -16,6 +17,17 @@ my $debug;
 my $dryrun;
 
 my $SERVER = 'http://nventory';
+my $PROXY_SERVER;
+#my $PROXY_SERVER = 'https://proxy.yellowpages.local:8080';
+
+# dir location where xen img files held if this is xen host
+my $XEN_IMGDIR = '/home/xen/disks';
+# If user manually specifies server other than the default
+sub setserver
+{
+	$SERVER = 'http://' . $_[0];
+	warn "** nVentory server: $SERVER **\n";
+}
 CONFIGFILE: foreach my $configfile ('/etc/nventory.conf', $ENV{HOME}.'/.nventory.conf')
 {
 	if (-f $configfile)
@@ -35,6 +47,11 @@ CONFIGFILE: foreach my $configfile ('/etc/nventory.conf', $ENV{HOME}.'/.nventory
 				# if they don't realize there's a config file lying
 				# around
 				warn "Using server $SERVER from $configfile\n";
+			}
+			elsif ($key eq 'proxy_server')
+			{
+				$PROXY_SERVER = $value;
+				warn "Using proxy server $PROXY_SERVER from $configfile\n";
 			}
 			elsif ($key eq 'ca_file' && -f $value)
 			{
@@ -75,7 +92,7 @@ sub _get_ua
 	if ($login && $login eq 'autoreg')
 	{
 		$cookiefile = '/root/.nventory_cookie_autoreg';
-		$password = 'autoreg';
+		$password = 'mypassword';
 		if (! -d '/root')
 		{
 			mkdir '/root' or die "mkdir: $!";
@@ -126,28 +143,60 @@ sub _get_ua
 		# a bug in HTTP::Request::Common::POST prior to version 5.72 of
 		# libwww-perl that wouldn't set a Content-Length header when the
 		# content is empty.  RHEL 3 includes a broken version.
-		my $response = $ua->request(POST "$SERVER/accounts.xml", { 'foo' => 'bar' });
-		if ($response->code == RC_FOUND)
-		{
-			warn "POST to $SERVER/accounts.xml was redirected, authenticating\n" if ($debug);
-			# Logins need to go to HTTPS
-			my $url = URI->new("$SERVER/login/login");
-			$url->scheme('https');
-			$password = &$password_callback() if (!$password);
-			$response = $ua->request(POST $url, {'login' => $login, 'password' => $password});
 
-			# The server always sends back a 302 redirect in response
-			# to a login attempt.  You get redirected back to the login
-			# page if your login failed, or redirected to your original
-			# page or the main page if the login succeeded.
-			my $locurl = URI->new($response->header('Location'));
-			if ($response->code != RC_FOUND || $locurl->path eq '/login/login')
-			{
-				if ($response->content =~ /Can't connect .* Invalid argument/)
-				{
-					warn "Looks like you're missing Crypt::SSLeay"
-				}
-				die "Authentication failed:\n", $response->content, "\n";
+		## proxing - this format doesn't work for some reason
+		#$ua->proxy('https', $PROXY_SERVER);
+		if ($PROXY_SERVER) { $ENV{HTTPS_PROXY} = $PROXY_SERVER; }
+
+		my $response = $ua->request(POST "$SERVER/accounts.xml", { 'foo' => 'bar' });
+		# NON-autoreg user logins should be redirected to SSO naturally.
+		if ( ($response->is_redirect) && ( $login ne 'autoreg' ) )
+		{
+			# nventory nginx will redirect all NONfqdn (https://nventory) to FQDN.  This logic will handle that, as POST will
+			# not follow redirect.  LWP::UserAgent claims the requests_redirectable would work w/ POST but can't get to work
+			while (($response->is_redirect) && ($response->header('location') !~ /^https:\/\/sso.*\/login\?url/)) { 
+				my $location = $response->header('location');
+				$response = $ua->request(POST $location, { 'foo' => 'bar' });
+			}
+			if (($response->is_redirect) && ($response->header('location') =~ /^https:\/\/(sso.*)\/login\?url/)) {
+				warn "POST to $SERVER/accounts.xml was redirected, authenticating to SSO\n" if ($debug);
+				my $SSO_SERVER=$1;
+				warn "SSO_SERVER: $SSO_SERVER\n" if ($debug);
+	                        # Logins need to go to HTTPS
+	                        print "Login: $login\n";
+	                        my $url = URI->new("https://$SSO_SERVER/session");
+	                        $url->scheme('https');
+	                        $password = &$password_callback() if (!$password);
+				print "Authenticating to $url...\n";
+	                        $response = $ua->request(POST $url, {'login' => $login, 'password' => $password});
+	
+	                        if ($response->is_success == 1 )
+	                        {
+	                                if ($response->content =~ /Can't connect .* Invalid argument/)
+	                                {
+	                                        warn "Looks like you're missing Crypt::SSLeay"
+	                                }
+	                                die "Authentication failed:\n", $response->content, "\n";
+				} else {
+					print "Authentication Successful\n";
+	                        }
+			}
+		}
+		# Autoreg user should NOT be redirected to SSO even if it wants to.  Autoreg auths to uri '/login/login' (which will allow LOCAL and LDAP account logins)
+		if ( ($response->is_redirect) && ( $login eq 'autoreg' ) )
+		{
+			# if it's a redirect yet not sso url, then we should follow the redirect and keep trying the post
+			while (($response->is_redirect) && ($response->header('location') !~ /^https:\/\/sso.*\/login\?url/)) { 
+				my $location = $response->header('location');
+				$response = $ua->request(POST $location, { 'foo' => 'bar' });
+			}
+			# if the redirect is a sso url, then we know we need to authenticate by bypassing sso via the url path '/login/login'
+			if (($response->is_redirect) && ($response->header('location') =~ /^https:\/\/(sso.*)\/login\?url/)) {
+				warn "POST to $SERVER/accounts.xml ( ** for user 'autoreg' ** ) was redirected, authenticating to local login path: '/login/login'\n" if ($debug);
+	                        my $url = URI->new("$SERVER/login/login");
+	                        $url->scheme('https');
+	                        $password = &$password_callback() if (!$password);
+	                        $response = $ua->request(POST $url, {'login' => $login, 'password' => $password});
 			}
 		}
 
@@ -495,6 +544,15 @@ sub set_objects
 				my $ua = _get_ua($login, $password_callback);
 				warn "PUT to URL: $SERVER/$objecttypes/$id.xml\n" if ($debug);
 				$response = $ua->request($request);
+				# due to nginx redirect from shortname (http://nventory) to fqdn, needs to handle POST redirects
+				    # lwp::useragent has a 'requests_redirectable' allowable for POSTS but can't get it working
+				while ($response->is_redirect) { 
+					my $newlo = $response->header('location');
+					$request = POST($newlo, \%cleandata);
+					$request->method('PUT');
+					warn "PUT to URL: $newlo" if ($debug);
+					$response = $ua->request($request);
+				}
                                 my (@output) = split("\n",$response->content);
 				foreach my $line (@output) { 
  					if ($line !~ /</) { print "** INFO **: $line\n"; }
@@ -543,15 +601,29 @@ sub register
 	#
 
 	$data{name} = nVentory::OSInfo::getfqdn();
+	$data{'name_aliases[name]'} = join(',', nVentory::OSInfo::getaliases());
 	$data{'operating_system[variant]'} = nVentory::OSInfo::getos();
 	$data{'operating_system[version_number]'} = nVentory::OSInfo::getosversion();
 	$data{'operating_system[architecture]'} = nVentory::OSInfo::getosarch();
 	$data{kernel_version} = nVentory::OSInfo::getkernelversion();
 	$data{os_memory} = nVentory::OSInfo::getosmemory();
 	$data{swap} = nVentory::OSInfo::getswapmemory();
-	$data{os_processor_count} = nVentory::OSInfo::get_os_cpu_count();
+	my %oscpus = nVentory::OSInfo::get_os_cpu_count();
+	$data{os_processor_count} = $oscpus{physical} if $oscpus{physical};
+	$data{os_virtual_processor_count} = $oscpus{virtual} if $oscpus{virtual};
 	$data{timezone} = nVentory::OSInfo::get_timezone();
-	$data{virtual_client_ids} = nVentory::OSInfo::get_virtual_client_ids();
+        my $temp_cpu_percent = nVentory::OSInfo::getcpupercent();
+        if (($temp_cpu_percent =~ /\S/) && ($temp_cpu_percent ne 'false')) {
+          $data{'utilization_metric[percent_cpu][value]'} = $temp_cpu_percent;
+        }
+        $data{'utilization_metric[login_count][value]'} = nVentory::OSInfo::getlogincount();
+        my %disk_usage = nVentory::OSInfo::getdiskusage();
+	$data{used_space} = $disk_usage{used_space};
+	$data{avail_space} = $disk_usage{avail_space};
+	my %volumes = nVentory::OSInfo::getvolumes();
+	foreach my $key (keys(%volumes)) {
+		$data{$key} = $volumes{$key};
+	}
 
 	#
 	# Gather hardware-related information
@@ -569,7 +641,8 @@ sub register
 	$data{processor_socket_count} = nVentory::HardwareInfo::get_cpu_socket_count();
 	$data{power_supply_count} = nVentory::HardwareInfo::get_power_supply_count();
 
-	$data{physical_memory} = nVentory::HardwareInfo::get_physical_memory();
+        my $physical_memory = nVentory::HardwareInfo::get_physical_memory();
+        $data{physical_memory} = $physical_memory unless (!$physical_memory);
 	# The library returns an array of the sizes of each of the DIMMs in the
 	# system.  We want to condense that into an easier to read format for
 	# storage in the database.  So "1024,1024,1024,1024" becomes "4@1024"
@@ -595,8 +668,11 @@ sub register
 	{
 		push @physical_memory_sizes, $physical_memory_sizes{$size} . 'x' . $size;
 	}
-	$data{physical_memory_sizes} = join ',', @physical_memory_sizes;
+        my $temp_physical_memory_sizes = join ',', @physical_memory_sizes;
+        $data{physical_memory_sizes} = $temp_physical_memory_sizes unless (!$temp_physical_memory_sizes);
 	# Switchport detection depends on if virtual or not
+
+	## XEN HOST <=> GUEST REGISTRATION
 	if ($data{kernel_version} =~ /xen$/)
 	{
 		$data{virtualarch} = 'xen';
@@ -605,6 +681,8 @@ sub register
 		{
 			print "XEN GUEST VM.\n";
 			$data{virtualmode} = 'guest';
+        		$data{'hardware_profile[manufacturer]'} = 'Xen' if ($data{'hardware_profile[manufacturer]'} eq 'Unknown');
+	                $data{'hardware_profile[model]'} = 'VM' if ($data{'hardware_profile[model]'} eq 'Unknown');
 		}
 		elsif ($xen_status =~ /xen0/)
 		{
@@ -614,13 +692,58 @@ sub register
 			foreach my $xenguest (@{$xenhostinfo{'guests'}})
 			{
 				print "$xenguest\n";
+				my $size;
+				my $sparse_size;
+				if (-e "$XEN_IMGDIR/$xenguest.img") 
+				{
+					## Actual file size of disk image ##
+					$size = -s "$XEN_IMGDIR/$xenguest.img";
+					$size = round($size / 1024);
+
+					## True sparse file size (in use) ##
+					my $st = stat("$XEN_IMGDIR/$xenguest.img");
+					my $blocks = $st->blocks;
+					$sparse_size = $blocks * 512;
+					$sparse_size = round($sparse_size / 1024);
+				}
+				print "   IMG SIZE: $size KB\n" if $size ;
+				print "   SPARSE SIZE: $sparse_size KB\n" if $sparse_size;
+				$data{"vmguest[$xenguest][vmimg_size]"} = $size;
+				$data{"vmguest[$xenguest][vmspace_used]"} = $sparse_size;
+				## subroutine to round the integer when divided
+				sub round {
+				    my($number) = shift;
+				    return int($number + .5);
+				}
 			}
-			$data{vmguests} = join(',',@{$xenhostinfo{'guests'}})
 		}
-        } elsif ($data{'hardware_profile[manufacturer]'} =~ /vmware/i) {
-		$data{virtualarch} = 'vmware';
-		print "VMWARE\n";
 	}
+
+
+	## VMWARE HOST <=> GUEST REGISTRATION
+       	my $vmware_status = nVentory::OSInfo::getvmwarestatus();
+	if ($vmware_status eq 'vmware_server')
+	{
+		$data{virtualarch} = 'vmware';
+		print "VMWARE MASTER HOST.  Listing all guest vm data:\n";
+		$data{virtualmode} = 'host';
+		my %vmwarehostdata = nVentory::OSInfo::getvmwarehostinfo;
+		unless (scalar(keys %vmwarehostdata) == 0)
+		{
+			foreach my $key (sort(keys %vmwarehostdata))
+			{
+				$data{$key} = $vmwarehostdata{$key};
+				print "$key = $vmwarehostdata{$key}\n";
+			}
+		}
+	}
+	elsif ($vmware_status eq 'vmware')
+	{
+		$data{virtualarch} = 'vmware';
+		print "VMWARE GUEST\n";
+	}
+
+
 	my %nicdata = nVentory::HardwareInfo::getnicdata($data{virtualarch},$data{virtualmode});
 	my $niccounter = 0;
 	while (my ($nic, $valueref) = each %nicdata)
@@ -657,19 +780,6 @@ sub register
 	$data{"network_interfaces[authoritative]"} = 1;
 
 	$data{uniqueid} = nVentory::HardwareInfo::get_uniqueid();
-
-	if ($data{'hardware_profile[model]'} eq 'VMware Virtual Platform')
-	{
-		my %results = get_objects('nodes', {'virtual_client_ids' => [$data{uniqueid}]}, {}, {}, {}, {}, [], 'autoreg');
-		if (scalar keys %results == 1)
-		{
-			$data{virtual_parent_node_id} = $results{(keys(%results))[0]}->{id};
-		}
-		elsif (scalar keys %results > 1)
-		{
-			warn "Multiple hosts claim this virtual client: ", join(',', sort keys %results), "\n";
-		}
-	}
 
 	#
 	# Report data to server
@@ -719,19 +829,44 @@ sub add_nodes_to_nodegroups
 	# method currently suffers from.
 	foreach my $nodegroup (keys %nodegroups)
 	{
+                my %real_nodes;
+                foreach my $realnode (split(',', $nodegroups{$nodegroup}->{real_nodes_names}))
+                {
+                        $real_nodes{$realnode} = 1;
+                }
+
 		# Use a hash to merge the current and new members and
 		# eliminate duplicates
 		my %merged_nodes;
 
 		%merged_nodes = %nodes;
 
+		# now merge in the pre-existing nodes from that ng
 		foreach my $node (@{$nodegroups{$nodegroup}->{nodes}})
 		{
 			my $name = $node->{name};
-			$merged_nodes{$name} = $node;
+			# unless the node is a virtual
+			$merged_nodes{$name} = $node if $real_nodes{$name};
 		}
 
 		set_nodegroup_node_assignments(\%merged_nodes, {$nodegroup => $nodegroups{$nodegroup}}, $login, $password_callback);
+	}
+}
+
+sub add_comment_to_obj
+{
+	my ($objecttypes, $objref, $comment, $login, $password_callback) = @_;
+	my %objects = %$objref;
+	foreach my $key (keys %objects) {
+		my @under = split(/_/,$objecttypes);
+		my @upper = map(ucfirst, @under);
+		my $camelized_objecttype = singularize(join('',@upper));
+        	set_objects('comments', undef,
+                                {  'comment' => $comment,
+				   'commentable_id' => ${${objects}{$key}}{"id"},
+				   'commentable_type' => $camelized_objecttype,
+				}, 
+                             $login, $password_callback);
 	}
 }
 # The first argument is a reference to a hash returned by a 'nodes' call
@@ -755,14 +890,20 @@ sub remove_nodes_from_nodegroups
 	# method currently suffers from.
 	foreach my $nodegroup (keys %nodegroups)
 	{
+
+		# build the list of ALL nodes minus the nodes to be deleted
+		my %real_nodes;
+		foreach my $realnode (split(',', $nodegroups{$nodegroup}->{real_nodes_names}))
+		{
+			$real_nodes{$realnode} = 1;
+		}
 		my %desired_nodes;
 
 		foreach my $node (@{$nodegroups{$nodegroup}->{nodes}})
 		{
-			my $name = $node->{name};
-			if (!grep($_ eq $name, keys %nodes))
-			{
-				$desired_nodes{$name} = $node;
+			if (my $name = $node->{name}) {
+				# don't process virtuals
+				$desired_nodes{$name} = $node if ( (!$nodes{$name}) && ($real_nodes{$name}) )
 			}
 		}
 
@@ -775,29 +916,35 @@ sub remove_nodes_from_nodegroups
 # call to get_objects
 sub set_nodegroup_node_assignments
 {
-	my ($nodesref, $nodegroupsref, $login, $password_callback) = @_;
-	my %nodes = %$nodesref;
+        my ($nodesref, $nodegroupsref, $login, $password_callback) = @_;
+        my %nodes = %$nodesref;
+        my @node_ids;
+        if ( (scalar %nodes) eq 0 )
+        {
+                push(@node_ids, 'nil');
+        }
+        else
+        {
+                foreach my $node (keys %nodes)
+                {
+                        my $id = $nodes{$node}->{id};
 
-	my @node_ids;
-	foreach my $node (keys %nodes)
-	{
-		my $id = $nodes{$node}->{id};
+                        if ($id)
+                        {
+                                push(@node_ids, $id);
+                        }
+                        else
+                        {
+                                # Of course it may not have a name field either...  :)
+                                warn "set_nodegroup_node_assignments passed a bogus nodes hash, ", $node->{name}, " has no id field\n";
+                        }
+                }
+        }
 
-		if ($id)
-		{
-			push(@node_ids, $id);
-		}
-		else
-		{
-			# Of course it may not have a name field either...  :)
-			warn "set_nodegroup_node_assignments passed a bogus nodes hash, ", $node->{name}, " has no id field\n";
-		}
-	}
-	
-	my %nodegroupdata;
-	$nodegroupdata{'node_group_node_assignments[nodes][]'} = \@node_ids;
+        my %nodegroupdata;
+        $nodegroupdata{'node_group_node_assignments[nodes][]'} = \@node_ids;
 
-	set_objects('node_groups', $nodegroupsref, \%nodegroupdata, $login, $password_callback);
+        set_objects('node_groups', $nodegroupsref, \%nodegroupdata, $login, $password_callback);
 }
 
 # Both arguments are references to a hash returned by a 'node_groups'

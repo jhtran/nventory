@@ -1,6 +1,6 @@
 Name: nventory-client
 Summary: nVentory client
-Version: 1.2-1
+Version: 1.50 
 Release: 1
 Group: Applications/System
 License: MIT
@@ -21,7 +21,7 @@ buildarch: noarch
 #  the DAG libxml2 package. DAG's libxml2 package is 2.6.16, as is
 #  RHEL 4 U0, so we can probably safely specify that as a minimum version
 #  for libxml2 in our spec file as a workaround.
-Requires: perl-Crypt-SSLeay, crontabs, libxml2 >= 2.6.16
+Requires: perl-Crypt-SSLeay, crontabs, libxml2 >= 2.6.16, sysstat
 BuildRoot: %{_builddir}/%{name}-buildroot
 %description
 nVentory client
@@ -31,14 +31,15 @@ nVentory client
 /usr/bin/nv
 /usr/bin/nv.perl
 /usr/bin/nv.ruby
+/usr/bin/nventory
 /usr/lib/perl5/site_perl/nVentory
 /usr/lib/ruby/site_ruby/1.8/nventory.rb
 /etc/cron.d/nventory
 /usr/sbin/nventory_cron_wrapper
 %config /etc/nventory.conf
-#%config /etc/nventory/ca.pem
+%config /etc/nventory/ca.pem
+%config /etc/nventory/dhparams
 
 %post
 # Run a one-time registration right away
 nv --register
-

@@ -1,19 +1,17 @@
-require 'facter'
+begin
+  # Try loading facter w/o gems first so that we don't introduce a
+  # dependency on gems if it is not needed.
+  require 'facter'         # Facter
+rescue LoadError
+  require 'rubygems'
+  require 'facter'
+end
+require 'uri'
 require 'net/http'
 require 'net/https'
 require 'cgi'
 require 'rexml/document'
 require 'yaml'
-
-# clean up "using default DH parameters" warning for https
-# http://blog.zenspider.com/2008/05/httpsssl-warning-cleanup.html
-class Net::HTTP
-  alias :old_use_ssl= :use_ssl=
-  def use_ssl= flag
-    self.old_use_ssl = flag
-    @ssl_context.tmp_dh_callback = proc {}
-  end
-end
 
 # fix for ruby http bug where it encodes the params incorrectly
 class Net::HTTP::Put
@@ -30,23 +28,43 @@ class Net::HTTP::Put
   end
 end
 
+module PasswordCallback
+  @@password = nil
+  def self.get_password
+    while !@@password
+      system "stty -echo"
+      print "Password: "
+      @@password = $stdin.gets.chomp
+      system "stty echo"
+    end
+    @@password
+  end
+end
+
 # Module and class names are constants, and thus have to start with a
 # capital letter.
 module NVentory
 end
 
+CONFIG_FILES = ['/etc/nventory.conf', "#{ENV['HOME']}/.nventory.conf"]
+
 class NVentory::Client
   attr_accessor :delete
-  def initialize(debug=false, dryrun=false)
+  def initialize(debug=false, dryrun=false, configfile=nil)
     @debug = debug
     @dryrun = dryrun
-    @write_http = nil
-    @read_http = nil
-    @server = 'http://nventory'
+    #@server = 'http://localhost/'
+    @server = 'http://nventory/'
+    @sso_server = 'https://sso.yellowpages.com/'
+    @proxy_server = nil
     @ca_file = nil
     @ca_path = nil
-
-    ['/etc/nventory.conf', "#{ENV['HOME']}/.nventory.conf"].each do |configfile|
+    @dhparams = '/etc/nventory/dhparams'
+    @delete = false  # Initialize the variable, see attr_accessor above
+    
+    CONFIG_FILES << configfile if configfile
+ 
+    CONFIG_FILES.each do |configfile|
       if File.exist?(configfile)
         IO.foreach(configfile) do |line|
           line.chomp!
@@ -55,30 +73,40 @@ class NVentory::Client
           key, value = line.split(/\s*=\s*/, 2)
           if key == 'server'
             @server = value
-
             # Warn the user, as this could potentially be confusing
             # if they don't realize there's a config file lying
             # around
             warn "Using server #{@server} from #{configfile}"
+          elsif key == 'sso_server'
+            @sso_server = value
+            warn "Using sso_server #{@sso_server} from #{configfile}"
+          elsif key == 'proxy_server'
+            @proxy_server = value
+            warn "Using proxy_server #{@proxy_server} from #{configfile}"
           elsif key == 'ca_file'
             @ca_file = value
             warn "Using ca_file #{@ca_file} from #{configfile}" if (@debug)
           elsif key == 'ca_path'
             @ca_path = value
             warn "Using ca_path #{@ca_path} from #{configfile}" if (@debug)
+          elsif key == 'dhparams'
+            @dhparams = value
+            warn "Using dhparams #{@dhparams} from #{configfile}" if (@debug)
           end
         end
       end
     end
-
-	# Make sure the server URL ends in a / so that we can append paths
-	# to it
+    
+    # Make sure the server URL ends in a / so that we can append paths to it
+    # using URI.join
     if @server !~ %r{/$}
       @server << '/'
     end
   end
-
-  def get_objects(objecttype, get, exactget, regexget, exclude, includes=nil, login=nil)
+  
+  # FIXME: get, exactget, regexget, exclude and includes should all merge into
+  # a single search options hash parameter
+  def get_objects(objecttype, get, exactget, regexget, exclude, includes=nil, login=nil, password_callback=PasswordCallback)
     #
     # Package up the search parameters in the format the server expects
     #
@@ -164,14 +192,13 @@ class NVentory::Client
     # Send the query to the server
     #
 
-    http = get_http(login)
     uri = URI::join(@server, "#{objecttype}.xml?#{querystring}")
-    req = Net::HTTP::Get.new(uri.request_uri, @headers)
+    req = Net::HTTP::Get.new(uri.request_uri)
     warn "GET URL: #{uri}" if (@debug)
-    $response = http.request(req)
-    if !$response.kind_of?(Net::HTTPOK)
-      puts $response.body
-      $response.error!
+    response = send_request(req, uri, login, password_callback)
+    if !response.kind_of?(Net::HTTPOK)
+      puts response.body
+      response.error!
     end
 
     #
@@ -180,8 +207,8 @@ class NVentory::Client
     # as a Perl hash.  It may need to evolve over time.
     #
 
-    puts $response.body if (@debug)
-    results_xml = REXML::Document.new($response.body)
+    puts response.body if (@debug)
+    results_xml = REXML::Document.new(response.body)
     results = {}
     if results_xml.root.elements["/#{objecttype}"]
       results_xml.root.elements["/#{objecttype}"].each do |elem|
@@ -199,19 +226,18 @@ class NVentory::Client
     results
   end
 
-  def get_field_names(objecttype, login=nil)
-    http = get_http(login)
+  def get_field_names(objecttype, login=nil, password_callback=PasswordCallback)
     uri = URI::join(@server, "#{objecttype}/field_names.xml")
-    req = Net::HTTP::Get.new(uri.request_uri, @headers)
+    req = Net::HTTP::Get.new(uri.request_uri)
     warn "GET URL: #{uri}" if (@debug)
-    $response = http.request(req)
-    if !$response.kind_of?(Net::HTTPOK)
-      puts $response.body
-      $response.error!
+    response = send_request(req, uri, login, password_callback)
+    if !response.kind_of?(Net::HTTPOK)
+      puts response.body
+      response.error!
     end
 
-    puts $response.body if (@debug)
-    results_xml = REXML::Document.new($response.body)
+    puts response.body if (@debug)
+    results_xml = REXML::Document.new(response.body)
     field_names = []
     results_xml.root.elements['/field_names'].each do |elem|
       # For some reason Elements[] is returning things other than elements,
@@ -224,7 +250,7 @@ class NVentory::Client
   end
 
   def get_expanded_nodegroup(nodegroup)
-    results = get_objects('node_groups', {}, {'name' => [nodegroup]}, ['nodes', 'child_groups'])
+    results = get_objects('node_groups', {}, {'name' => [nodegroup]}, {}, {}, ['nodes', 'child_groups'])
     nodes = {}
     if results.has_key?(nodegroup)
       if results[nodegroup].has_key?('nodes')
@@ -241,12 +267,12 @@ class NVentory::Client
 
   # The results argument can be a reference to a hash returned by a
   # call to get_objects, in which case the data will be PUT to each object
-  # there, thus updating them.  Or it can be 'undef', in which case the
+  # there, thus updating them.  Or it can be nil, in which case the
   # data will be POSTed to create a new entry.
-  def set_objects(objecttypes, results, data, login, password_callback=nil)
-    objecttype = singularize(objecttypes)
+  def set_objects(objecttypes, results, data, login, password_callback=PasswordCallback)
     # Convert any keys which don't already specify a model
     # from 'foo' to 'objecttype[foo]'
+    objecttype = singularize(objecttypes)
     cleandata = {}
     data.each_pair do |key, value|
       if key !~ /\[.+\]/
@@ -259,28 +285,34 @@ class NVentory::Client
     #puts cleandata.inspect if (@debug)
     puts YAML.dump(cleandata) if (@debug)
 
+    successcount = 0
     if results && !results.empty?
       results.each_pair do |result_name, result|
         if @delete
-          http = get_http(login, password_callback)
+          warn "Deleting objects via set_objects is deprecated, use delete_objects instead"
           uri = URI::join(@server, "#{objecttypes}/#{result['id']}.xml")
-          req = Net::HTTP::Delete.new(uri.request_uri, @headers)
+          req = Net::HTTP::Delete.new(uri.request_uri)
           req.set_form_data(cleandata)
-          $response = http.request(req)
+          response = send_request(req, uri, login, password_callback)
+          if response.kind_of?(Net::HTTPOK)
+            successcount += 1
+          else
+            puts "DELETE to #{uri} failed for #{result_name}:"
+            puts response.body
+          end
         # PUT to update an existing object
         elsif result['id']
-          http = get_http(login, password_callback)
           uri = URI::join(@server, "#{objecttypes}/#{result['id']}.xml")
-          req = Net::HTTP::Put.new(uri.request_uri, @headers)
+          req = Net::HTTP::Put.new(uri.request_uri)
           req.set_form_data(cleandata)
           warn "PUT to URL: #{uri}" if (@debug)
           if !@dryrun
-            $response = http.request(req)
-            # FIXME: Aborting partway through a multi-node action is probably
-            # not ideal behavior
-            if !$response.kind_of?(Net::HTTPOK)
-              puts $response.body
-              $response.error!
+            response = send_request(req, uri, login, password_callback)
+            if response.kind_of?(Net::HTTPOK)
+              successcount += 1
+            else
+              puts "PUT to #{uri} failed for #{result_name}:"
+              puts response.body
             end
           end
         else
@@ -288,21 +320,45 @@ class NVentory::Client
         end
       end
     else
-      http = get_http(login, password_callback)
       uri = URI::join(@server, "#{objecttypes}.xml")
-      req = Net::HTTP::Post.new(uri.request_uri, @headers)
+      req = Net::HTTP::Post.new(uri.request_uri)
       req.set_form_data(cleandata)
       warn "POST to URL: #{uri}" if (@debug)
       if !@dryrun
-        $response = http.request(req)
-        if !$response.kind_of?(Net::HTTPCreated)
-          puts $response.body
-          $response.error!
+        response = send_request(req, uri, login, password_callback)
+        if response.kind_of?(Net::HTTPOK)
+          successcount += 1
+        else
+          puts "POST to #{uri} failed."
+          puts response.body
         end
       end
     end
+    
+    successcount
   end
-
+  
+  # The results argument should be a reference to a hash returned by a
+  # call to get_objects.
+  def delete_objects(objecttypes, results, login, password_callback=PasswordCallback)
+    successcount = 0
+    results.each_pair do |result_name, result|
+      if result['id']
+        uri = URI::join(@server, "#{objecttypes}/#{result['id']}.xml")
+        req = Net::HTTP::Delete.new(uri.request_uri)
+        response = send_request(req, uri, login, password_callback)
+        if response.kind_of?(Net::HTTPOK)
+          successcount = 0
+        else
+          warn "Delete of #{result_name} (#{result['id']}) failed:\n" + response.body
+        end
+      else
+        warn "delete_objects passed a bogus results hash, #{result_name} has no id field"
+      end
+    end
+    successcount
+  end
+  
   def register
     data = {}
 
@@ -455,7 +511,7 @@ class NVentory::Client
     end
 
     if data['hardware_profile[model]'] == 'VMware Virtual Platform'
-      results = get_objects('nodes', {'virtual_client_ids' => [data['uniqueid']]}, {}, [], 'autoreg')
+      results = get_objects('nodes', {'virtual_client_ids' => [data['uniqueid']]}, {}, {}, {}, [], 'autoreg')
       if results.length == 1
         data['virtual_parent_node_id'] = results.values.first['id']
       elsif results.length > 1
@@ -473,7 +529,7 @@ class NVentory::Client
     # host was renamed).
     results = nil
     if data['uniqueid']
-      results = get_objects('nodes', {}, {'uniqueid' => [data['uniqueid']]}, [], 'autoreg')
+      results = get_objects('nodes', {}, {'uniqueid' => [data['uniqueid']]}, {}, {}, [], 'autoreg')
     end
 
     # If we failed to find an existing entry based on the unique id
@@ -482,7 +538,7 @@ class NVentory::Client
     # as undef, which triggers set_nodes to create a new entry on the
     # server.
     if !results && data['name']
-      results = get_objects('nodes', {}, {'name' => [data['name']]}, [], 'autoreg')
+      results = get_objects('nodes', {}, {'name' => [data['name']]}, {}, {}, [], 'autoreg')
     end
 
     set_objects('nodes', results, data, 'autoreg')
@@ -492,7 +548,7 @@ class NVentory::Client
   # The second argument is a hash returned by a 'node_groups'
   # call to get_objects
   # NOTE: For the node groups you must have requested that the server include 'nodes' in the result
-  def add_nodes_to_nodegroups(nodes, nodegroups, login, password_callback)
+  def add_nodes_to_nodegroups(nodes, nodegroups, login, password_callback=PasswordCallback)
     # The server only supports setting a complete list of members of
     # a node group.  So we need to retreive the current list of members
     # for each group, merge in the additional nodes that the user wants
@@ -517,7 +573,7 @@ class NVentory::Client
   # The second argument is a hash returned by a 'node_groups'
   # call to get_objects
   # NOTE: For the node groups you must have requested that the server include 'nodes' in the result
-  def remove_nodes_from_nodegroups(nodes, nodegroups, login, password_callback)
+  def remove_nodes_from_nodegroups(nodes, nodegroups, login, password_callback=PasswordCallback)
     # The server only supports setting a complete list of members of
     # a node group.  So we need to retreive the current list of members
     # for each group, remove the nodes that the user wants
@@ -542,7 +598,7 @@ class NVentory::Client
   # The first argument is a hash returned by a 'nodes' call to get_objects
   # The second argument is a hash returned by a 'node_groups'
   # call to get_objects
-  def set_nodegroup_node_assignments(nodes, nodegroups, login, password_callback)
+  def set_nodegroup_node_assignments(nodes, nodegroups, login, password_callback=PasswordCallback)
     node_ids = []
     nodes.each_pair do |node_name, node|
       if node['id']
@@ -560,7 +616,7 @@ class NVentory::Client
 
   # Both arguments are hashes returned by a 'node_groups' call to get_objects
   # NOTE: For the parent groups you must have requested that the server include 'child_groups' in the result
-  def add_nodegroups_to_nodegroups(child_groups, parent_groups, login, password_callback)
+  def add_nodegroups_to_nodegroups(child_groups, parent_groups, login, password_callback=PasswordCallback)
     # The server only supports setting a complete list of assignments for
     # a node group.  So we need to retreive the current list of assignments
     # for each group, merge in the additional node groups that the user wants
@@ -584,7 +640,7 @@ class NVentory::Client
   end
   # Both arguments are hashes returned by a 'node_groups' call to get_objects
   # NOTE: For the parent groups you must have requested that the server include 'child_groups' in the result
-  def remove_nodegroups_from_nodegroups(child_groups, parent_groups, login, password_callback)
+  def remove_nodegroups_from_nodegroups(child_groups, parent_groups, login, password_callback=PasswordCallback)
     # The server only supports setting a complete list of assignments for
     # a node group.  So we need to retrieve the current list of assignments
     # for each group, remove the node groups that the user wants
@@ -607,7 +663,7 @@ class NVentory::Client
     end
   end
   # Both arguments are hashes returned by a 'node_groups' call to get_objects
-  def set_nodegroup_nodegroup_assignments(child_groups, parent_groups, login, password_callback)
+  def set_nodegroup_nodegroup_assignments(child_groups, parent_groups, login, password_callback=PasswordCallback)
     child_ids = []
     child_groups.each_pair do |child_group_name, child_group|
       if child_group['id']
@@ -628,27 +684,48 @@ class NVentory::Client
   #
   private
 
-  def get_http(login=nil, password_callback=nil)
-    if login
-      return @write_http if (@write_http)
+  def make_http(uri)
+    http = nil
+    if @proxy_server
+      proxyuri = URI.parse(@proxy_server)
+      proxy = Net::HTTP::Proxy(proxyuri.host, proxyuri.port)
+      http = proxy.new(uri.host, uri.port)
     else
-      return @read_http if (@read_http)
+      http = Net::HTTP.new(uri.host, uri.port)
     end
-
-    uri = URI.parse(@server)
-
+    if uri.scheme == "https"
+      # Eliminate the OpenSSL "using default DH parameters" warning
+      if File.exist?(@dhparams)
+        dh = OpenSSL::PKey::DH.new(IO.read(@dhparams))
+        Net::HTTP.ssl_context_accessor(:tmp_dh_callback)
+        http.tmp_dh_callback = proc { dh }
+      end
+      http.use_ssl = true
+      if @ca_file && File.exist?(@ca_file)
+        http.ca_file = @ca_file
+        http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      end 
+      if @ca_path && File.directory?(@ca_path)
+        http.ca_path = @ca_path
+        http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      end
+    end
+    http
+  end
+  
+  # Returns the path to the cookiefile to be used for the specified user, or
+  # based on $HOME if a user is not specified.
+  def get_cookiefile(login=nil)
     cookiefile = nil
-    password = nil
+    # autoreg has a special file
     if login == 'autoreg'
       cookiefile = '/root/.nventory_cookie_autoreg'
-      password = 'autoreg'
       if ! File.directory?('/root')
         Dir.mkdir('/root')
       end
     else
       cookiefile = "#{ENV['HOME']}/.nventory_cookie"
     end
-
     # Create the cookie file if it doesn't already exist
     if !File.exist?(cookiefile)
       warn "Creating #{cookiefile}"
@@ -662,125 +739,265 @@ class NVentory::Client
       warn "Correcting permissions on #{cookiefile}"
       File.chmod(st.mode & 0600, cookiefile)
     end
+    cookiefile
+  end
+  
+  # Sigh, Ruby doesn't have a library for handling a persistent
+  # cookie store so we have to do the dirty work ourselves.  This
+  # is by no means a full implementation, it's just enough to do
+  # what's needed here.
 
+  # Break's a Set-Cookie line up into its constituent parts
+  # Example from http://en.wikipedia.org/wiki/HTTP_cookie:
+  # Set-Cookie: RMID=732423sdfs73242; expires=Fri, 31-Dec-2010 23:59:59 GMT; path=/; domain=.example.net
+  def parse_cookie(line)
+    cookie = nil
+    if line =~ /^Set-Cookie\d?: .+=.+/
+      cookie = {}
+      line.chomp!
+      cookie[:line] = line
+      # Remove the Set-Cookie portion of the line
+      setcookie, rest = line.split(' ', 2)
+      # Then break off the name and value from the cookie attributes
+      namevalue, rawattributes = rest.split('; ', 2)
+      name, value = namevalue.split('=', 2)
+      cookie[:name] = name
+      cookie[:value] = value
+      attributes = {}
+      rawattributes.split('; ').each do |attribute|
+        attrname, attrvalue = attribute.split('=', 2)
+        # The Perl cookie jar uses a non-standard syntax, which seems to
+        # include wrapping some fields (particularly path) in quotes.  The
+        # Perl nVentory library uses the Perl cookie jar code so we need to be
+        # compatible with it.
+        if attrvalue =~ /^".*"$/
+          attrvalue.sub!(/^"/, '')
+          attrvalue.sub!(/"$/, '')
+        end
+        # rfc2965, 3.2.2:
+        # If an attribute appears more than once in a cookie, the client
+        # SHALL use only the value associated with the first appearance of
+        # the attribute; a client MUST ignore values after the first.
+        if !attributes[attrname]
+          attributes[attrname] = attrvalue
+        end
+      end
+      cookie[:attributes] = attributes
+    else
+      # Invalid lines in the form of comments and blank lines are to be
+      # expected when we're called by read_cookiefile, so don't treat this as
+      # a big deal.
+      puts "parse_cookie passed invalid line: #{line}" if (@debug)
+    end
+    cookie
+  end
+  
+  # Returns an array of cookies from the specified cookiefile
+  def read_cookiefile(cookiefile)
     warn "Using cookies from #{cookiefile}" if (@debug)
-    # Sigh, Ruby doesn't have a library for handling a persistent
-    # cookie store so we have to do the dirty work ourselves.  This
-    # is by no means a full implementation, it's just enough to do
-    # what's needed here.
     cookies = []
     IO.foreach(cookiefile) do |line|
-      next if (line =~ /^\s*$/);  # Skip blank lines
-      next if (line =~ /^\s*#/);  # Skip comments
-      if (line =~ /^Set-Cookie\d?: (.*)/)
-        data = $1
-        cookie, rest = data.split('; ', 2)
-        use = true
-        rest.split('; ').each do |crumb|
-          if crumb =~ /^domain=(.*)/
-            domain = $1
-            if uri.host !~ Regexp.new("#{domain}$")
-              use = false
-            end
-          elsif crumb =~ /^path="(.*)"/
-            path = $1
-            if uri.path !~ Regexp.new("^#{path}")
-              use = false
-            end
+      cookie = parse_cookie(line)
+      if cookie
+        cookies << cookie
+      end
+    end
+    cookies
+  end
+  
+  # This returns any cookies in the cookiefile which have domain and path
+  # settings that match the specified uri.
+  def get_cookies_for_uri(cookiefile, uri)
+    cookies = []
+    read_cookiefile(cookiefile).each do |cookie|
+      use = true
+      if uri.host !~ Regexp.new("#{cookie[:attributes]['domain']}$")
+        use = false
+      elsif uri.path !~ Regexp.new("^#{cookie[:attributes]['path']}")
+        use = false
+      end
+      if use
+        cookies << cookie
+      end
+    end
+    cookies
+  end
+  
+  # Extract cookie from response and save it to the user's cookie store
+  def extract_cookie(response, uri, login=nil)
+    if response['set-cookie']
+      cookiefile = get_cookiefile(login)
+      # It doesn't look like it matters for our purposes at the moment, but
+      # according to rfc2965, 3.2.2 the Set-Cookie header can contain more
+      # than one cookie, separated by commas.
+      puts "extract_cookie processing #{response['set-cookie']}" if (@debug)
+      newcookie = parse_cookie('Set-Cookie: ' + response['set-cookie'])
+      return if newcookie.nil?
+
+      # Some cookie fields are optional, and should default to the
+      # values in the request.  We need to insert these so that we
+      # save them properly.
+      # http://cgi.netscape.com/newsref/std/cookie_spec.html
+      if !newcookie[:attributes]['domain']
+        puts "Adding domain #{uri.host} to cookie" if (@debug)
+        newcookie = parse_cookie(newcookie[:line] + "; domain=#{uri.host}")
+      end
+      if !newcookie[:attributes]['path']
+        puts "Adding path #{uri.path} to cookie" if (@debug)
+        newcookie = parse_cookie(newcookie[:line] + "; path=#{uri.path}")
+      end
+      cookies = []
+      change = false
+      existing_cookie = false
+      read_cookiefile(cookiefile).each do |cookie|
+        # Remove any existing cookies with the same name, domain and path
+        puts "Comparing #{cookie.inspect} to #{newcookie.inspect}" if (@debug)
+        if cookie[:name] == newcookie[:name] &&
+           cookie[:attributes]['domain'] == newcookie[:attributes]['domain'] &&
+           cookie[:attributes]['path'] == newcookie[:attributes]['path']
+          existing_cookie = true
+          if cookie == newcookie
+            puts "Existing cookie is identical to new cookie" if (@debug)
+          else
+            # Cookie removed by virtue of us not saving it here
+            puts "Replacing existing but not identical cookie #{cookie.inspect}" if (@debug)
+            cookies << newcookie
+            change = true
           end
-        end
-        if use
+        else
+          puts "Keeping non-matching cookie #{cookie.inspect}" if (@debug)
           cookies << cookie
         end
       end
-    end
-    @headers = { 'Cookie' => cookies.join('; ') }
-
-    http = Net::HTTP.new(uri.host, uri.port)
-    https = nil
-    if uri.scheme == "https"
-      https = http
+      if !existing_cookie
+        puts "No existing cookie matching new cookie, adding new cookie" if (@debug)
+        cookies << newcookie
+        change = true
+      end
+      if change
+        puts "Updating cookiefile #{cookiefile}" if (@debug)
+        File.open(cookiefile, 'w') { |file| file.puts(cookies.collect{|cookie| cookie[:line]}.join("\n")) }
+      else
+        puts "No cookie changes, leaving cookiefile untouched" if (@debug)
+      end
     else
-      # FIXME: Need to provide a way for users to specify a non-standard
-      # HTTPS port when they aren't using HTTPS for all activity
-      https = Net::HTTP.new(uri.host, 443)
+      puts "extract_cookie finds no cookie in response" if (@debug)
     end
-    https.use_ssl = true
-    if @ca_file && File.exist?(@ca_file)
-      https.ca_file = @ca_file
-      https.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    end 
-    if @ca_path && File.directory?(@ca_path)
-      https.ca_path = @ca_path
-      https.verify_mode = OpenSSL::SSL::VERIFY_PEER
+  end
+  
+  # Sends requests to the nVentory server and handles any redirects to
+  # authentication pages or services.
+  def send_request(req, uri, login, password_callback=PasswordCallback)
+    cookies = get_cookies_for_uri(get_cookiefile(login), uri)
+    if !cookies.empty?
+      cookiestring = cookies.collect{|cookie| "#{cookie[:name]}=#{cookie[:value]}" }.join('; ')
+      puts "Inserting cookies into request: #{cookiestring}" if (@debug)
+      req['Cookie'] = cookiestring
     end
-
-    if login
-      # User wants to be able to write to the server
-
-      # First check if any existing session id works by sending
-      # an empty POST to the accounts controller.  We will get
-      # back a 302 redirect if we need to authenticate.  There's
-      # nothing special about accounts, we could use any controller,
-      # accounts just seemed appropriate.
-      uri = URI::join(@server, 'accounts.xml')
-      $response = http.post(uri.request_uri, '', @headers)
-      if $response.kind_of?(Net::HTTPFound)
-        warn "POST to #{uri} was redirected, authenticating" if (@debug)
-        # Extract cookie
-        newcookieentry = $response['Set-Cookie']
-        # Some cookie fields are optional, and should default to the
-        # values in the request.  We need to insert these so that we
-        # save them properly.
-        # http://cgi.netscape.com/newsref/std/cookie_spec.html
-        if !newcookieentry.include?('domain=')
-          newcookieentry << "; domain=#{uri.host}"
-        end
-        newcookie, rest = newcookieentry.split('; ', 2)
-        if !cookies.include?(newcookie)
-          # Update @headers
-          cookies << newcookie
-          @headers = { 'Cookie' => cookies.join('; ') }
-          # Save cookie for the future
-          warn "Updating cookiefile #{cookiefile}" if (@debug)
-          File.open(cookiefile, 'a') { |file| file.puts("Set-Cookie: #{newcookieentry}") }
-        end
-        # Logins need to go to HTTPS
-        uri = URI::join(@server, 'login/login')
-        req = Net::HTTP::Post.new(uri.request_uri, @headers)
+    
+    response = make_http(uri).request(req)
+    extract_cookie(response, uri, login)
+    
+    # Check for signs that the server wants us to authenticate
+    password = nil
+    if login == 'autoreg'
+      password = 'mypassword'
+    end
+    # nVentory will redirect to the login controller if authentication is
+    # required.  The scheme and port in the redirect location could be either
+    # the standard server or the https variant, depending on whether or not
+    # the server administration has turned on the ssl_requirement plugin.
+    if response.kind_of?(Net::HTTPFound) &&
+       response['Location'] &&
+       URI.parse(response['Location']).host == URI.parse(@server).host &&
+       URI.parse(response['Location']).path == URI.join(@server, 'login/login').path
+      puts "Server responsed with redirect to nVentory login: #{response['Location']}" if (@debug)
+      loginuri = URI.parse(response['Location'])
+      loginreq = Net::HTTP::Post.new(loginuri.request_uri)
+      if password_callback.kind_of?(Module)
         password = password_callback.get_password if (!password)
-        req.set_form_data({'login' => login, 'password' => password})
-        $response = https.request(req)
-
-        # The server always sends back a 302 redirect in $response
-        # to a login attempt.  You get redirected back to the login
-        # page if your login failed, or redirected to your original
-        # page or the main page if the login succeeded.
-        locurl = nil
-        if $response['Location']
-          locurl = URI.parse($response['Location'])
-        end
-        if (!$response.kind_of?(Net::HTTPFound) || locurl.path == uri.path)
-          warn "Authentication failed"
-          if @debug
-            puts $response.body
-            $response.error!
-          else
-            abort
-          end
+      else
+        password = password_callback if !password
+      end
+      loginreq.set_form_data({'login' => login, 'password' => password})
+      # Include the cookies so the server doesn't have to generate another
+      # session for us.
+      loginreq['Cookie'] = cookiestring
+      loginresponse = make_http(loginuri).request(loginreq)
+      if @debug
+        puts "nVentory auth POST response (#{loginresponse.code}):"
+        if loginresponse.body.strip.empty?
+          puts '<Body empty>'
+        else
+          puts loginresponse.body
         end
       end
-
-      # Cache http object
-      @write_http = http
-      @read_http = http
-    else
-      @read_http = http
+      # The server always sends back a 302 redirect in response to a login
+      # attempt.  You get redirected back to the login page if your login
+      # failed, or redirected to your original page or the main page if the
+      # login succeeded.
+      if loginresponse.kind_of?(Net::HTTPFound) &&
+         URI.parse(loginresponse['Location']).path != loginuri.path
+        puts "Authentication against nVentory server succeeded" if (@debug)
+        extract_cookie(loginresponse, loginuri, login)
+        puts "Resending original request now that we've authenticated" if (@debug)
+        return send_request(req, uri, login, password_callback)
+      else
+        puts "Authentication against nVentory server failed" if (@debug)
+      end
     end
-
-    http
+    
+    # An SSO-enabled app will redirect to SSO if authentication is required
+    if response.kind_of?(Net::HTTPFound) &&
+       response['Location'] &&
+       URI.parse(response['Location']).host == URI.parse(@sso_server).host
+      puts "Server responsed with redirect to SSO login: #{response['Location']}" if (@debug)
+      if login == 'autoreg'
+        loginuri = URI.join(@server, 'login/login')
+        unless loginuri.scheme == 'https'
+          loginuri.scheme = 'https'
+          loginuri = URI.parse(loginuri.to_s)
+        end
+      else
+        loginuri = URI.parse(response['Location'])
+      end
+      loginreq = Net::HTTP::Post.new(loginuri.request_uri)
+      if password_callback.kind_of?(Module)
+        password = password_callback.get_password if (!password)
+      else
+        password = password_callback if !password
+      end
+      loginreq.set_form_data({'login' => login, 'password' => password})
+      # It probably doesn't matter, but include the cookies again for good
+      # measure
+      loginreq['Cookie'] = cookiestring
+      # Telling the SSO server we want XML back gets responses that are easier
+      # to parse.
+      loginreq['Accept'] = 'application/xml'
+      loginresponse = make_http(loginuri).request(loginreq)
+      if @debug
+          puts "AUTH POST response (#{loginresponse.code}):"
+          if loginresponse.body.strip.empty?
+            puts '<Body empty>'
+          else
+            puts loginresponse.body
+          end
+      end
+      # The SSO server sends back 200 if authentication succeeds, 401 or 403
+      # if it does not.
+      if loginresponse.kind_of?(Net::HTTPSuccess)
+        puts "Authentication against server succeeded" if (@debug)
+        extract_cookie(loginresponse, loginuri, login)
+        puts "Resending original request now that we've authenticated" if (@debug)
+        return send_request(req, uri, login, password_callback)
+      else
+        puts "Authentication against server failed" if (@debug)
+      end
+    end
+    
+    response
   end
-
+  
   def xml_to_ruby(xmlnode)
     # The server includes a hint as to the type of data structure
     # in the XML

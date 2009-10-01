@@ -1,6 +1,6 @@
 # When updating the version number you currently need to update
 # nventory-client.spec, control and pkginfo as well
-VER=1.2-1
+VER=1.50
 
 all:
 
@@ -21,13 +21,15 @@ rpm: nventory-client.spec
 	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
 	# Make the perl client the default client for now
 	ln -s nv.perl $(BUILDROOT)/usr/bin/nv
+	ln -s nv $(BUILDROOT)/usr/bin/nventory
 	mkdir -p $(BUILDROOT)/usr/lib/perl5/site_perl
 	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/lib/perl5/site_perl)
 	mkdir -p $(BUILDROOT)/usr/lib/ruby/site_ruby/1.8
 	cp -p ruby/nventory.rb $(BUILDROOT)/usr/lib/ruby/site_ruby/1.8
 	mkdir -p $(BUILDROOT)/etc/nventory
 	cp -p nventory.conf $(BUILDROOT)/etc
-	#cp -p ca.pem $(BUILDROOT)/etc/nventory
+	cp -p ca.pem $(BUILDROOT)/etc/nventory
+	cp -p dhparams $(BUILDROOT)/etc/nventory
 	# Cron job for registration
 	mkdir -p $(BUILDROOT)/etc/cron.d
 	cp nventory_cron $(BUILDROOT)/etc/cron.d/nventory
@@ -48,26 +50,28 @@ rpm: nventory-client.spec
 	rm -rf $(BUILDROOT) $(TMPSPEC)
 
 debian: control
-	rm -rf debtmp
-	mkdir -p debtmp/DEBIAN
-	grep -v '^#' control > debtmp/DEBIAN/control
-	mkdir -p debtmp/usr/bin
-	cp -p perl/nv debtmp/usr/bin/nv.perl
-	chmod 555 debtmp/usr/bin/nv.perl
-	cp -p ruby/nv debtmp/usr/bin/nv.ruby
-	chmod 555 debtmp/usr/bin/nv.ruby
+	rm -rf $(BUILDROOT)
+	mkdir -p $(BUILDROOT)/DEBIAN
+	grep -v '^#' control > $(BUILDROOT)/DEBIAN/control
+	mkdir -p $(BUILDROOT)/usr/bin
+	cp -p perl/nv $(BUILDROOT)/usr/bin/nv.perl
+	chmod 555 $(BUILDROOT)/usr/bin/nv.perl
+	cp -p ruby/nv $(BUILDROOT)/usr/bin/nv.ruby
+	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
 	# Make the perl client the default client for now
-	ln -s nv.perl debtmp/usr/bin/nv
-	mkdir -p debtmp/usr/lib/perl5/site_perl
-	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum debtmp/usr/lib/perl5/site_perl)
-	mkdir -p debtmp/usr/lib/ruby/site_ruby/1.8
-	cp -p ruby/nventory.rb debtmp/usr/lib/ruby/site_ruby/1.8
-	mkdir -p debtmp/etc/nventory
-	cp -p nventory.conf debtmp/etc
-	#cp -p ca.pem debtmp/etc/nventory
-	sudo chown -R 0:0 debtmp
-	dpkg --build debtmp nventory-client-$(VER).deb
-	rm -rf debtmp
+	ln -s nv.perl $(BUILDROOT)/usr/bin/nv
+	ln -s nv $(BUILDROOT)/usr/bin/nventory
+	mkdir -p $(BUILDROOT)/usr/lib/perl5/site_perl
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/lib/perl5/site_perl)
+	mkdir -p $(BUILDROOT)/usr/local/lib/site_ruby/1.8
+	cp -p ruby/nventory.rb $(BUILDROOT)/usr/local/lib/ruby/site_ruby/1.8
+	mkdir -p $(BUILDROOT)/etc/nventory
+	cp -p nventory.conf $(BUILDROOT)/etc
+	cp -p ca.pem $(BUILDROOT)/etc/nventory
+	cp -p dhparams $(BUILDROOT)/etc/nventory
+	sudo chown -R 0:0 $(BUILDROOT)
+	dpkg --build $(BUILDROOT) nventory-client-$(VER).deb
+	sudo rm -rf $(BUILDROOT)
 
 solaris: pkginfo depend
 	#
@@ -87,6 +91,7 @@ solaris: pkginfo depend
 	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
 	# Make the perl client the default client for now
 	ln -s nv.perl $(BUILDROOT)/usr/bin/nv
+	ln -s nv $(BUILDROOT)/usr/bin/nventory
 	mkdir -p $(BUILDROOT)/opt/csw/lib/perl/site_perl
 	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/opt/csw/lib/perl/site_perl)
 	mkdir -p $(BUILDROOT)/usr/nventory
@@ -95,7 +100,8 @@ solaris: pkginfo depend
 	cp -p ruby/nventory.rb $(BUILDROOT)/opt/csw/lib/ruby/site_ruby/1.8
 	mkdir -p $(BUILDROOT)/etc/nventory
 	cp -p nventory.conf $(BUILDROOT)/etc
-	#cp -p ca.pem $(BUILDROOT)/etc/nventory
+	cp -p ca.pem $(BUILDROOT)/etc/nventory
+	cp -p dhparams $(BUILDROOT)/etc/nventory
 	# Cron job for registration
 	mkdir -p $(BUILDROOT)/usr/sbin
 	cat nventory_cron_wrapper | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/sbin/nventory_cron_wrapper
@@ -114,8 +120,23 @@ solaris: pkginfo depend
 	# on /usr and /usr/bin
 	find $(BUILDROOT) | pkgproto | tail +2 | sed "s,$(BUILDROOT),," | sed 's,/usr .*,/usr ? ? ?,' | sed 's,/usr/bin .*,/usr/bin ? ? ?,' | sed 's,/usr/sbin .*,/usr/sbin ? ? ?,' >> prototype
 	pkgmk -r $(BUILDROOT) -d $(PWD)
-	pkgtrans . OSSnventory-$(VER).pkg OSSnventory
-	rm -rf OSSnventory
+	pkgtrans . YPCnventory-$(VER).pkg YPCnventory
+	rm -rf YPCnventory
 	rm -rf $(BUILDROOT)
 	rm -f prototype
+
+# This package is for users who want to program against the nventory
+# libraries. It is handy for them to be able to install and depend on
+# the library along with other tpkgs. In order to reduce confusion this
+# package does not contain any of the executables that go in the normal
+# packages.
+tpkgpkg: tpkg.xml
+	rm -rf $(BUILDROOT)
+	mkdir -p $(BUILDROOT)/root/home/t/perl-5.8.9/lib/site_perl/5.8.9
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/root/home/t/perl-5.8.9/lib/site_perl/5.8.9)
+	mkdir -p $(BUILDROOT)/root/home/t/ruby-ypc/lib/ruby/site_ruby/1.8
+	sed 's/VER/$(VER)/' tpkg.xml > $(BUILDROOT)/tpkg.xml
+	cp -p ruby/nventory.rb $(BUILDROOT)/root/home/t/ruby-ypc/lib/ruby/site_ruby/1.8
+	tpkg --make $(BUILDROOT)
+	rm -rf $(BUILDROOT)
 

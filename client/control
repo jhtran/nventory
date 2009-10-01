@@ -1,6 +1,6 @@
 Package: nventory-client
-Version: 1.2-1
-Maintainer: nVentory Project <https://sourceforge.net/projects/nventory/>
+Version: 1.50 
+Maintainer: Jason Heiss <jheiss@yellowpages.com>
 Architecture: all
 Depends: libxml-libxml-perl
 Description: nVentory client
