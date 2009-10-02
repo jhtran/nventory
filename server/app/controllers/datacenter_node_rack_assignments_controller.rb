@@ -67,9 +67,9 @@ class DatacenterNodeRackAssignmentsController < ApplicationController
             # the datacenter show page or the rack show page. Depending on
             # which we do something slightly different.
             if request.env["HTTP_REFERER"].include? "datacenters"
-              page.replace_html 'datacenter_node_rack_assignments', :partial => 'datacenters/rack_assignments', :locals => { :datacenter => @datacenter_node_rack_assignment.datacenter }
-              page.hide 'create_rack_assignment'
-              page.show 'add_rack_assignment_link'
+              page.replace_html 'datacenter_node_rack_assignments', :partial => 'datacenters/node_rack_assignments', :locals => { :datacenter => @datacenter_node_rack_assignment.datacenter }
+              page.hide 'create_node_rack_assignment'
+              page.show 'add_node_rack_assignment_link'
             elsif request.env["HTTP_REFERER"].include? "node_racks"
               page.replace_html 'datacenter_node_rack_assignments', :partial => 'node_racks/datacenter_assignment', :locals => { :node_rack => @datacenter_node_rack_assignment.node_rack }
               page.hide 'create_datacenter_assignment'
@@ -112,7 +112,18 @@ class DatacenterNodeRackAssignmentsController < ApplicationController
 
     respond_to do |format|
       format.html { redirect_to datacenter_node_rack_assignments_url }
-      format.js # will use destroy.js.rjs
+      format.js {
+          render(:update) { |page|
+            if request.env["HTTP_REFERER"].include? "datacenters"
+              page.replace_html 'datacenter_node_rack_assignments', :partial => 'datacenters/node_rack_assignments', :locals => { :datacenter => @datacenter_node_rack_assignment.datacenter }
+              page.hide 'create_node_rack_assignment'
+              page.show 'add_node_rack_assignment_link'
+            elsif request.env["HTTP_REFERER"].include? "node_racks"
+              page.replace_html 'datacenter_node_rack_assignments', :partial => 'node_racks/datacenter_assignment', :locals => { :node_rack => @datacenter_node_rack_assignment.node_rack }
+              page.hide 'create_datacenter_assignment'
+            end
+          }
+      }
       format.xml  { head :ok }
     end
   end

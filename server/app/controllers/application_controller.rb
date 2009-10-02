@@ -260,10 +260,14 @@ class ApplicationController < ActionController::Base
   # Used by acts_as_audited
   protected
     def current_user
-      if @sso = sso_auth(:redirect => false)
-        @user ||= Account.find_by_login(@sso.login)
+      if SSO_AUTH_SERVER
+        if (@sso = sso_auth(:redirect => false))
+          @user ||= Account.find_by_login(@sso.login)
+        else
+          @user ||= Account.find(session[:account_id]) if session[:account_id]
+        end
       else
-        @user ||= Account.find(session[:account_id]) if session[:account_id]
+        (@user ||= Account.find(session[:account_id])) if session[:account_id]
       end
     end
 

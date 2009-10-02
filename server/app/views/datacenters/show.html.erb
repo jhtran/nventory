@@ -26,19 +26,19 @@
 <div class="relationship">
 
 <div id="datacenter_node_rack_assignments">
-<%= render :partial => 'node_rack_assignments', :locals => { :datacenter => @datacenter} %>
+  <%= render :partial => 'node_rack_assignments', :locals => { :datacenter => @datacenter} %>
 </div> <!-- end datacenter_node_rack_assignments -->
 
-<div id="create_rack_assignment">
-<%= render :partial => 'shared/create_assignment', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
+<div id="create_node_rack_assignment">
+  <%= render :partial => 'shared/create_node_rack_assignment', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
 </div>
 
 <p id="new_node_rack">
 
 </p>
 
-<p id="add_rack_assignment_link">
-<%= render :partial => 'shared/add_inline_link', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
+<p id="add_node_rack_assignment_link">
+<%= render :partial => 'shared/add_datacenter_node_rack_inline_link', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
 </p>
 
 </div> <!-- end relationship -->
@@ -84,7 +84,7 @@
 
 <%= render :partial => 'shared/version_information', :locals => { :object => @datacenter} %>
 
-<%= javascript_tag "Element.hide('create_rack_assignment')" %>
+<%= javascript_tag "Element.hide('create_node_rack_assignment')" %>
 <%= javascript_tag "Element.hide('create_vip_assignment')" %>
 
 <%= javascript_tag "_datacenter_id = "+@datacenter.id.to_s %>

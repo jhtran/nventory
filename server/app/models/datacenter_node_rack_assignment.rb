@@ -6,8 +6,8 @@ class DatacenterNodeRackAssignment < ActiveRecord::Base
   belongs_to :datacenter
   belongs_to :node_rack 
   
-  validates_presence_of :datacenter_id, :rack_id
-  validates_uniqueness_of :rack_id
+  validates_presence_of :datacenter_id, :node_rack_id
+  validates_uniqueness_of :node_rack_id
   
   def self.default_search_attribute
     'assigned_at'

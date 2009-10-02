@@ -37,27 +37,31 @@ class DashboardController < ApplicationController
       data[hwp.name] = hwp.nodes.size
     end
     sum = data.values.inject(0) { |s,v| s += v }
-    data.each_pair do |hwp,count|
-      if (percent[(count * 100)/sum].nil?) || (percent[(count * 100)/sum].empty?) 
-        percent[(count * 100)/sum] = [hwp]
-      else
-        percent[(count * 100)/sum] << hwp
-      end
-    end 
+    unless sum == 0
+      data.each_pair do |hwp,count|
+        if (percent[(count * 100)/sum].nil?) || (percent[(count * 100)/sum].empty?) 
+          percent[(count * 100)/sum] = [hwp]
+        else
+          percent[(count * 100)/sum] << hwp
+        end
+      end 
+    end
     order = percent.keys.sort
     # only take the top 7 hw profiles otherwise pie graph is ugly
     counter = 15
-    while counter > 0
-      highest_percent = order.pop
-      # may be more than 1 hw profile with the same % key
-      percent[highest_percent].each do |hwp|
-        if counter > 0
-          pie_values << PieValue.new(data[hwp], "#{hwp}: #{data[hwp]}")
-          counter -= 1
-        else
-          other += data[hwp]
+    unless order.empty?
+      while counter > 0
+        highest_percent = order.pop
+        # may be more than 1 hw profile with the same % key
+        percent[highest_percent].each do |hwp|
+          if counter > 0
+            pie_values << PieValue.new(data[hwp], "#{hwp}: #{data[hwp]}")
+            order.empty? ? (counter = 0) : (counter -= 1)
+          else
+            other += data[hwp]
+          end
         end
-      end
+      end # while counter > 0
     end
     # Doesn't matter what the OS's are left, we'll just add the # of those hwprofiles to "other"
     order.each do |leftover|
@@ -170,43 +174,48 @@ class DashboardController < ApplicationController
     OperatingSystem.find(:all,:include => {:nodes => {}}).each do |os|
       data[os.name] = os.nodes.size
     end
+    @operating_systems_pie_fail = true
     sum = data.values.inject(0) { |s,v| s += v }
-    data.each_pair do |os,count|
-      if (percent[(count * 100)/sum].nil?) || (percent[(count * 100)/sum].empty?) 
-        percent[(count * 100)/sum] = [os]
-      else
-        percent[(count * 100)/sum] << os 
-      end
-    end 
+    unless sum == 0
+      data.each_pair do |os,count|
+        if (percent[(count * 100)/sum].nil?) || (percent[(count * 100)/sum].empty?) 
+          percent[(count * 100)/sum] = [os]
+        else
+          percent[(count * 100)/sum] << os 
+        end
+      end 
+    end
     order = percent.keys.sort
     # only take the top hw profiles otherwise pie graph is ugly
     counter = 10
-    while counter > 0
-      highest_percent = order.pop
-      # may be more than 1 hw profile with the same % key
-      percent[highest_percent].each do |os|
-        if counter > 0
-          if (os =~ /windows/i) 
-            shortname = os.gsub(/standard edition/i, 'SE')
-            shortname.gsub!(/service pack/i, 'SP')
-            shortname.gsub!(/Microsoft.*Windows.*Server/, "Windows\n")
-            shortname.gsub!(/enterprise edition/i, 'EE')
-            shortname.gsub!(/enterprise x64 edition/i, 'EE x64')
-            shortname.gsub!(/standard x64 edition/i, 'SE x64')
-            shortname.gsub!(/windows\s/i, 'Win')
-          elsif (os =~ /red *hat.*centos/i)
-            shortname = os.gsub(/red *hat.*centos/i, 'CentOS').gsub(/\sLinux/i, '')
-          elsif (os =~ /red *hat.*enterprise/i)
-            shortname = os.gsub(/red *hat.*enterprise/i, 'RHEL').gsub(/\sLinux/i, '')
+    unless order.empty?
+      while counter > 0
+        highest_percent = order.pop
+        # may be more than 1 hw profile with the same % key
+        percent[highest_percent].each do |os|
+          if counter > 0
+            if (os =~ /windows/i) 
+              shortname = os.gsub(/standard edition/i, 'SE')
+              shortname.gsub!(/service pack/i, 'SP')
+              shortname.gsub!(/Microsoft.*Windows.*Server/, "Windows\n")
+              shortname.gsub!(/enterprise edition/i, 'EE')
+              shortname.gsub!(/enterprise x64 edition/i, 'EE x64')
+              shortname.gsub!(/standard x64 edition/i, 'SE x64')
+              shortname.gsub!(/windows\s/i, 'Win')
+            elsif (os =~ /red *hat.*centos/i)
+              shortname = os.gsub(/red *hat.*centos/i, 'CentOS').gsub(/\sLinux/i, '')
+            elsif (os =~ /red *hat.*enterprise/i)
+              shortname = os.gsub(/red *hat.*enterprise/i, 'RHEL').gsub(/\sLinux/i, '')
+            else
+              shortname = os
+            end
+            pie_values << PieValue.new(data[os], "#{shortname}: #{data[os]}")
+            order.empty? ? (counter = 0) : (counter -= 1)
           else
-            shortname = os
+            other += data[os]
           end
-          pie_values << PieValue.new(data[os], "#{shortname}: #{data[os]}")
-          counter -= 1
-        else
-          other += data[os]
         end
-      end
+      end # while counter > 0
     end
     # Doesn't matter what the OS's are left, we'll just add the # of those os's to "other"
     order.each do |leftover|
