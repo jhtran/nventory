@@ -1,0 +1,3 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= link_to_function 'Add '+to.underscore.titleize+' Assignment', "Element.show('create_"+to+"_assignment');Element.hide('add_"+to+"_assignment_link');$('"+from+"_"+to+"_assignment_"+to+"_id').value=''" %>
+<%= @tooltips if ttflag %>

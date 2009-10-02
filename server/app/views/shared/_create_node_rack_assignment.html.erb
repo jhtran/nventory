@@ -1,0 +1,13 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :datacenter_node_rack_assignment, :url => datacenter_node_rack_assignments_path ) do |f| %>
+  <p><%= Rack %>:
+  
+  <%- to_array = NodeRack.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+  
+  <%= f.select( :node_rack_id, to_array, { :include_blank => true } ) %>
+  <%= f.hidden_field( :datacenter_id, { :value => @datacenter.id } ) %>
+  
+  <%= submit_tag "Assign", :onclick => "$('datacenter_node_rack_assignment_id').value = _datacenter_id" %> | <%= link_to_function 'Cancel', "Element.show('add_node_rack_assignment_link');Element.hide('create_node_rack_assignment');Element.hide('new_node_rack_id')"%></p>
+<% end %>
+
+<%= @tooltips if ttflag %>
