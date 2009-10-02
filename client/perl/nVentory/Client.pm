@@ -18,7 +18,7 @@ my $dryrun;
 
 my $SERVER = 'http://nventory';
 my $PROXY_SERVER;
-#my $PROXY_SERVER = 'https://proxy.yellowpages.local:8080';
+#my $PROXY_SERVER = 'https://proxy.mydomain.local:8080';
 
 # dir location where xen img files held if this is xen host
 my $XEN_IMGDIR = '/home/xen/disks';

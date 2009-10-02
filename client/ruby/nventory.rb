@@ -55,7 +55,7 @@ class NVentory::Client
     @dryrun = dryrun
     #@server = 'http://localhost/'
     @server = 'http://nventory/'
-    @sso_server = 'https://sso.yellowpages.com/'
+    @sso_server = 'https://sso.mydomain.com/'
     @proxy_server = nil
     @ca_file = nil
     @ca_path = nil
