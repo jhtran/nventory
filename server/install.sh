@@ -11,6 +11,7 @@ RAILS_VER="2.3.2"
 # yum install graphviz -y
 # yum install ruby -y
 # yum install -y ruby-devel ruby-docs ruby-ri ruby-irb ruby-rdoc
+# yum install -y gcc make
 
 # goto rubygems.org to download and install rubygems
 
