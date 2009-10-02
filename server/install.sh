@@ -17,6 +17,7 @@ RAILS_VER="2.3.2"
 ## for mysql gem
 # yum install mysql-devel -y
 ## for nginx
+# yum install -y openssl-devel
 # yum install -y gcc-c++
 # yum install -y zlib-devel
 # yum install -y pcre-devel
@@ -31,7 +32,34 @@ RAILS_VER="2.3.2"
 # wget http://www.nginx.eu/download/sources/nginx-0.8.9.tar.gz
 # tar zxvf nginx-0.8.9.tar.gz
 # cd nginx-0.8.9
-# ./configure && make && make install
+# ./configure --sbin-path=/sbin/nginx --prefix=/opt/nginx --with-http_ssl_module 
+# make && make install
+
+## generate self signed keys & certs for nginx ssl
+# cd /opt/nginx
+# openssl genrsa -des3 -out server.key 1024
+# openssl req -new -key server.key -out server.csr
+# openssl rsa -in server.key -out cert.key
+# openssl x509 -req -days 365 -in server.csr -signkey cert.key -out cert.pem
+
+## move your nventory-0.<version>/server directory to /opt/nventory (this is your rails app)
+# mv /home/user/nventory-0.83/server /opt/nventory
+
+## copy nginx.conf template overwriting original
+# cp /opt/nventory/config/nginx.conf /opt/nginx/conf
+
+## startup nginx
+# /sbin/nginx
+
+## create nventory database
+# service mysqld start
+# mysql -u root nventory -e 'create database nventory;'
+
+## run nventory's initial db migration to create database schema
+# cd /opt/nventory && rake db:migrate
+
+## Startup Rails
+# cd /opt/nventory && unicorn_rails --daemonize
 
 ## install gems
 gem install rails -v $RAILS_VER
@@ -51,3 +79,4 @@ gem install mislav-will_paginate --source http://gems.github.com/ -v 2.3.2
 gem install mongrel -v 1.1.5
 gem install mysql -- --with-mysql-config=$MYSQL_CONFIG_DIR
 gem install ruby-graphviz
+gem install unicorn
