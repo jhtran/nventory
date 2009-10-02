@@ -1,7 +1,18 @@
 #!/bin/sh
 
+# Sample installation script for CentOS5
+
 MYSQL_CONFIG_DIR="/usr/bin/mysql_config"
 RAILS_VER="2.3.2"
+
+## OPERATING SYSTEM PRE-REQUISITES
+# yum install mysql-server -y
+# yum install mysql-devel -y
+# yum install graphviz -y
+# yum install ruby -y
+# yum install -y ruby-devel ruby-docs ruby-ri ruby-irb ruby-rdoc
+
+# goto rubygems.org to download and install rubygems
 
 gem install rails -v $RAILS_VER
 gem install RedCloth -v 3.0.4
