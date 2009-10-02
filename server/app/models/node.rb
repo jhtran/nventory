@@ -101,8 +101,8 @@ class Node < ActiveRecord::Base
       users = contact.split(',')
       users.each do |user|
         user.strip!
-        uri = URI.parse("https://sso.yellowpages.com/users.xml?login=#{user}")
-        http = Net::HTTP::Proxy('proxy.yellowpages.local',8080).new(uri.host,uri.port)
+        uri = URI.parse("https://#{SSO_AUTH_SERVER}/users.xml?login=#{user}")
+        http = Net::HTTP::Proxy(SSO_PROXY_SERVER,8080).new(uri.host,uri.port)
         http.use_ssl = true
         sso_xmldata = http.get(uri.request_uri).body
         sso_xmldoc = Hpricot::XML(sso_xmldata)
