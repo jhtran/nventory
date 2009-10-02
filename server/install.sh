@@ -19,6 +19,7 @@ RAILS_VER="2.3.2"
 ## for nginx
 # yum install -y gcc-c++
 # yum install -y zlib-devel
+# yum install -y pcre-devel
 
 ## goto rubygems.org to download and install rubygems (example below but you want the latest source)
 # wget http://rubyforge.org/frs/download.php/60718/rubygems-1.3.5.tgz
@@ -26,12 +27,13 @@ RAILS_VER="2.3.2"
 # cd rubygems-1.3.5
 # ruby setup.rb
 
-## get phusion-passenger nginx installation package (example below but you want the latest source)
-# wget http://rubyforge.org/frs/download.php/59007/passenger-2.2.4.tar.gz
-# tar zxvf passenger-2.2.4.tar.gz
-# cd passenger-2.2.4/bin
-# ./passenger-install-nginx-module
+## get  nginx installation package (example below but you want the latest source)
+# wget http://www.nginx.eu/download/sources/nginx-0.8.9.tar.gz
+# tar zxvf nginx-0.8.9.tar.gz
+# cd nginx-0.8.9
+# ./configure && make && make install
 
+## install gems
 gem install rails -v $RAILS_VER
 gem install RedCloth -v 3.0.4
 gem install ruby-net-ldap -v 0.0.4
