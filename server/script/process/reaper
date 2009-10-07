@@ -1,2 +1,0 @@
-#!/usr/bin/env ruby
-puts "This script is deprecated and here for legacy capistrano reasons.  Use script/init-unicorn to start|stop rails"
