@@ -116,12 +116,29 @@ if File.exist?(CONFIGFILE)
   confighash['sso_proxy_server'] ? (SSO_PROXY_SERVER = confighash['sso_proxy_server']) : (SSO_PROXY_SERVER = false)
   confighash['sso_proxy_port'] ? (SSO_PROXY_PORT = confighash['sso_proxy_port']) : (SSO_PROXY_PORT = false)
   confighash['help_url'] ? (HELP_URL = confighash['help_url']) : (HELP_URL = 'http://sourceforge.net/apps/trac/nventory/wiki')
+  confighash['email_suffix'] ? (EMAIL_SUFFIX = confighash['email_suffix']) : (EMAIL_SUFFIX  = 'test.com')
+  confighash['mail_from'] ? ($mail_from = confighash['mail_from']) : ($mail_from = "nventory@#{EMAIL_SUFFIX}")
   confighash['prod_users_email'] ? ($prod_users_email= confighash['prod_users_email']) : ($prod_users_email = "nventory@#{EMAIL_SUFFIX}")
   confighash['dev_users_email'] ? ($dev_users_email= confighash['dev_users_email']) : ($dev_users_email = "nventory@#{EMAIL_SUFFIX}")
-  confighash['mail_from'] ? ($mail_from = confighash['mail_from']) : ($mail_from = "nventory@#{EMAIL_SUFFIX}")
-  confighash['email_suffix'] ? (EMAIL_SUFFIX = confighash['email_suffix']) : (EMAIL_SUFFIX  = false)
   confighash['admin_email'] ? ($admin_email = confighash['admin_email']) : ($admin_email = "admin@#{EMAIL_SUFFIX}")
-end
+else # if File.exist?(CONFIGFILE)
+  LDAP_SERVER = false
+  LDAP_SERVERS = false
+  LDAP_BASE = false
+  LDAP_DNS_NAME = false
+  LDAP_EMAIL_SUFFIX  = false
+  SSO_AUTH_SERVER = false
+  SSO_AUTH_URL = false
+  SSO_LOGIN_URL = false
+  SSO_PROXY_SERVER = false
+  SSO_PROXY_PORT = false
+  HELP_URL = 'http://sourceforge.net/apps/trac/nventory/wiki'
+  EMAIL_SUFFIX  = 'example.com'
+  $mail_from = "nventory@#{EMAIL_SUFFIX}"
+  $prod_users_email = "nventory@#{EMAIL_SUFFIX}"
+  $dev_users_email = "nventory@#{EMAIL_SUFFIX}"
+  $admin_email = "admin@#{EMAIL_SUFFIX}"
+end # if File.exist?(CONFIGFILE)
 
 # Email receipients for the exception_notification plugin
 ExceptionNotifier.exception_recipients = $admin_email
