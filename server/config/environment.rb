@@ -122,6 +122,7 @@ if File.exist?(CONFIGFILE)
   confighash['dev_users_email'] ? ($dev_users_email= confighash['dev_users_email']) : ($dev_users_email = "nventory@#{EMAIL_SUFFIX}")
   confighash['admin_email'] ? ($admin_email = confighash['admin_email']) : ($admin_email = "admin@#{EMAIL_SUFFIX}")
 else # if File.exist?(CONFIGFILE)
+  logger.info "\n\n\n***** Config file: #{CONFIGFILE} does not exit.  Using default values. *****\n\n\n"
   LDAP_SERVER = false
   LDAP_SERVERS = false
   LDAP_BASE = false
