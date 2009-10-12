@@ -50,12 +50,22 @@ CONFIG_FILES = ['/etc/nventory.conf', "#{ENV['HOME']}/.nventory.conf"]
 
 class NVentory::Client
   attr_accessor :delete
-  def initialize(debug=false, dryrun=false, configfile=nil)
+  def initialize(debug=false, dryrun=false, configfile=nil, server=nil)
     @debug = debug
     @dryrun = dryrun
     #@server = 'http://localhost/'
-    @server = 'http://nventory/'
-    @sso_server = 'https://sso.mydomain.com/'
+    if server
+      if server =~ /^http/
+        (server =~ /\/$/) ? (@server = server) : (@server = "#{server}/")
+      else
+        @server = "http://#{server}/"
+      end
+      warn "** Using server #{@server} **"
+    else
+      @server = 'http://nventory/'
+      warn "Using server #{@server}" if @debug
+    end
+    @sso_server = 'https://sso.example.com/'
     @proxy_server = nil
     @ca_file = nil
     @ca_path = nil
@@ -76,13 +86,13 @@ class NVentory::Client
             # Warn the user, as this could potentially be confusing
             # if they don't realize there's a config file lying
             # around
-            warn "Using server #{@server} from #{configfile}"
+            warn "Using server #{@server} from #{configfile}" if (@debug)
           elsif key == 'sso_server'
             @sso_server = value
-            warn "Using sso_server #{@sso_server} from #{configfile}"
+            warn "Using sso_server #{@sso_server} from #{configfile}" if (@debug)
           elsif key == 'proxy_server'
             @proxy_server = value
-            warn "Using proxy_server #{@proxy_server} from #{configfile}"
+            warn "Using proxy_server #{@proxy_server} from #{configfile}" if (@debug)
           elsif key == 'ca_file'
             @ca_file = value
             warn "Using ca_file #{@ca_file} from #{configfile}" if (@debug)
@@ -196,6 +206,11 @@ class NVentory::Client
     req = Net::HTTP::Get.new(uri.request_uri)
     warn "GET URL: #{uri}" if (@debug)
     response = send_request(req, uri, login, password_callback)
+    while response.kind_of?(Net::HTTPMovedPermanently)
+      uri = URI.parse(response['Location'])
+      req = Net::HTTP::Get.new(uri.request_uri)
+      response = send_request(req, uri, login, password_callback)
+    end
     if !response.kind_of?(Net::HTTPOK)
       puts response.body
       response.error!
@@ -231,6 +246,11 @@ class NVentory::Client
     req = Net::HTTP::Get.new(uri.request_uri)
     warn "GET URL: #{uri}" if (@debug)
     response = send_request(req, uri, login, password_callback)
+    while response.kind_of?(Net::HTTPMovedPermanently)
+      uri = URI.parse(response['Location'])
+      req = Net::HTTP::Get.new(uri.request_uri)
+      response = send_request(req, uri, login, password_callback)
+    end  
     if !response.kind_of?(Net::HTTPOK)
       puts response.body
       response.error!
@@ -294,6 +314,11 @@ class NVentory::Client
           req = Net::HTTP::Delete.new(uri.request_uri)
           req.set_form_data(cleandata)
           response = send_request(req, uri, login, password_callback)
+          while response.kind_of?(Net::HTTPMovedPermanently)
+            uri = URI.parse(response['Location'])
+            req = Net::HTTP::Delete.new(uri.request_uri)
+            response = send_request(req, uri, login, password_callback)
+          end  
           if response.kind_of?(Net::HTTPOK)
             successcount += 1
           else
@@ -308,6 +333,12 @@ class NVentory::Client
           warn "PUT to URL: #{uri}" if (@debug)
           if !@dryrun
             response = send_request(req, uri, login, password_callback)
+            while response.kind_of?(Net::HTTPMovedPermanently)
+              uri = URI.parse(response['Location'])
+              req = Net::HTTP::Put.new(uri.request_uri)
+              req.set_form_data(cleandata)
+              response = send_request(req, uri, login, password_callback)
+            end
             if response.kind_of?(Net::HTTPOK)
               successcount += 1
             else
@@ -326,7 +357,13 @@ class NVentory::Client
       warn "POST to URL: #{uri}" if (@debug)
       if !@dryrun
         response = send_request(req, uri, login, password_callback)
-        if response.kind_of?(Net::HTTPOK)
+        while response.kind_of?(Net::HTTPMovedPermanently)
+          uri = URI.parse(response['Location'])
+          req = Net::HTTP::Post.new(uri.request_uri)
+          req.set_form_data(cleandata)
+          response = send_request(req, uri, login, password_callback)
+        end  
+        if response.kind_of?(Net::HTTPOK) || response.kind_of?(Net::HTTPCreated)
           successcount += 1
         else
           puts "POST to #{uri} failed."
@@ -347,6 +384,11 @@ class NVentory::Client
         uri = URI::join(@server, "#{objecttypes}/#{result['id']}.xml")
         req = Net::HTTP::Delete.new(uri.request_uri)
         response = send_request(req, uri, login, password_callback)
+        while response.kind_of?(Net::HTTPMovedPermanently)
+          uri = URI.parse(response['Location'])
+          req = Net::HTTP::Delete.new(uri.request_uri)
+          response = send_request(req, uri, login, password_callback)
+        end  
         if response.kind_of?(Net::HTTPOK)
           successcount = 0
         else

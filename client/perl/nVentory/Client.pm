@@ -18,7 +18,7 @@ my $dryrun;
 
 my $SERVER = 'http://nventory';
 my $PROXY_SERVER;
-#my $PROXY_SERVER = 'https://proxy.mydomain.local:8080';
+#my $PROXY_SERVER = 'https://proxy.example.local:8080';
 
 # dir location where xen img files held if this is xen host
 my $XEN_IMGDIR = '/home/xen/disks';
@@ -46,25 +46,25 @@ CONFIGFILE: foreach my $configfile ('/etc/nventory.conf', $ENV{HOME}.'/.nventory
 				# Warn the user, as this could potentially be confusing
 				# if they don't realize there's a config file lying
 				# around
-				warn "Using server $SERVER from $configfile\n";
+				#warn "Using server $SERVER from $configfile\n";
 			}
 			elsif ($key eq 'proxy_server')
 			{
 				$PROXY_SERVER = $value;
-				warn "Using proxy server $PROXY_SERVER from $configfile\n";
+				#warn "Using proxy server $PROXY_SERVER from $configfile\n" if $debug;
 			}
 			elsif ($key eq 'ca_file' && -f $value)
 			{
 				# This currently executes before anyone could call setdebug,
 				# so the debug message is never printed.
-				warn "Using CA file $value from $configfile\n" if ($debug);
+				#warn "Using CA file $value from $configfile\n" if ($debug);
 				$ENV{HTTPS_CA_FILE} = $value;
 			}
 			elsif ($key eq 'ca_path' && -d $value)
 			{
 				# This currently executes before anyone could call setdebug,
 				# so the debug message is never printed.
-				warn "Using CA directory $value from $configfile\n" if ($debug);
+				#warn "Using CA directory $value from $configfile\n" if ($debug);
 				$ENV{HTTPS_CA_DIR} = $value;
 			}
 		}
@@ -185,15 +185,25 @@ sub _get_ua
 		# Autoreg user should NOT be redirected to SSO even if it wants to.  Autoreg auths to uri '/login/login' (which will allow LOCAL and LDAP account logins)
 		if ( ($response->is_redirect) && ( $login eq 'autoreg' ) )
 		{
+			my $location;
 			# if it's a redirect yet not sso url, then we should follow the redirect and keep trying the post
 			while (($response->is_redirect) && ($response->header('location') !~ /^https:\/\/sso.*\/login\?url/)) { 
-				my $location = $response->header('location');
+				$location = URI->new($response->header('location'));
 				$response = $ua->request(POST $location, { 'foo' => 'bar' });
 			}
 			# if the redirect is a sso url, then we know we need to authenticate by bypassing sso via the url path '/login/login'
 			if (($response->is_redirect) && ($response->header('location') =~ /^https:\/\/(sso.*)\/login\?url/)) {
 				warn "POST to $SERVER/accounts.xml ( ** for user 'autoreg' ** ) was redirected, authenticating to local login path: '/login/login'\n" if ($debug);
-	                        my $url = URI->new("$SERVER/login/login");
+                                my $authbase;
+                                if ($location)
+                                {
+                                        $authbase = 'https://' . $location->authority;
+                                }
+                                else
+                                {
+                                        $authbase = "$SERVER";
+                                }
+                                my $url = URI->new("$authbase/login/login");
 	                        $url->scheme('https');
 	                        $password = &$password_callback() if (!$password);
 	                        $response = $ua->request(POST $url, {'login' => $login, 'password' => $password});

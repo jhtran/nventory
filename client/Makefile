@@ -1,6 +1,6 @@
 # When updating the version number you currently need to update
 # nventory-client.spec, control and pkginfo as well
-VER=1.50
+VER=1.52`cat VERSION`
 
 all:
 
@@ -15,7 +15,7 @@ rpm: nventory-client.spec
 	#
 	rm -rf $(BUILDROOT)
 	mkdir -p $(BUILDROOT)/usr/bin
-	cp -p perl/nv $(BUILDROOT)/usr/bin/nv.perl
+	cat perl/nv|sed "s/@@VERSION@@/$VER/g" > $(BUILDROOT)/usr/bin/nv.perl
 	chmod 555 $(BUILDROOT)/usr/bin/nv.perl
 	cp -p ruby/nv $(BUILDROOT)/usr/bin/nv.ruby
 	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
@@ -40,7 +40,7 @@ rpm: nventory-client.spec
 	# Now build the package
 	#
 	# Prior to RHEL 5 the package containing dmidecode is kernel-utils
-	cat nventory-client.spec | sed '/^Requires:/s/$$/, kernel-utils/' > $(TMPSPEC)
+	cat nventory-client.spec | sed '/^Requires:/s/$$/, kernel-utils/'|sed "s/@@VERSION@@/$VER/g" > $(TMPSPEC)
 	rpmbuild -bb --buildroot $(BUILDROOT) $(TMPSPEC)
 	mv /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.noarch.rpm /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.el4.noarch.rpm
 	# Starting with RHEL 5 dmidecode got its own package
@@ -52,9 +52,9 @@ rpm: nventory-client.spec
 debian: control
 	rm -rf $(BUILDROOT)
 	mkdir -p $(BUILDROOT)/DEBIAN
-	grep -v '^#' control > $(BUILDROOT)/DEBIAN/control
+	grep -v '^#' control|sed "s/@@VERSION@@/$VER/g" > $(BUILDROOT)/DEBIAN/control
 	mkdir -p $(BUILDROOT)/usr/bin
-	cp -p perl/nv $(BUILDROOT)/usr/bin/nv.perl
+	cat perl/nv|sed "s/@@VERSION@@/$VER/g" > $(BUILDROOT)/usr/bin/nv.perl
 	chmod 555 $(BUILDROOT)/usr/bin/nv.perl
 	cp -p ruby/nv $(BUILDROOT)/usr/bin/nv.ruby
 	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
@@ -79,7 +79,7 @@ solaris: pkginfo depend
 	#
 	rm -rf $(BUILDROOT)
 	mkdir -p $(BUILDROOT)/usr/bin
-	cp -p perl/nv $(BUILDROOT)/usr/bin/nv.perl
+	cat perl/nv|sed "s/@@VERSION@@/$VER/g" > $(BUILDROOT)/usr/bin/nv.perl
 	mv $(BUILDROOT)/usr/bin/nv.perl $(BUILDROOT)/usr/bin/nv.perl.tmp
 	cat $(BUILDROOT)/usr/bin/nv.perl.tmp | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/bin/nv.perl
 	rm $(BUILDROOT)/usr/bin/nv.perl.tmp
@@ -105,6 +105,7 @@ solaris: pkginfo depend
 	# Cron job for registration
 	mkdir -p $(BUILDROOT)/usr/sbin
 	cat nventory_cron_wrapper | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/sbin/nventory_cron_wrapper
+	cat pkginfo | sed "s,@@VERSION@@,$VER,g" > pkginfo
 	chmod 555 $(BUILDROOT)/usr/sbin/nventory_cron_wrapper
 	#
 	# Now build the package

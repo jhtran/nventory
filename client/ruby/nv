@@ -35,8 +35,10 @@ $addnodegrouptonodegroup = nil
 $removenodegroupfromnodegroup = nil
 $register = false
 $username = ENV['LOGNAME']
+$delete = nil
 $debug = nil
 $dryrun = nil
+$server = nil
 
 def opt_hash_parse(opt)
   opthash = {}
@@ -68,6 +70,9 @@ opts.on('--get [field=value1,value2][,field2=value1[,value2]]') do |opt|
   else
     $get = opt_hash_parse(opt)
   end
+end
+opts.on('--delete', 'Delete the object(s) returned') do |opt|
+  $delete = opt
 end
 opts.on('--exactget [field=value1,value2]',
         'Select objects for display or updating.  get does a substring',
@@ -182,6 +187,9 @@ opts.on('--username value', String,
         'Username to use when authenticating to the server.  If not',
         'specified defaults to the current user.') do |opt|
   $username = opt
+end
+opts.on('--server value', String, 'Specify alternate server to query.') do |opt|
+  $server = opt
 end
 opts.on('--debug') do |opt|
   $debug = opt
@@ -306,7 +314,7 @@ end
 # Perform requested actions
 #
 
-nvclient = NVentory::Client.new($debug, $dryrun)
+nvclient = NVentory::Client.new($debug, $dryrun, nil, $server)
 
 # First handle the standalone actions where we perform a single
 # operation and exit.
@@ -403,7 +411,12 @@ results = nil
 names = nil
 if $get || $exactget || $regexget
   results = nvclient.get_objects($objecttype, $get, $exactget, $regexget, $exclude, includes)
-  names = results.keys.sort
+  if $delete
+    puts "Deleting objects"
+    nvclient.delete_objects($objecttype, results, $username)
+  else
+    names = results.keys.sort
+  end
 end
 if $nodegroupexpanded
   names_hash = {}
@@ -416,9 +429,11 @@ if $nodegroupexpanded
   end
 end
 
-if names.length == 0
-  puts "No matching objects"
-  exit
+unless $delete
+  if names.length == 0
+    puts "No matching objects"
+    exit
+  end
 end
 
 # The results hash is a complex data structure.  This function
@@ -447,7 +462,7 @@ def fieldprint(fields, value)
   end
 end
 
-if !$getallvalues && !$set && !$addtonodegroup && !$removefromnodegroup
+if !$getallvalues && !$set && !$addtonodegroup && !$removefromnodegroup && !$delete
   names.each do |name|
     puts name
     if $allfields || $fields

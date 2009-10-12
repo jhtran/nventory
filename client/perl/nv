@@ -11,6 +11,7 @@ use nVentory::Client;
 # Ensure we have a sane path, particularly since we might be run from
 # cron in registration mode.
 $ENV{PATH} = '/bin:/usr/bin:/sbin:/usr/sbin';
+my $client_version = '@@VERSION@@';
 
 #
 # Process command line options
@@ -95,6 +96,7 @@ Usage: nv
     [--debug]
     [--dry-run]
     [--help]
+    [--version]
 
 All options can be shortened to anything that's unique.
 EOF
@@ -130,6 +132,7 @@ my $delete;
 my $debug;
 my $dryrun;
 my $help;
+my $version;
 my $getopt = GetOptions(
 	'objecttype:s' => \$objecttype,
 	'get:s' => \%get,
@@ -160,7 +163,13 @@ my $getopt = GetOptions(
 	'debug' => \$debug,
 	'dry-run' => \$dryrun,
 	'help' => \$help,
+	'version' => \$version,
 );
+if ( $version )
+{
+  print $client_version . "\n";
+  exit;
+}
 usage() unless ($getopt);
 usage() if ($help);
 usage() unless (
@@ -341,6 +350,37 @@ if ($debug)
 {
 	warn "Enabling debug mode\n";
 	nVentory::Client::setdebug(1);
+	CONFIGFILE: foreach my $configfile ('/etc/nventory.conf', $ENV{HOME}.'/.nventory.conf')
+	{
+	        if (-f $configfile)
+	        {
+	                open my $configfh, '<', $configfile or next CONFIGFILE;
+	                while (<$configfh>)
+	                {
+	                        next if (/^\s*$/);  # Skip blank lines
+	                        next if (/^\s*#/);  # Skip comments
+	                        chomp;
+	                        my ($key, $value) = split /\s*=\s*/, $_, 2;
+	                        if ($key eq 'server')
+	                        {
+	                                warn "Using server $value from $configfile\n";
+	                        }
+	                        elsif ($key eq 'proxy_server')
+	                        {
+	                                warn "Using proxy server $value from $configfile\n";
+	                        }
+	                        elsif ($key eq 'ca_file' && -f $value)
+	                        {
+	                                warn "Using CA file $value from $configfile\n";
+	                        }
+	                        elsif ($key eq 'ca_path' && -d $value)
+	                        {
+	                                warn "Using CA directory $value from $configfile\n";
+	                        }
+	                }
+	                close $configfh;
+	        }
+	}
 }
 
 if ($dryrun)
