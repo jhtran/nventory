@@ -106,7 +106,7 @@ class Node < ActiveRecord::Base
         http.use_ssl = true
         sso_xmldata = http.get(uri.request_uri).body
         sso_xmldoc = Hpricot::XML(sso_xmldata)
-        kind = (sso_xmldoc/:kind).innerHTML
+        kind = (sso_xmldoc/:kind).first.innerHTML
         unless kind == "employee"
           flag << user
         end

@@ -3,7 +3,7 @@
 
 <p><strong><%= tooltip(IpAddress,:address_type) %></strong> <em>*</em> <br /> <%= f.text_field :address_type %></p>
 
-<p><strong><%= tooltip(IpAddress,:network_interface) %></strong> <br /> <%= %></p>
+<p><strong><%= tooltip(IpAddress,:network_interface) %></strong> <br /> <%= select 'ip_address', 'network_interface_id', NetworkInterface.all.collect { |n| ["#{n.node.name} #{n.name}", n.id] } %></p>
 
 <p><strong><%= tooltip(IpAddress,:netmask) %></strong> <br /> <%= f.text_field :netmask %></p>
 
