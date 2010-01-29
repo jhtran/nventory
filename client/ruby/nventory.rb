@@ -113,17 +113,55 @@ class NVentory::Client
       @server << '/'
     end
   end
+
+  def legacy_getparms(data,moredata)
+    # if data is string, it is legacy method of supplying get_objects params:
+    # def get_objects(objecttype, get, exactget, regexget, exclude, andget, includes=nil, login=nil, password_callback=PasswordCallback)
+    newdata = {}
+    if data.kind_of?(String)
+      newdata[:objecttype] = data
+      newdata[:get] = moredata[0]
+      newdata[:exactget] = moredata[1]
+      newdata[:regexget] = moredata[2]
+      newdata[:exclude] = moredata[3]
+      newdata[:andget] = moredata[4]
+      newdata[:includes] = moredata[5] 
+      newdata[:login] = moredata[6] 
+      raise 'SyntaxError' if !newdata[:get].kind_of?(Hash) && !newdata[:exactget].kind_of?(Hash) && !newdata[:regexget].kind_of?(Hash)
+      newdata[:password_callback] = PasswordCallback
+    elsif data.kind_of?(Hash) && !data[:objecttype].nil? && moredata.empty?
+      raise 'Syntax Error' if !data[:get].kind_of?(Hash) && !data[:exactget].kind_of?(Hash) && !data[:regexget].kind_of?(Hash) 
+      newdata = data
+      newdata[:password_callback] = PasswordCallback unless newdata[:password_callback]
+    else
+      raise 'Syntax Error'
+    end
+    return newdata
+  end
   
   # FIXME: get, exactget, regexget, exclude and includes should all merge into
   # a single search options hash parameter
-  def get_objects(objecttype, get, exactget, regexget, exclude, includes=nil, login=nil, password_callback=PasswordCallback)
+  def get_objects(data,*moredata)
+    parms = legacy_getparms(data,moredata)
+    # def get_objects(objecttype, get, exactget, regexget, exclude, andget, includes=nil, login=nil, password_callback=PasswordCallback)
+    objecttype = parms[:objecttype]
+    get = parms[:get]
+    exactget = parms[:exactget]
+    regexget = parms[:regexget]
+    exclude = parms[:exclude]
+    andget = parms[:andget]
+    includes = parms[:includes]
+    login = parms[:login]
+    password_callback = parms[:password_callback]
     #
     # Package up the search parameters in the format the server expects
     #
     metaget = []
     if get
       get.each_pair do |key,values|
-        if values.length > 1
+        if key == 'enable_aliases' && values == 1
+          metaget << "#{key}=#{values}"
+        elsif values.length > 1
           values.each do |value|
             metaget << "#{key}[]=#{CGI.escape(value)}"
           end
@@ -137,7 +175,9 @@ class NVentory::Client
     end
     if exactget
       exactget.each_pair do |key,values|
-        if values.length > 1
+        if key == 'enable_aliases' && values == 1
+          metaget << "#{key}=#{values}"
+        elsif values.length > 1
           values.each do |value|
             metaget << "exact_#{key}[]=#{CGI.escape(value)}"
           end
@@ -174,6 +214,20 @@ class NVentory::Client
           # 'key[]=[value]' would work fine, but this makes for a cleaner URL
           # and slightly reduced processing on the backend
           metaget << "exclude_#{key}=#{CGI.escape(values[0])}"
+        end
+      end
+    end
+    if andget
+      andget.each_pair do |key,values|
+        if values.length > 1
+          values.each do |value|
+            metaget << "and_#{key}[]=#{CGI.escape(value)}"
+          end
+        else
+          # This isn't strictly necessary, specifying a single value via
+          # 'key[]=[value]' would work fine, but this makes for a cleaner URL
+          # and slightly reduced processing on the backend
+          metaget << "and_#{key}=#{CGI.escape(values[0])}"
         end
       end
     end
@@ -270,7 +324,11 @@ class NVentory::Client
   end
 
   def get_expanded_nodegroup(nodegroup)
-    results = get_objects('node_groups', {}, {'name' => [nodegroup]}, {}, {}, ['nodes', 'child_groups'])
+    getdata = {}
+    getdata[:objecttype] = 'node_groups'
+    getdata[:exactget] = {'name' => [nodegroup]}
+    getdata[:includes] = ['nodes', 'child_groups']
+    results = get_objects(getdata)
     nodes = {}
     if results.has_key?(nodegroup)
       if results[nodegroup].has_key?('nodes')
@@ -482,7 +540,7 @@ class NVentory::Client
       # Example: Intel(R) Core(TM)2 Duo CPU     T7300  @ 2.00GHz
       # Example: Intel(R) Pentium(R) 4 CPU 3.60GHz
       processor = Facter['processor0'].value
-      if cpu_type =~ /(\S+)\s(.+)/
+      if processor =~ /(\S+)\s(.+)/
         manufacturer = $1
         model = $2
         speed = nil
@@ -553,7 +611,11 @@ class NVentory::Client
     end
 
     if data['hardware_profile[model]'] == 'VMware Virtual Platform'
-      results = get_objects('nodes', {'virtual_client_ids' => [data['uniqueid']]}, {}, {}, {}, [], 'autoreg')
+      getdata = {} 
+      getdata[:objecttype] = 'nodes'
+      getdata[:exactget] = {'virtual_client_ids' => [data['uniqueid']]}
+      getdata[:login] = 'autoreg'
+      results = get_objects(getdata)
       if results.length == 1
         data['virtual_parent_node_id'] = results.values.first['id']
       elsif results.length > 1
@@ -571,7 +633,11 @@ class NVentory::Client
     # host was renamed).
     results = nil
     if data['uniqueid']
-      results = get_objects('nodes', {}, {'uniqueid' => [data['uniqueid']]}, {}, {}, [], 'autoreg')
+      getdata = {} 
+      getdata[:objecttype] = 'nodes'
+      getdata[:exactget] = {'uniqueid' => [data['uniqueid']]}
+      getdata[:login] = 'autoreg'
+      results = get_objects(getdata)
     end
 
     # If we failed to find an existing entry based on the unique id
@@ -580,10 +646,15 @@ class NVentory::Client
     # as undef, which triggers set_nodes to create a new entry on the
     # server.
     if !results && data['name']
-      results = get_objects('nodes', {}, {'name' => [data['name']]}, {}, {}, [], 'autoreg')
+      getdata = {} 
+      getdata[:objecttype] = 'nodes'
+      getdata[:exactget] = {'name' => [data['name']]}
+      getdata[:login] = 'autoreg'
+      results = get_objects(getdata)
     end
 
-    set_objects('nodes', results, data, 'autoreg')
+    setresults = set_objects('nodes', results, data, 'autoreg')
+    puts "Command successful" if setresults == 1
   end
 
   # The first argument is a hash returned by a 'nodes' call to get_objects
@@ -602,7 +673,7 @@ class NVentory::Client
     nodegroups.each_pair do |nodegroup_name, nodegroup|
       # Use a hash to merge the current and new members and
       # eliminate duplicates
-      merged_nodes = nodes
+      merged_nodes = nodes.clone
       nodegroup["nodes"].each do |node|
          name = node['name']
          merged_nodes[name] = node
@@ -627,8 +698,8 @@ class NVentory::Client
     nodegroups.each_pair do |nodegroup_name, nodegroup|
       desired_nodes = {}
 
-      nodegroup[nodes].each do |node|
-        name = node[name]
+      nodegroup['nodes'].each do |node|
+        name = node['name']
         if !nodes.has_key?(name)
           desired_nodes[name] = node
         end
@@ -651,6 +722,7 @@ class NVentory::Client
     end
 
     nodegroupdata = {}
+    node_ids = 'nil' if node_ids.empty?
     nodegroupdata['node_group_node_assignments[nodes][]'] = node_ids
 
     set_objects('node_groups', nodegroups, nodegroupdata, login, password_callback)
@@ -672,9 +744,11 @@ class NVentory::Client
       # eliminate duplicates
       merged_nodegroups = child_groups
 
-      parent_group[child_groups].each do |child_group|
-        name = child_group[name]
-        merged_nodegroups[name] = child_group
+      if parent_group[child_groups]
+        parent_group[child_groups].each do |child_group|
+          name = child_group[name]
+          merged_nodegroups[name] = child_group
+        end
       end
 
       set_nodegroup_nodegroup_assignments(merged_nodegroups, {parent_group_name => parent_group}, login, password_callback)
@@ -693,11 +767,12 @@ class NVentory::Client
     # method currently suffers from.
     parent_groups.each_pair do |parent_group_name, parent_group|
       desired_child_groups = {}
-
-      parent_group[child_groups].each do |child_group|
-        name = child_group[name]
-        if !child_groups.has_key?(name)
-          desired_child_groups[name] = child_group
+      if parent_groups[child_groups]
+        parent_group[child_groups].each do |child_group|
+          name = child_group[name]
+          if !child_groups.has_key?(name)
+            desired_child_groups[name] = child_group
+          end
         end
       end
 
@@ -714,10 +789,10 @@ class NVentory::Client
         warn "set_nodegroup_nodegroup_assignments passed a bogus child groups hash, #{child_group_name} has no id field"
       end
     end
-
+    # cannot pass empty hash therefore, add a 'nil' string. nasty hack and accomodated on the server side code
+    child_ids << 'nil' if child_ids.empty?
     nodegroupdata = {}
     nodegroupdata['node_group_node_group_assignments[child_groups][]'] = child_ids
-
     set_objects('node_groups', parent_groups, nodegroupdata, login, password_callback)
   end
   
@@ -996,6 +1071,7 @@ class NVentory::Client
       puts "Server responsed with redirect to SSO login: #{response['Location']}" if (@debug)
       if login == 'autoreg'
         loginuri = URI.join(@server, 'login/login')
+        puts "** Login user is 'autoreg'.  Changing loginuri to #{loginuri.to_s}" if @debug
         unless loginuri.scheme == 'https'
           loginuri.scheme = 'https'
           loginuri = URI.parse(loginuri.to_s)
@@ -1017,6 +1093,16 @@ class NVentory::Client
       # to parse.
       loginreq['Accept'] = 'application/xml'
       loginresponse = make_http(loginuri).request(loginreq)
+
+      # if it's a redirect (such as due to NON-fqdn) loop so that it follows until no further redirect
+      while loginresponse.kind_of?(Net::HTTPMovedPermanently)
+        puts "** Following redirect #{loginresponse.class.to_s} => #{loginresponse['Location'].to_s}" if @debug
+        loginuri = URI.parse(loginresponse['Location'])
+        loginreq = Net::HTTP::Post.new(loginuri.request_uri)
+        loginreq.set_form_data({'login' => login, 'password' => password})
+        loginresponse = make_http(loginuri).request(loginreq)
+      end # while loginresponse.kind_of?(Net::HTTPMovedPermanently)
+
       if @debug
           puts "AUTH POST response (#{loginresponse.code}):"
           if loginresponse.body.strip.empty?
@@ -1025,9 +1111,18 @@ class NVentory::Client
             puts loginresponse.body
           end
       end
+
+      # SSO does a number of redirects until you get to the right domain but should just follow once and get the cookie, will become Net::HTTPNotAcceptable (406). 
+      if loginresponse.kind_of?(Net::HTTPFound) && loginresponse['Location'] =~ /sso.*\/session\/token.*.xml/
+        puts "** Following redirect #{loginresponse.class.to_s} => #{loginresponse['Location'].to_s}" if @debug
+        loginuri = URI.parse(loginresponse['Location'])
+        loginreq = Net::HTTP::Get.new(loginuri.request_uri)
+        loginresponse = make_http(loginuri).request(loginreq)
+      end
+
       # The SSO server sends back 200 if authentication succeeds, 401 or 403
       # if it does not.
-      if loginresponse.kind_of?(Net::HTTPSuccess)
+      if loginresponse.kind_of?(Net::HTTPSuccess) || (loginresponse.kind_of?(Net::HTTPFound) && loginresponse['Location'] =~ /^#{loginuri.scheme}:\/\/#{loginuri.host}\/$/ )  || loginresponse.kind_of?(Net::HTTPNotAcceptable)
         puts "Authentication against server succeeded" if (@debug)
         extract_cookie(loginresponse, loginuri, login)
         puts "Resending original request now that we've authenticated" if (@debug)

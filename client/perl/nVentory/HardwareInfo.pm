@@ -29,6 +29,7 @@ my $first_nic_hwaddr;
 my %dmidata;
 my %nicdata;
 my %virtdata;
+my $cdprflag = 0;
 
 sub get_host_manufacturer
 {
@@ -1079,6 +1080,44 @@ sub _getsmbiosdata
 	@physical_memory_sizes = @temp_physical_memory_sizes;
 }
 
+sub getnetport
+{
+        my %ports;
+        my @content;
+        open my $netstatn, '-|', 'netstat', '-tulpn'
+                or die "open netstat -tulpn: $!";
+                @content = <$netstatn>;
+        close $netstatn;
+        foreach my $line (@content)
+        {    
+                my @linearr = split(/\s+/, $line);
+                next unless (($linearr[3]) && ($linearr[3] =~ /\d+\.\d+.\d+.\d+:\d+/));
+                my $protocol = $linearr[0];
+                my ($ip,$port) = $linearr[3] =~ /(\d+\.\d+.\d+.\d+):(\d+)/;
+                my $app;
+                ($app) = $linearr[6] =~ /\d+\/(\S+)/ if ($linearr[0] eq 'tcp');
+                ($app) = $linearr[5] =~ /\d+\/(\S+)/ if ($linearr[0] eq 'udp');
+		$app =~ s/://g if $app;
+                $ports{$ip} ||= {};
+                $ports{$ip}{$protocol} ||= {};
+                $ports{$ip}{$protocol}{$port} = $app;
+        }    
+	# ports registered to 0.0.0.0 binds to all ip addresses
+	my %global_ip = %{$ports{'0.0.0.0'}};
+	delete $ports{'0.0.0.0'};
+	foreach my $ip (keys %ports)
+	{
+		foreach my $gprotocol (keys %global_ip)
+		{
+			foreach my $gport (keys %{$global_ip{$gprotocol}})
+			{
+				$ports{$ip}{$gprotocol}{$gport} = $global_ip{$gprotocol}{$gport};
+			}
+		}
+	}
+        return %ports;
+}
+
 # The following info is gathered for each network interface
 # - Hardware address
 # - IP addresses (both IPv4 and IPv6)
@@ -1088,13 +1127,25 @@ sub _getsmbiosdata
 # - Switch / Switch port
 sub getnicdata
 {
-	my $virtualarch = $_[0] if $_[0];
-	my $virtualmode = $_[1] if $_[1];
+	my %params;
+	%params = %{$_[0]} if $_[0];
+	my $virtualarch = $params{virtualarch};
+	my $virtualmode = $params{virtualmode};
+	$cdprflag = $params{nocdpr} if $params{nocdpr};
+
 	if (!%nicdata)
 	{
 		my $nic;
 
 		my $os = nVentory::OSInfo::getos();
+		
+		# get listening network ports (udp&tcp) PS-531
+		my %ports;
+		if ($os =~ 'Linux')
+		{
+			%ports = getnetport;
+		}
+
 
 		warn "Running 'ifconfig -a'" if ($debug);
 		open my $ifconfigfh, '-|', 'ifconfig', '-a'
@@ -1195,6 +1246,7 @@ sub getnicdata
 						'address' => $ipaddr,
 						'netmask' => $netmask,
 						'broadcast' => $broadcast,
+						'network_ports' => $ports{$ipaddr}
 					});
 			}
 			if (/(?:inet6 addr:|inet6) ([\da-fA-F:]+)/)
@@ -1369,7 +1421,6 @@ sub getnicdata
 				waitpid $pid, 0;
                                 # Run cdpr to discover which switch and switch port
 				# this interface connected to 
-				my $cdprflag = 0;
 				if ($virtualarch) {
 					if ($virtualarch =~ /vmware/i)  {
 				  	      	$cdprflag = 1;
@@ -1380,7 +1431,9 @@ sub getnicdata
 					}
 				}
 
-				unless ($cdprflag == 1) {
+				if ($cdprflag == 1) {
+					warn "Skipping network switch detection\n" if $debug;
+				} else {
 					print "Running cdpr on ($nic) to detect switch port - this may take up to 2 minutes...\n";
 					warn "Running 'cdpr -t 120 -d $nic'" if ($debug);
 					my $cdprpid = open3(\*IN, \*OUT, \*ERR,
@@ -1529,6 +1582,98 @@ sub getnicdata
 	warn "get_nicdata returning ", Dumper(\%nicdata) if ($debug);
 	return %nicdata;
 }
+
+sub getstoragedata {
+  my %emptyhash;
+  my %params;
+  %params = %{$_[0]} if $_[0];
+  if ( $params{nolshw} )
+  {
+	warn "Skipping storage detection (via lshw)\n" if $debug;
+	return %emptyhash;
+  }
+  my $os = nVentory::OSInfo::getos();
+  if ($os =~ /Linux/ || $os eq 'FreeBSD')
+  {
+    my $parser = XML::LibXML->new();
+    print "Running lshw to detect storage devices\n";
+    open(my $lshwfh, '-|', '/usr/sbin/lshw -xml');
+    my $doc = $parser->parse_fh($lshwfh);
+    
+    my $depth=0;
+    my %storage_data;
+    my @storage_nodes;
+    foreach my $node ($doc->findnodes('/node')) {
+      my @results = find_storage_nodes($node, $depth);
+      foreach my $storage_node (@results) { push(@storage_nodes, $storage_node); }
+    }
+    foreach my $storage_node (@storage_nodes) {
+      my %results = grab_storg_data($storage_node);
+      $storage_data{$results{'id'}} = \%results;
+    }
+    print "\n\n***** STORAGE DATA ****\n\n" if $debug;
+    print Dumper(\%storage_data) if $debug;
+    return %storage_data;
+    
+    #### SUBROUTINES ####
+    
+    sub find_storage_nodes {
+      my $chnode = $_[0];
+      my $depth = $_[1] + 1;
+      my @children = $chnode->childNodes;
+      my @storage_nodes;
+    
+      #print "DEPTH $depth  CHILDREN: " . scalar @children . "\n" if $debug;
+      foreach my $child (@children) { 
+        my $is_storage_flag;
+        if ($child->nodeName eq 'node') {
+          ### Determine if is a storage xml node ###
+          foreach my $attr ($child->attributes) {
+            $is_storage_flag = 1 if $attr->name eq 'class' && $attr->getValue eq 'storage';
+          }
+          ### Gather storage data or recurse on child nodes ###
+          if ($is_storage_flag) {
+            #grab_storg_data($child);
+            push(@storage_nodes, $child);
+          } else {
+            my @results = find_storage_nodes($child, $depth) if ($child->childNodes);
+            if (@results) {
+              foreach my $storage_node (@results) { 
+                push(@storage_nodes, $storage_node);
+              } # foreach my $storage_node (@storage_nodes)
+            }
+          } # if ($is_storage_flag) {
+        }
+      } # foreach my $child (@children) {
+      return @storage_nodes;
+    }
+  
+    sub grab_storg_data {
+      my $node = $_[0];
+      my %mainhash;
+      # parse the attributes of node
+      foreach my $attr ($node->attributes) {
+        $mainhash{$attr->name} = $attr->getValue;
+        print $attr->name . " : " . $attr->getValue . "\n" if $debug; 
+      }
+      # parse the child objects
+      foreach my $child (@{$node->childNodes}) {
+        next if $child->nodeName eq 'text';
+        if ($child->nodeName eq 'node') {
+          my %tmphash = grab_storg_data($child);
+          $mainhash{$tmphash{'id'}} = \%tmphash;
+        } else {
+          $mainhash{$child->nodeName} = $child->firstChild->nodeValue if $child->firstChild->nodeValue =~ /\S/;
+          print $child->nodeName . ": " . $child->firstChild->nodeValue . "\n" if $debug; 
+        } # if ($child->nodeName eq 'node') {
+      } # foreach my $child
+      print Dumper(\%mainhash) if $debug;
+      return %mainhash;
+    }
+  } else {
+    return %emptyhash;
+  }
+} # sub getstoragedata
 
 sub setdebug
 {

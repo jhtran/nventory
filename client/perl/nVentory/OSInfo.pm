@@ -917,6 +917,7 @@ sub getcpupercent
 			    }
 			  }
 			
+                          return 0 unless @all;
 			  # create the average #
 			  my $sum;
 			  foreach (@all) { $sum += $_ };

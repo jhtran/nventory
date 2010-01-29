@@ -20,6 +20,12 @@ my $SERVER = 'http://nventory';
 my $PROXY_SERVER;
 #my $PROXY_SERVER = 'https://proxy.example.local:8080';
 
+########################################################################################
+## specify which external modules based on lshw's controller 'product' string ##
+## Note: should look into Module::Load or Module::Plugin or UNIVERSAL::require ##
+########################################################################################
+use nVentory::CompaqSmartArray;
+
 # dir location where xen img files held if this is xen host
 my $XEN_IMGDIR = '/home/xen/disks';
 # If user manually specifies server other than the default
@@ -181,6 +187,14 @@ sub _get_ua
 					print "Authentication Successful\n";
 	                        }
 			}
+			if (($response->is_redirect) && ($response->header('location') =~ /^https:\/\/(sso.*)\/session\/tokens/)) {
+				my $location = URI->new($response->header('location'));
+				# SSO tries to redirect u multiple times to find the right domain but we only need the first redirect and then grab cookie
+				$ua->max_redirect(0);
+				$ua->timeout(10);
+				$response = $ua->get($location);
+			}
+			$ua->max_redirect(7);
 		}
 		# Autoreg user should NOT be redirected to SSO even if it wants to.  Autoreg auths to uri '/login/login' (which will allow LOCAL and LDAP account logins)
 		if ( ($response->is_redirect) && ( $login eq 'autoreg' ) )
@@ -207,6 +221,9 @@ sub _get_ua
 	                        $url->scheme('https');
 	                        $password = &$password_callback() if (!$password);
 	                        $response = $ua->request(POST $url, {'login' => $login, 'password' => $password});
+				unless (($response->is_redirect) && ($response->header('location') !~ /^https:\/\/(sso.*)\/login\?url/)) {
+					die "\n!!! Authentication failed !!!!\n\n" . $response->message . "\n";
+				}
 			}
 		}
 
@@ -265,12 +282,31 @@ sub _xml_to_perl
 
 sub get_objects
 {
-	my ($objecttype, $getref, $exactgetref, $regexgetref, $excluderef, $andref, $includesref, $login) = @_;
-	my %get = %$getref;
-	my %exactget = %$exactgetref;
-        my %regexget = %$regexgetref;
-        my %excludeget = %$excluderef;
-        my %andget = %$andref;
+	# PS-544 include legacy backward support for long list of params
+	my ($objecttype, %get, %exactget, %regexget, %excludeget, %andget, $includesref, $login);
+	if (ref($_[0]) eq 'HASH')
+	{
+		die "Syntax error" if ( scalar @_ > 1 );
+		my %getdata = %{$_[0]};
+		die "Syntax error" unless $getdata{'objecttype'};
+		$objecttype = $getdata{'objecttype'};
+		%get = %{$getdata{'get'}} if defined($getdata{'get'});
+		%exactget = %{$getdata{'exactget'}} if defined($getdata{'exactget'});
+		%regexget = %{$getdata{'regexget'}} if defined($getdata{'regexget'});
+		%excludeget = %{$getdata{'exclude'}} if defined($getdata{'exclude'});
+		%andget = %{$getdata{'and'}} if defined($getdata{'and'});
+		$includesref = $getdata{'includes'} if defined($getdata{'includes'});
+		$login = $getdata{'login'} if defined($getdata{'login'});
+	} else {
+		my ($getref, $exactgetref, $regexgetref, $excluderef, $andref);
+		($objecttype, $getref, $exactgetref, $regexgetref, $excluderef, $andref, $includesref, $login) = @_;
+		%get = %$getref;
+		%exactget = %$exactgetref;
+	        %regexget = %$regexgetref;
+	        %excludeget = %$excluderef;
+	        %andget = %$andref;
+	}
+	die "Syntax error" if ((!scalar %exactget) && (!scalar %get) && (!scalar %regexget));
         
 	#
 	# Package up the search parameters in the format the server expects
@@ -385,6 +421,7 @@ sub get_objects
 	my $url = URI->new("$SERVER/$objecttype.xml");
 	$url->query_form(%metaget);
 	my $ua = _get_ua($login);
+        die "Authentication failed" unless $ua;
 	warn "GET URL: $url\n" if ($debug);
 	my $response = $ua->get($url);
 	if (!$response->is_success)
@@ -445,7 +482,11 @@ sub get_expanded_nodegroup
 {
 	my ($nodegroup) = @_;
 
-	my %results = get_objects('node_groups', {}, {'name' => [$nodegroup]}, {}, {}, {}, ['nodes', 'child_groups']);
+        my %getdata;
+        $getdata{'objecttype'} = 'node_groups';
+        $getdata{'exactget'} ={ 'name' => [$nodegroup] };
+        $getdata{'includes'} = ['nodes', 'child_groups'];
+        my %results = get_objects(\%getdata);
 	my %nodes;
 	foreach my $node (@{$results{$nodegroup}->{nodes}})
 	{
@@ -542,6 +583,11 @@ sub set_objects
 				my $ua = _get_ua($login, $password_callback);
 				warn "DELETE to URL: $SERVER/$objecttypes/$id.xml\n" if ($debug);
 				$response = $ua->request(POST "$SERVER/$objecttypes/$id.xml", [ _method => 'delete' ]);
+                                while ($response->is_redirect) {
+                                        my $newlo = $response->header('location');
+					print "Redirected attempt to post: $newlo\n" if $debug;
+					$response = $ua->request(POST $newlo, [ _method => 'delete' ]);
+                                }
                         }
                         elsif ($id && !$delete)
 			{
@@ -592,7 +638,10 @@ sub set_objects
 		my $ua = _get_ua($login, $password_callback);
 		warn "POST to URL: $SERVER/$objecttypes.xml\n" if ($debug);
 		$response = $ua->request(POST "$SERVER/$objecttypes.xml", \%cleandata);
-
+		while ($response->is_redirect) { 
+			my $newlo = $response->header('location');
+			$response = $ua->request(POST $newlo, \%cleandata);
+		}
 		if ($response->code != RC_CREATED)
 		{
 			warn "Response: ", $response->status_line, "\n";
@@ -604,11 +653,65 @@ sub set_objects
 
 sub register
 {
+	my %params;
+	%params = %{$_[0]} if $_[0];
 	my %data;
 
 	#
 	# Gather software-related information
 	#
+        ## NIC ##
+	my %nicdata = nVentory::HardwareInfo::getnicdata(\%params);
+	my $niccounter = 0;
+	while (my ($nic, $valueref) = each %nicdata)
+	{
+		$data{"network_interfaces[$niccounter][name]"} = $nic;
+		while (my ($field, $value) = each %$valueref)
+		{
+			if ($field eq 'ip_addresses')
+			{
+				my $ipcounter = 0;
+				foreach my $ipref (@$value)
+				{
+					while (my ($ipfield, $ipvalue) = each %$ipref)
+					{
+						if ($ipfield eq 'network_ports')
+						{
+							my $portcounter = 0;
+							while (my ($protocol, $portvalue) = each %$ipvalue)
+							{
+								while (my ($port, $app) = each %$portvalue)
+								{
+									$data{"network_interfaces[$niccounter][ip_addresses][$ipcounter][network_ports][$portcounter][protocol]"} = $protocol;
+									$data{"network_interfaces[$niccounter][ip_addresses][$ipcounter][network_ports][$portcounter][number]"} = $port;
+									$data{"network_interfaces[$niccounter][ip_addresses][$ipcounter][network_ports][$portcounter][apps]"} = $app;
+									$portcounter++;
+								}
+							}
+						}
+						else
+						{
+							$data{"network_interfaces[$niccounter][ip_addresses][$ipcounter][$ipfield]"} = $ipvalue;
+						}
+					}
+					$ipcounter++;
+				}
+			}
+			else
+			{
+				# The library gathers a few bits of data that the server
+				# doesn't support.  Filter those out.
+				next if ($field eq 'txerrs');
+				next if ($field eq 'rxerrs');
+
+				$data{"network_interfaces[$niccounter][$field]"} = $value;
+			}
+		}
+		$niccounter++;
+	}
+	# Mark our NIC data as authoritative so that the server properly
+	# updates its records (removing any NICs and IPs we don't specify)
+	$data{"network_interfaces[authoritative]"} = 1;
 
 	$data{name} = nVentory::OSInfo::getfqdn();
 	$data{'name_aliases[name]'} = join(',', nVentory::OSInfo::getaliases());
@@ -753,43 +856,108 @@ sub register
 		print "VMWARE GUEST\n";
 	}
 
+	$params{virtualarch} = $data{virtualarch} if $data{virtualarch};
+	$params{virtualmode} = $data{virtualmode} if $data{virtualmode};
 
-	my %nicdata = nVentory::HardwareInfo::getnicdata($data{virtualarch},$data{virtualmode});
-	my $niccounter = 0;
-	while (my ($nic, $valueref) = each %nicdata)
-	{
-		$data{"network_interfaces[$niccounter][name]"} = $nic;
-		while (my ($field, $value) = each %$valueref)
+        ## STORAGE - convert storage hash to RESTful format ##
+        my %storage = nVentory::HardwareInfo::getstoragedata(\%params);
+        my $strg_counter = 0;
+	my $drivecounter = 0;
+	my $volumecounter = 0;
+	# note that controllers, drives and volumes each have different @exceptions (fields to ignore) from each other
+        while (my ($ctrlrkey, $ctrlrref) = each %storage)
+        {
+		my %ctrlrhash = %{$ctrlrref};
+                if ($ctrlrhash{'description'})
+                {
+                        $data{"storage_controllers[$strg_counter][name]"} = $ctrlrhash{'description'};
+                }
+                else
+                {
+                        $data{"storage_controllers[$strg_counter][name]"} = $ctrlrhash{'logicalname'};
+                }
+                ######################################################################
+                ## if needs external modules due to custom raid controller commands ##
+                ######################################################################
+                if (($ctrlrhash{'product'}) && ($ctrlrhash{'product'} eq 'Smart Array 5i/532'))
 		{
-			if ($field eq 'ip_addresses')
+			my %result = nVentory::CompaqSmartArray::parse_storage();
+			foreach my $key (keys %result)
 			{
-				my $ipcounter = 0;
-				foreach my $ipref (@$value)
-				{
-					while (my ($ipfield, $ipvalue) = each %$ipref)
-					{
-						$data{"network_interfaces[$niccounter][ip_addresses][$ipcounter][$ipfield]"} = $ipvalue;
-					}
-					$ipcounter++;
-				}
-			}
-			else
-			{
-				# The library gathers a few bits of data that the server
-				# doesn't support.  Filter those out.
-				next if ($field eq 'txerrs');
-				next if ($field eq 'rxerrs');
-
-				$data{"network_interfaces[$niccounter][$field]"} = $value;
+				$data{"storage_controllers[$strg_counter]$key"} = $result{$key};
 			}
 		}
-		$niccounter++;
-	}
-	# Mark our NIC data as authoritative so that the server properly
-	# updates its records (removing any NICs and IPs we don't specify)
-	$data{"network_interfaces[authoritative]"} = 1;
+                #### END CUSTOM RAID ARRAY MODULE ####
+
+		while (my ($ctrlrkey, $ctrlrvalue) = each %ctrlrhash) 
+		{
+			if (ref($ctrlrvalue) eq "HASH") 
+			{
+				my %drivehash = %{$ctrlrvalue};
+				unless ($drivehash{'class'} eq 'disk') 
+				{
+					%drivehash = find_classhash(\%drivehash, 'disk');
+				}
+				next unless %drivehash;
+				while (my ($drivefield, $drivevalue) = each %drivehash)
+				{
+					if (ref($drivevalue) eq "HASH")
+					{
+						my %volumehash = %{$drivevalue};
+						unless ($volumehash{'class'} eq 'volume')
+						{
+							%volumehash = find_classhash(\%volumehash, 'volume');
+						}
+						next unless %volumehash;
+						while (my ($volumefield, $volumevalue) = each %volumehash)
+						{ 
+							if ($volumefield eq 'id')
+							{
+								$data{"storage_controllers[$strg_counter][drives][$drivecounter][volumes][$volumecounter][name]"} = $volumevalue;
+								next;
+							}
+							$data{"storage_controllers[$strg_counter][drives][$drivecounter][volumes][$volumecounter][$volumefield]"} = $volumevalue;
+						} 
+						$volumecounter++;
+					} else {
+						if ($drivefield eq 'id')
+						{
+							$data{"storage_controllers[$strg_counter][drives][$drivecounter][name]"} = $drivevalue;
+							next;
+						}
+						$data{"storage_controllers[$strg_counter][drives][$drivecounter][$drivefield]"} = $drivevalue;
+					} # if (ref($drivevalue) eq "HASH")
+				} # while (my ($drivefield, $drivevalue) = each %drivehash)
+				$drivecounter++;
+			} else {
+				$data{"storage_controllers[$strg_counter][$ctrlrkey]"} = $ctrlrvalue;
+			} # if (ref($ctrlrvalue) eq "HASH")
+		} # while (my ($ctrlrkey, $ctrlrvalue) = each %ctrlrhash)
+		$strg_counter++;
+	} # while (my ($ctrlrkey, $ctrlrref) = each %storage)
+	$data{"storage_controllers[authoritative]"} = 1;
 
 	$data{uniqueid} = nVentory::HardwareInfo::get_uniqueid();
+
+        ## recursive subroutine used by above
+	sub find_classhash {
+	        my %tmphash = %{$_[0]};
+	        my $class = $_[1];
+	        my %results;
+	        if (($tmphash{'class'}) && ($tmphash{'class'}  eq $class))
+	        {
+	                return %tmphash;
+	        } else {
+	                while (my ($k,$v) = each %tmphash)
+	                {
+	                        if (ref($v) eq 'HASH')
+	                        {
+	                                %results = find_classhash(\%{$v}, $class);
+	                        }
+	                }
+	        }
+	        return %results;
+	}
 
 	#
 	# Report data to server
@@ -802,7 +970,11 @@ sub register
 	my %results;
 	if ($data{uniqueid})
 	{
-		%results = get_objects('nodes', {}, {'uniqueid' => [$data{uniqueid}]}, {}, {}, {}, [], 'autoreg');
+                my %getdata;
+                $getdata{'objecttype'} = 'nodes';
+                $getdata{'exactget'} = {'uniqueid' => [$data{uniqueid}]};
+                $getdata{'login'} = 'autoreg';
+                %results = get_objects(\%getdata);
 	}
 
 	# If we failed to find an existing entry based on the unique id
@@ -812,7 +984,11 @@ sub register
 	# server.
 	if (!%results && $data{name})
 	{
-		%results = get_objects('nodes', {}, {'name' => [$data{name}]}, {}, {}, {}, [], 'autoreg');
+                my %getdata;
+                $getdata{'objecttype'} = 'nodes';
+                $getdata{'exactget'} = {'name' => [$data{name}]};
+                $getdata{'login'} = 'autoreg';
+                %results = get_objects(\%getdata);
 	}
 
 	set_objects('nodes', \%results, \%data, 'autoreg');

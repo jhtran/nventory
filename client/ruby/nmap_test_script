@@ -1,0 +1,32 @@
+#!/usr/bin/env ruby
+require 'nventory'
+$nvclient = NVentory::Client.new(nil,nil,nil,'http://nventorystg1.wc1.example.com')
+getdata = {}
+getdata[:objecttype] = 'ip_addresses'
+## include the following if you want to see which nodes belong to the ip_address
+# getdata[:includes] = ["ip_address_network_port_assignments[network_port]", "network_interface[node]"]
+getdata[:get] = {'address' => '10.1.18.30'}
+results = $nvclient.get_objects(getdata)
+raise "no results" if results.empty?
+if results.size == 1
+  ipobj = results[results.keys.first] 
+elsif results.size > 1 
+  latest = ["1",DateTime.civil(1993,1,1)]
+  results.keys.each do |objid|
+    objtime = DateTime.parse(results[objid]["updated_at"])
+    latest = [objid,objtime] if objtime > latest[1]
+  end
+  ipobj = results[latest[0]]
+end
+portcounter = 0
+setdata = {}
+setdata["network_ports[#{portcounter}][number]"]  = '999'
+setdata["network_ports[#{portcounter}][protocol]"]  = 'tcp'
+setdata["network_ports[#{portcounter}][apps]"]  = 'yadda' # app would be nmap fingerprint, this attr is optional, comma seperated list
+setdata["network_ports[#{portcounter}][nmap]"]  = '1' # in order for the server to register the nmap timestamp fields, this value needs to be declared and must = 1
+portcounter +=1
+setdata["network_ports[#{portcounter}][number]"] = '888'
+setdata["network_ports[#{portcounter}][protocol]"]  = 'tcp'
+setdata["network_ports[#{portcounter}][nmap]"]  = '1'
+portcounter +=1
+setresults = $nvclient.set_objects('ip_addresses',{'somelabel'=>ipobj},setdata,'jtran')

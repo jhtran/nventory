@@ -1,6 +1,6 @@
 # When updating the version number you currently need to update
 # nventory-client.spec, control and pkginfo as well
-VER=1.52`cat VERSION`
+VER=1.611.61
 
 all:
 
@@ -15,7 +15,7 @@ rpm: nventory-client.spec
 	#
 	rm -rf $(BUILDROOT)
 	mkdir -p $(BUILDROOT)/usr/bin
-	cat perl/nv|sed "s/@@VERSION@@/$VER/g" > $(BUILDROOT)/usr/bin/nv.perl
+	cat perl/nv|sed "s/@@VERSION@@/$(VER)/g" > $(BUILDROOT)/usr/bin/nv.perl
 	chmod 555 $(BUILDROOT)/usr/bin/nv.perl
 	cp -p ruby/nv $(BUILDROOT)/usr/bin/nv.ruby
 	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
@@ -40,7 +40,7 @@ rpm: nventory-client.spec
 	# Now build the package
 	#
 	# Prior to RHEL 5 the package containing dmidecode is kernel-utils
-	cat nventory-client.spec | sed '/^Requires:/s/$$/, kernel-utils/'|sed "s/@@VERSION@@/$VER/g" > $(TMPSPEC)
+	cat nventory-client.spec | sed '/^Requires:/s/$$/, kernel-utils/'|sed "s/@@VERSION@@/$(VER)/g" > $(TMPSPEC)
 	rpmbuild -bb --buildroot $(BUILDROOT) $(TMPSPEC)
 	mv /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.noarch.rpm /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.el4.noarch.rpm
 	# Starting with RHEL 5 dmidecode got its own package
@@ -52,9 +52,9 @@ rpm: nventory-client.spec
 debian: control
 	rm -rf $(BUILDROOT)
 	mkdir -p $(BUILDROOT)/DEBIAN
-	grep -v '^#' control|sed "s/@@VERSION@@/$VER/g" > $(BUILDROOT)/DEBIAN/control
+	grep -v '^#' control|sed "s/@@VERSION@@/$(VER)/g" > $(BUILDROOT)/DEBIAN/control
 	mkdir -p $(BUILDROOT)/usr/bin
-	cat perl/nv|sed "s/@@VERSION@@/$VER/g" > $(BUILDROOT)/usr/bin/nv.perl
+	cat perl/nv|sed "s/@@VERSION@@/$(VER)/g" > $(BUILDROOT)/usr/bin/nv.perl
 	chmod 555 $(BUILDROOT)/usr/bin/nv.perl
 	cp -p ruby/nv $(BUILDROOT)/usr/bin/nv.ruby
 	chmod 555 $(BUILDROOT)/usr/bin/nv.ruby
@@ -79,7 +79,7 @@ solaris: pkginfo depend
 	#
 	rm -rf $(BUILDROOT)
 	mkdir -p $(BUILDROOT)/usr/bin
-	cat perl/nv|sed "s/@@VERSION@@/$VER/g" > $(BUILDROOT)/usr/bin/nv.perl
+	cat perl/nv|sed "s/@@VERSION@@/$(VER)/g" > $(BUILDROOT)/usr/bin/nv.perl
 	mv $(BUILDROOT)/usr/bin/nv.perl $(BUILDROOT)/usr/bin/nv.perl.tmp
 	cat $(BUILDROOT)/usr/bin/nv.perl.tmp | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/bin/nv.perl
 	rm $(BUILDROOT)/usr/bin/nv.perl.tmp
@@ -105,7 +105,8 @@ solaris: pkginfo depend
 	# Cron job for registration
 	mkdir -p $(BUILDROOT)/usr/sbin
 	cat nventory_cron_wrapper | sed 's,/usr/bin/perl,/opt/csw/bin/perl,' > $(BUILDROOT)/usr/sbin/nventory_cron_wrapper
-	cat pkginfo | sed "s,@@VERSION@@,$VER,g" > pkginfo
+	cat pkginfo | sed "s,@@VERSION@@,$(VER),g" > pkginfo.NEW
+	mv pkginfo.NEW pkginfo
 	chmod 555 $(BUILDROOT)/usr/sbin/nventory_cron_wrapper
 	#
 	# Now build the package
@@ -119,7 +120,7 @@ solaris: pkginfo depend
 	# The first sed just cleans up the directory names
 	# The second and third seds tell pkgadd to not force our permissions
 	# on /usr and /usr/bin
-	find $(BUILDROOT) | pkgproto | tail +2 | sed "s,$(BUILDROOT),," | sed 's,/usr .*,/usr ? ? ?,' | sed 's,/usr/bin .*,/usr/bin ? ? ?,' | sed 's,/usr/sbin .*,/usr/sbin ? ? ?,' >> prototype
+	find $(BUILDROOT) | pkgproto | tail -n +2 | sed "s,$(BUILDROOT),," | sed 's,/usr .*,/usr ? ? ?,' | sed 's,/usr/bin .*,/usr/bin ? ? ?,' | sed 's,/usr/sbin .*,/usr/sbin ? ? ?,' >> prototype
 	pkgmk -r $(BUILDROOT) -d $(PWD)
 	pkgtrans . YPCnventory-$(VER).pkg YPCnventory
 	rm -rf YPCnventory
@@ -131,12 +132,12 @@ solaris: pkginfo depend
 # the library along with other tpkgs. In order to reduce confusion this
 # package does not contain any of the executables that go in the normal
 # packages.
-tpkgpkg: tpkg.xml
+tpkg: tpkg.xml
 	rm -rf $(BUILDROOT)
-	mkdir -p $(BUILDROOT)/root/home/t/perl-5.8.9/lib/site_perl/5.8.9
-	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/root/home/t/perl-5.8.9/lib/site_perl/5.8.9)
+	mkdir -p $(BUILDROOT)/root/home/t/lib/perl5/site_perl/5.10.0
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/root/home/t/lib/perl5/site_perl/5.10.0)
 	mkdir -p $(BUILDROOT)/root/home/t/ruby-ypc/lib/ruby/site_ruby/1.8
-	sed 's/VER/$(VER)/' tpkg.xml > $(BUILDROOT)/tpkg.xml
+	sed "s/VER/$(VER)/" tpkg.xml > $(BUILDROOT)/tpkg.xml
 	cp -p ruby/nventory.rb $(BUILDROOT)/root/home/t/ruby-ypc/lib/ruby/site_ruby/1.8
 	tpkg --make $(BUILDROOT)
 	rm -rf $(BUILDROOT)

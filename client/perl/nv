@@ -42,6 +42,8 @@ Usage: nv
        Multiple values for an individual field can be specified seperated by commas.
     [--name value[,value2]]
        Shortcut for --get name=value
+    [--withaliases]
+       When searching by name, search aliases as well. (doesn't work with exactget nor regexget)
     [--allfields [excludefield1[,excludefield2]]]
        Display all fields for selected objects.
        One or more fields may be specified to be excluded from the
@@ -95,6 +97,10 @@ Usage: nv
        Specify nventory server if different than the default
     [--debug]
     [--dry-run]
+    [--no-switchport]
+        Skip switch port detection
+    [--no-storage]
+        Skip storage detection
     [--help]
     [--version]
 
@@ -129,8 +135,11 @@ my $register;
 my $server;
 my $username = $ENV{LOGNAME};
 my $delete;
+my $withaliases;
 my $debug;
 my $dryrun;
+my $nocdpr;
+my $nolshw;
 my $help;
 my $version;
 my $getopt = GetOptions(
@@ -159,9 +168,12 @@ my $getopt = GetOptions(
 	'username=s' => \$username,
 	'register' => \$register,
         'delete' => \$delete,
+        'withaliases' => \$withaliases,
         'server:s' => \$server,
 	'debug' => \$debug,
 	'dry-run' => \$dryrun,
+        'no-switchport' => \$nocdpr,
+        'no-storage' => \$nolshw,
 	'help' => \$help,
 	'version' => \$version,
 );
@@ -182,6 +194,15 @@ usage() if (@getallvalues && (%get || %exactget || %regexget || @name));
 # FIXME: Should support searches on node group membership and other characteristics
 usage() if (($nodegroup || @nodegroupexpanded || @get_nodegroup_nodes) && (%get || %exactget || %regexget || %exclude || @name || %and));
 usage() if ($register && (%get || %exactget || %regexget || %exclude || %and || @name || $getfieldnames || @getallvalues || $nodegroup || @nodegroupexpanded || @get_nodegroup_nodes || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup));
+# Enable aliases searching  when used with a 'name' field search and only with 'get' (no exactget nor regexpget)
+if ($withaliases) {
+  if (%get) {
+    foreach my $key (keys %get) {
+      usage() unless ($key =~ /\[name\]/ || $key eq 'name');
+    }
+    $get{'enable_aliases'} = 1;
+  }
+}
 
 $objecttype = 'nodes' if (!$objecttype);
 
@@ -259,8 +280,6 @@ if (@name)
 }
 
 my %SEARCH_SHORTCUTS = (
-        'datacenter' => 'rack_node_assignment[rack][datacenter_rack_assignment][datacenter][name]',
-        'rack' => 'rack_node_assignment[rack][name]',
 	'hw' => 'hardware_profile[name]',
 	'hwmanuf' => 'hardware_profile[manufacturer]',
 	'hwmodel' => 'hardware_profile[model]',
@@ -344,6 +363,14 @@ for (my $i=0; $i<scalar(@fields); $i++)
 	{
 		$fields[$i] = $SEARCH_SHORTCUTS{$fields[$i]};
 	}
+	if ( $fields[$i] =~ /\b(node_rack|rack)\b/i ) 
+	{
+		$fields[$i] = 'node_rack_node_assignment[node_rack][name]',
+	}
+	if ( $fields[$i] =~ /\bdatacenter\b/i )
+	{
+        	$fields[$i] = 'node_rack_node_assignment[node_rack][datacenter_node_rack_assignment][datacenter][name]',
+	}
 }
 
 if ($debug)
@@ -422,8 +449,13 @@ if ($getfieldnames)
 }
 if ($register)
 {
-	nVentory::Client::register;
-	exit;
+        $nocdpr = 0 unless $nocdpr;
+        $nolshw = 0 unless $nolshw;
+        my %params;
+        $params{nocdpr} = $nocdpr;
+        $params{nolshw} = $nolshw;
+        nVentory::Client::register(\%params);
+        exit;
 }
 if ($nodegroup)
 {

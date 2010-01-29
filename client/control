@@ -1,5 +1,5 @@
 Package: nventory-client
-Version: 1.52 1.52
+Version: 1.61 1.61
 Maintainer: Jason Heiss <jheiss@example.com>
 Architecture: all
 Depends: libxml-libxml-perl
