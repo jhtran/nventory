@@ -50,23 +50,25 @@ CONFIG_FILES = ['/etc/nventory.conf', "#{ENV['HOME']}/.nventory.conf"]
 
 class NVentory::Client
   attr_accessor :delete
-  def initialize(debug=false, dryrun=false, configfile=nil, server=nil)
-    @debug = debug
-    @dryrun = dryrun
-    #@server = 'http://localhost/'
-    if server
-      if server =~ /^http/
-        (server =~ /\/$/) ? (@server = server) : (@server = "#{server}/")
-      else
-        @server = "http://#{server}/"
+
+  def initialize(data=nil,*moredata)
+    if data || moredata
+      parms = legacy_initializeparms(data,moredata) 
+      # def initialize(debug=false, dryrun=false, configfile=nil, server=nil)
+      parms[:debug] ? (@debug = parms[:debug]) : @debug = (nil)
+      parms[:dryrun] ? (@dryrun = parms[:dryrun]) : @dryrun = (nil)
+      parms[:server] ? (@server = parms[:server]) : @server = (nil)
+      if parms[:proxy_server] == false
+        @proxy_server = 'nil'
+      elsif parms[:proxy_server]
+        @proxy_server = parms[:proxy_server]
+      else 
+        @proxy_server = nil
       end
-      warn "** Using server #{@server} **"
-    else
-      @server = 'http://nventory/'
-      warn "Using server #{@server}" if @debug
+      parms[:sso_server] ? (@sso_server = parms[:sso_server]) : (@sso_server = nil)
+      parms[:configfile] ? (configfile = parms[:configfile]) : (configfile = nil)
     end
-    @sso_server = 'https://sso.example.com/'
-    @proxy_server = nil
+    @sso_server = 'https://sso.example.com/' unless @sso_server
     @ca_file = nil
     @ca_path = nil
     @dhparams = '/etc/nventory/dhparams'
@@ -87,10 +89,10 @@ class NVentory::Client
             # if they don't realize there's a config file lying
             # around
             warn "Using server #{@server} from #{configfile}" if (@debug)
-          elsif key == 'sso_server'
+          elsif key == 'sso_server' && !@sso_server
             @sso_server = value
             warn "Using sso_server #{@sso_server} from #{configfile}" if (@debug)
-          elsif key == 'proxy_server'
+          elsif key == 'proxy_server' && !@proxy_server
             @proxy_server = value
             warn "Using proxy_server #{@proxy_server} from #{configfile}" if (@debug)
           elsif key == 'ca_file'
@@ -106,6 +108,11 @@ class NVentory::Client
         end
       end
     end
+
+    unless @server
+      @server = 'http://nventory/'
+      warn "Using server #{@server}" if @debug
+    end
     
     # Make sure the server URL ends in a / so that we can append paths to it
     # using URI.join
@@ -114,11 +121,39 @@ class NVentory::Client
     end
   end
 
+  def legacy_initializeparms(data,moredata)
+    # if data is string, it is legacy method of supplying initialize params:
+    # def initialize(debug=false, dryrun=false, configfile=nil, server=nil)
+    newdata = {}
+    if data.kind_of?(Hash)
+      newdata = data
+    elsif data || moredata
+      newdata[:debug] = data
+      newdata[:dryrun] = moredata[0]
+      newdata[:configfile] = moredata[1]
+      if moredata[2]
+      server = moredata[2] if moredata[2]
+        if server =~ /^http/
+          (server =~ /\/$/) ? (newdata[:server] = server) : (newdata[:server] = "#{server}/")
+        else
+          newdata[:server] = "http://#{server}/"
+        end
+      end
+      newdata[:proxy_server] = moredata[3]
+    else
+      raise 'Syntax Error'
+    end
+    warn "** Using server #{newdata[:server]} **" if newdata[:server]
+    warn "** Using proxy_server #{newdata[:proxy_server]} **" if newdata[:proxy_server]
+    return newdata
+  end
+
   def legacy_getparms(data,moredata)
     # if data is string, it is legacy method of supplying get_objects params:
     # def get_objects(objecttype, get, exactget, regexget, exclude, andget, includes=nil, login=nil, password_callback=PasswordCallback)
     newdata = {}
     if data.kind_of?(String)
+      raise 'Syntax Error: Missing :objecttype' unless data.kind_of?(String)
       newdata[:objecttype] = data
       newdata[:get] = moredata[0]
       newdata[:exactget] = moredata[1]
@@ -127,10 +162,9 @@ class NVentory::Client
       newdata[:andget] = moredata[4]
       newdata[:includes] = moredata[5] 
       newdata[:login] = moredata[6] 
-      raise 'SyntaxError' if !newdata[:get].kind_of?(Hash) && !newdata[:exactget].kind_of?(Hash) && !newdata[:regexget].kind_of?(Hash)
       newdata[:password_callback] = PasswordCallback
-    elsif data.kind_of?(Hash) && !data[:objecttype].nil? && moredata.empty?
-      raise 'Syntax Error' if !data[:get].kind_of?(Hash) && !data[:exactget].kind_of?(Hash) && !data[:regexget].kind_of?(Hash) 
+    elsif data.kind_of?(Hash) 
+      raise 'Syntax Error: Missing :objecttype' unless data[:objecttype].kind_of?(String)
       newdata = data
       newdata[:password_callback] = PasswordCallback unless newdata[:password_callback]
     else
@@ -153,6 +187,9 @@ class NVentory::Client
     includes = parms[:includes]
     login = parms[:login]
     password_callback = parms[:password_callback]
+    # PS-704 - node_groups controller when format.xml, includes some custom model methods that create a lot of querying joins, so this is 
+      # a way to 'override' it on cli side - the server will look for that param to skip these def methods when it renders.  webparams = {:nodefmeth => 1}
+    webparams = parms[:webparams]
     #
     # Package up the search parameters in the format the server expects
     #
@@ -249,6 +286,9 @@ class NVentory::Client
         metaget << incstring
       end
     end
+    if webparams && webparams.kind_of?(Hash)
+      webparams.each_pair{|k,v| metaget << "#{k}=#{v}"}
+    end  
 
     querystring = metaget.join('&')
 
@@ -678,7 +718,6 @@ class NVentory::Client
          name = node['name']
          merged_nodes[name] = node
       end
-
       set_nodegroup_node_assignments(merged_nodes, {nodegroup_name => nodegroup}, login, password_callback)
     end
   end
@@ -915,6 +954,12 @@ class NVentory::Client
     cookies = []
     IO.foreach(cookiefile) do |line|
       cookie = parse_cookie(line)
+      if cookie && cookie[:attributes] && cookie[:attributes]["expires"]
+        if DateTime.parse(cookie[:attributes]["expires"]) < DateTime.now
+          warn "Cookie expired: #{cookie[:line]}" if @debug
+          next
+        end
+      end
       if cookie
         cookies << cookie
       end
@@ -926,17 +971,24 @@ class NVentory::Client
   # settings that match the specified uri.
   def get_cookies_for_uri(cookiefile, uri)
     cookies = []
+    latest_cookie = []
+    counter = 0
     read_cookiefile(cookiefile).each do |cookie|
-      use = true
-      if uri.host !~ Regexp.new("#{cookie[:attributes]['domain']}$")
-        use = false
-      elsif uri.path !~ Regexp.new("^#{cookie[:attributes]['path']}")
-        use = false
-      end
-      if use
+      next unless uri.host =~ Regexp.new("#{cookie[:attributes]['domain']}$")
+      next unless uri.path =~ Regexp.new("^#{cookie[:attributes]['path'].gsub(/,.*/,'')}") # gsub in case didn't parse out comma seperator for new cookie
+      # if there are more than 1 cookie , we only want the one w/ latest expiration
+      if cookie[:attributes]["expires"]
+        unless latest_cookie.empty?
+          cookie_expiration = DateTime.parse(cookie[:attributes]["expires"])
+          latest_cookie[0] < cookie_expiration ? (latest_cookie = [cookie_expiration, cookie]) : next
+        else
+          latest_cookie = [ DateTime.parse(cookie[:attributes]["expires"]), cookie ]
+        end
+      else
         cookies << cookie
       end
     end
+    cookies << latest_cookie[1] unless latest_cookie.empty?
     cookies
   end
   
@@ -1004,7 +1056,17 @@ class NVentory::Client
   
   # Sends requests to the nVentory server and handles any redirects to
   # authentication pages or services.
-  def send_request(req, uri, login, password_callback=PasswordCallback)
+  def send_request(req, uri, login, password_callback=PasswordCallback,loopcounter=0,stopflag=false)
+    if loopcounter > 7
+      if stopflag
+        raise "Infinite loop detected"
+      else
+        warn "Loop detected.  Clearing out cookiefile.."
+        loopcounter = 0
+        stopflag = true
+        File.open(get_cookiefile(login), 'w') { |file| file.write(nil) }
+      end
+    end
     cookies = get_cookies_for_uri(get_cookiefile(login), uri)
     if !cookies.empty?
       cookiestring = cookies.collect{|cookie| "#{cookie[:name]}=#{cookie[:value]}" }.join('; ')
@@ -1120,13 +1182,22 @@ class NVentory::Client
         loginresponse = make_http(loginuri).request(loginreq)
       end
 
+      # some bug, but once sso gives you a token non-SSL url redirect, and you follow it, you get redirected to yet another URL that is SSL for a token again
+      if loginresponse.kind_of?(Net::HTTPFound) && loginresponse['Location'] =~ /^https:\/\/sso.*\/session\/token.*.xml/
+        puts "** Following redirect #{loginresponse.class.to_s} => #{loginresponse['Location'].to_s}" if @debug
+        loginuri = URI.parse(loginresponse['Location'])
+        loginreq = Net::HTTP::Get.new(loginuri.request_uri)
+        loginresponse = make_http(loginuri).request(loginreq)
+      end
+
       # The SSO server sends back 200 if authentication succeeds, 401 or 403
       # if it does not.
       if loginresponse.kind_of?(Net::HTTPSuccess) || (loginresponse.kind_of?(Net::HTTPFound) && loginresponse['Location'] =~ /^#{loginuri.scheme}:\/\/#{loginuri.host}\/$/ )  || loginresponse.kind_of?(Net::HTTPNotAcceptable)
         puts "Authentication against server succeeded" if (@debug)
         extract_cookie(loginresponse, loginuri, login)
         puts "Resending original request now that we've authenticated" if (@debug)
-        return send_request(req, uri, login, password_callback)
+        loopcounter += 1
+        return send_request(req, uri, login, password_callback, loopcounter,stopflag)
       else
         puts "Authentication against server failed" if (@debug)
       end

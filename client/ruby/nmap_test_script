@@ -29,4 +29,4 @@ setdata["network_ports[#{portcounter}][number]"] = '888'
 setdata["network_ports[#{portcounter}][protocol]"]  = 'tcp'
 setdata["network_ports[#{portcounter}][nmap]"]  = '1'
 portcounter +=1
-setresults = $nvclient.set_objects('ip_addresses',{'somelabel'=>ipobj},setdata,'jtran')
+setresults = $nvclient.set_objects('ip_addresses',{'somelabel'=>ipobj},setdata,'jsmith')

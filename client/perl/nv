@@ -460,46 +460,53 @@ if ($register)
 if ($nodegroup)
 {
 	my %results = nVentory::Client::get_objects('node_groups', {}, {'name' => [$nodegroup]}, {}, {}, {}, ['child_groups', 'nodes']);
-        print "Child groups:\n";
-	if ($results{$nodegroup}->{child_groups})
+        if (scalar keys(%results) == 0)
 	{
-		foreach my $child_group (sort { $a->{name} cmp $b->{name} } @{$results{$nodegroup}->{child_groups}})
-		{
-			print '  ', $child_group->{name}, "\n";
-		}
+		print "No matches for '$nodegroup'\n";
 	}
 	else
-	{
-		print "\n";
-	}
-        print "=====================\n";
-	print "Real Nodes:\n";
-	if ($results{$nodegroup}->{real_nodes_names})
-	{
-        	my @realnodes = split(/,/, $results{$nodegroup}->{real_nodes_names});
-		foreach my $node (sort { $a cmp $b } @realnodes)
+	{	
+	        print "Child groups:\n";
+		if ($results{$nodegroup}->{child_groups})
 		{
-			print '  ', $node, "\n";
+			foreach my $child_group (sort { $a->{name} cmp $b->{name} } @{$results{$nodegroup}->{child_groups}})
+			{
+				print '  ', $child_group->{name}, "\n";
+			}
 		}
-	}
-	else
-	{
-		print "\n";
-	}
-        print "=====================\n";
-	print "Virtual Nodes:\n";
-	if ($results{$nodegroup}->{virtual_nodes_names})
-	{
-        	my @virtualnodes = split(/,/, $results{$nodegroup}->{virtual_nodes_names});
-		foreach my $node (sort { $a cmp $b } @virtualnodes)
+		else
 		{
-			print '  ', $node, "\n";
+			print "\n";
 		}
-	}
-	else
-	{
-		print "\n";
-	}
+	        print "=====================\n";
+		print "Real Nodes:\n";
+		if ($results{$nodegroup}->{real_nodes_names})
+		{
+	        	my @realnodes = split(/,/, $results{$nodegroup}->{real_nodes_names});
+			foreach my $node (sort { $a cmp $b } @realnodes)
+			{
+				print '  ', $node, "\n";
+			}
+		}
+		else
+		{
+			print "\n";
+		}
+	        print "=====================\n";
+		print "Virtual Nodes:\n";
+		if ($results{$nodegroup}->{virtual_nodes_names})
+		{
+	        	my @virtualnodes = split(/,/, $results{$nodegroup}->{virtual_nodes_names});
+			foreach my $node (sort { $a cmp $b } @virtualnodes)
+			{
+				print '  ', $node, "\n";
+			}
+		}
+		else
+		{
+			print "\n";
+		}
+        }
 	exit;
 }
 if (@createnodegroup)
@@ -726,7 +733,7 @@ if (%set || $delete)
 	{
 
 		my $number_of_matching_entries = scalar(@names);
-		print "\nThis will delete $number_of_matching_entries nodes.\n";
+		print "\nThis will delete $number_of_matching_entries $objecttype.\n";
 		print "\n";
                 # iterate through each individual entry prompting verification cannot be bypassed with --yes either
 		foreach my $key (keys(%results)) {
@@ -765,14 +772,17 @@ if (%set || $delete)
 		my $number_of_matching_entries = scalar(@names);
 		my $entrystring = 'entry';
 		$entrystring = 'entries' if ($number_of_matching_entries > 1);
-		print "This will update $number_of_matching_entries",
-			" $entrystring, continue?  [y/N]: ";
-	
-		my $input = <STDIN>;
-		if ($input !~ /^y/i)
+		if (!$yes || ($yes && $number_of_matching_entries > 1)) 
 		{
-			print "Canceled\n";
-			exit;
+			print "This will update $number_of_matching_entries",
+				" $entrystring, continue?  [y/N]: ";
+		
+			my $input = <STDIN>;
+			if ($input !~ /^y/i)
+			{
+				print "Canceled\n";
+				exit;
+			}
 		}
 		nVentory::Client::set_objects($objecttype, \%results, \%set, $username, \&get_password);
         }

@@ -1,6 +1,6 @@
 # When updating the version number you currently need to update
 # nventory-client.spec, control and pkginfo as well
-VER=1.611.61
+VER=1.62.81.62.8
 
 all:
 
@@ -46,6 +46,7 @@ rpm: nventory-client.spec
 	# Starting with RHEL 5 dmidecode got its own package
 	cat nventory-client.spec | sed '/^Requires:/s/$$/, dmidecode/' > $(TMPSPEC)
 	rpmbuild -bb --buildroot $(BUILDROOT) $(TMPSPEC)
+	cp /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.noarch.rpm /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.el6.noarch.rpm
 	mv /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.noarch.rpm /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.el5.noarch.rpm
 	rm -rf $(BUILDROOT) $(TMPSPEC)
 

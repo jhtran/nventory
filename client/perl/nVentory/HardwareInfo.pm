@@ -631,7 +631,7 @@ sub get_physical_memory
 				# checking for signs of it being a DIMM in the locator
 				# field.
 				if ($size ne 'No Module Installed' &&
-				   ($form_factor eq 'DIMM' ||
+				   (($form_factor eq 'DIMM' || $form_factor eq 'FB-DIMM' ) ||
 				    ($form_factor eq '<OUT OF SPEC>' && $locator =~ /DIMM/)))
 				{
 					my ($megs, $units) = split(' ', $size);
@@ -1598,7 +1598,16 @@ sub getstoragedata {
     my $parser = XML::LibXML->new();
     print "Running lshw to detect storage devices\n";
     open(my $lshwfh, '-|', '/usr/sbin/lshw -xml');
-    my $doc = $parser->parse_fh($lshwfh);
+
+    # removes non-UTF characters otherwise libxml fails
+    my @templshw = <$lshwfh>;
+    my @tempall;
+    foreach my $line (@templshw) {
+      foreach my $char (split(//,$line)) {
+        push(@tempall, $char) if $char =~ /[[:print:]\n]/
+      }
+    }
+    my $doc = $parser->parse_string(join('',@tempall));
     
     my $depth=0;
     my %storage_data;
@@ -1657,8 +1666,9 @@ sub getstoragedata {
         print $attr->name . " : " . $attr->getValue . "\n" if $debug; 
       }
       # parse the child objects
+
       foreach my $child (@{$node->childNodes}) {
-        next if $child->nodeName eq 'text';
+        next if ($child->nodeName =~ /#?text$/);
         if ($child->nodeName eq 'node') {
           my %tmphash = grab_storg_data($child);
           $mainhash{$tmphash{'id'}} = \%tmphash;

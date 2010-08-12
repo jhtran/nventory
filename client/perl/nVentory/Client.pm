@@ -187,10 +187,10 @@ sub _get_ua
 					print "Authentication Successful\n";
 	                        }
 			}
-			if (($response->is_redirect) && ($response->header('location') =~ /^https:\/\/(sso.*)\/session\/tokens/)) {
+                        if (($response->is_redirect) && ($response->header('location') =~ /^(http|https):\/\/(sso.*)\/session\/tokens/)) {
 				my $location = URI->new($response->header('location'));
 				# SSO tries to redirect u multiple times to find the right domain but we only need the first redirect and then grab cookie
-				$ua->max_redirect(0);
+				$ua->max_redirect(2);
 				$ua->timeout(10);
 				$response = $ua->get($location);
 			}
@@ -245,7 +245,7 @@ my $delete;
 sub setdelete
 {
         ($delete) = @_;
-	warn "** You have requested to delete node(s) **\n";
+	warn "** You have requested to delete object(s) **\n";
 }
 
 sub _xml_to_perl
@@ -569,10 +569,9 @@ sub set_objects
 		print Dumper(\%cleandata);
 	}
 
+	my $response;
 	if (%results)
 	{
-		my $response;
-
 		foreach my $result (keys %results)
 		{
 			my $id = $results{$result}->{id};
@@ -626,14 +625,12 @@ sub set_objects
 			{
 				warn "Response: ", $response->status_line, "\n";
 				warn "Response content:\n", $response->content, "\n";
-				exit 1;
+				return $response;
 			}
 		}
 	}
 	else
 	{
-		my $response;
-
 		# POST to create a new node
 		my $ua = _get_ua($login, $password_callback);
 		warn "POST to URL: $SERVER/$objecttypes.xml\n" if ($debug);
@@ -646,9 +643,10 @@ sub set_objects
 		{
 			warn "Response: ", $response->status_line, "\n";
 			warn "Response content:\n", $response->content, "\n";
-			exit 1;
+			return $response;
 		}
 	}
+        return $response;
 }
 
 sub register
@@ -786,7 +784,7 @@ sub register
 	# Switchport detection depends on if virtual or not
 
 	## XEN HOST <=> GUEST REGISTRATION
-	if ($data{kernel_version} =~ /xen$/)
+	if ($data{kernel_version} =~ /xenU?$/)
 	{
 		$data{virtualarch} = 'xen';
         	my $xen_status = nVentory::OSInfo::getxenstatus();
@@ -879,7 +877,7 @@ sub register
                 ######################################################################
                 ## if needs external modules due to custom raid controller commands ##
                 ######################################################################
-                if (($ctrlrhash{'product'}) && ($ctrlrhash{'product'} eq 'Smart Array 5i/532'))
+                if (($ctrlrhash{'product'}) && ($ctrlrhash{'product'} =~ /Smart Array/))
 		{
 			my %result = nVentory::CompaqSmartArray::parse_storage();
 			foreach my $key (keys %result)
