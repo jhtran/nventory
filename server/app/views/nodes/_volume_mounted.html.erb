@@ -16,12 +16,12 @@
   <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
       <td><%= link_to assignment.volume.name, assignment.volume %></td>
       <td><%= assignment.mount %></td>
-      <td><%= link_to assignment.volume.volume_server.name %></td>
+      <td><%= link_to assignment.volume.volume_server.name, assignment.volume.volume_server %></td>
       <td><%= assignment.volume.volume_type %></td>
       <td><%= link_to_remote 'Delete',
                               :url => assignment,
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(node,['updater']) && allow_perm(assignment.volume,['updater']) %></td>
   </tr>
   <%- end %>
   </tbody>

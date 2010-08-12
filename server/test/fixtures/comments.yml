@@ -1,0 +1,7 @@
+comment1:
+  title: 'test comment'
+  comment: 'this is a test comment blah'
+  commentable_type: 'AccountGroup'
+  commentable_id: account_groups(:administrators).object_id
+  user: jsmith
+  created_at: <%= 5.days.ago.to_s :db %>

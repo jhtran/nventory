@@ -1,6 +1,6 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <% @tooltips = [] %>
-<strong><%= tooltip(@node.class,:name) %>:</strong> <em>*</em> <br/><%= f.text_field :name %></p>
+<h2><%= tooltip(@node.class,:name) %>:</h2> <em>*</em> <br/><%= f.text_field :name %></p>
 <p><strong><%= tooltip(@node.class,:status) %>:</strong> <em>*</em> <br /><%= f.select :status_id, Status.find(:all, :order => 'name').collect { |s| [ s.name, s.id ] }, { :include_blank => true } %></p>
 <p><strong><%= tooltip(@node.class,:contact) %>:</strong> (comma separated list) <br/><%= f.text_field :contact %></p>
 <p><strong><%= tooltip(@node.class,:expiration) %>:</strong> <br/><%= f.datetime_select(:expiration,:include_blank => true) %></p>

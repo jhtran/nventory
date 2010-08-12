@@ -1,0 +1,70 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if vip.node_group_vip_assignments.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the node groups assigned to this vip.">
+  <caption><%= tooltip(Node,:node_groups) %></caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(NodeGroup,:name) %></th>
+      <th><%= tooltip(NodeGroup,:assigned_at) %></th>
+      <th><%= tooltip(NodeGroup,:owner) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in vip.real_node_group_vip_assignments.sort{|a,b| a.node_group.name <=> b.node_group.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.node_group.name, node_group_path(assignment.node_group) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), node_group_vip_assignment_path(assignment) %></td>
+      <td><%= mail_to assignment.node_group.owner %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => node_group_vip_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+
+  <table cellspacing="0" class="styled" summary="A list of the node groups virtually assigned to this vip.">
+  <caption><%= tooltip(@vip.class,:virtual_node_groups) %></caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(NodeGroup,:name) %></th>
+      <th><%= tooltip(NodeGroup,:member_through) %></th>
+      <th><%= tooltip(NodeGroup,:assigned_at) %></th>
+      <th><%= tooltip(NodeGroup,:owner) %></th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in vip.virtual_node_group_vip_assignments.sort{|a,b| a.node_group.name <=> b.node_group.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.node_group.name, node_group_path(assignment.node_group) %></td>
+      <td>
+      <%- rngs = [] -%>
+      <%- vip.real_node_groups.each do |rng| -%>
+        <%- if rng.all_parent_groups.include?(assignment.node_group) -%>
+          <%- rngs << rng.name -%>
+        <%- end -%>
+      <%- end -%>
+      <%- if (rngs.empty?) || (rngs.nil?) -%>
+        <%= "<b><font color='red'>** ROGUE VIRTUAL - BAD DATABASE RECORD **</b></font>" %>
+      <%- else -%>
+        <ul>
+        <%- rngs.uniq.each do |rng| -%>
+          <%= "<li>#{rng}</li>" %>
+        <%- end -%>
+        </ul>
+      <%- end -%>
+      </td>
+      <td><%= assignment.assigned_at.to_formatted_s(:long) %></td>
+      <td><%= mail_to assignment.node_group.owner %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <strong><%= tooltip(Node,:node_groups) %></strong><br /><br />
+  <p>This vip is not assigned to any node groups.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

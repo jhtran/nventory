@@ -1,9 +1,11 @@
 class ServicesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /services
   # GET /services.xml
   def index
-    # The default display index_row columns (services model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
@@ -12,12 +14,12 @@ class ServicesController < ApplicationController
     params['sort'] = "node_group" if ( params['sort'].nil? || params['sort'] == "name" )
     params['sort'] = "node_group_reverse" if ( params['sort'].nil? || params['sort'] == "name_reverse" )
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     
     respond_to do |format|
@@ -30,8 +32,7 @@ class ServicesController < ApplicationController
   # GET /services/1
   # GET /services/1.xml
   def show
-    includes = process_includes(Service, params[:include])
-    @service = Service.find(params[:id], :include => includes)
+    @service = @object
     if @service.service_profile
       @app_locs = {}
       @app_locs['Development'] = return_url_or_node(@service.service_profile.dev_url)
@@ -63,13 +64,13 @@ class ServicesController < ApplicationController
 
   # GET /services/new
   def new
-    @service = Service.new
+    @service = @object
     @service.build_service_profile
   end
 
   # GET /services/1/edit
   def edit
-    @service = Service.find(params[:id])
+    @service = @object
     redirect_to edit_node_group_url(@service) unless @service.service_profile
   end
 
@@ -102,7 +103,7 @@ class ServicesController < ApplicationController
   # PUT /services/1
   # PUT /services/1.xml
   def update
-    @service = Service.find(params[:id])
+    @service = @object
     if (defined?(params[:service_service_assignments][:child_services]) && params[:service_service_assignments][:child_services].include?('nil'))
       params[:service_service_assignments][:child_services] = []
     end
@@ -125,7 +126,7 @@ class ServicesController < ApplicationController
   # DELETE /services/1
   # DELETE /services/1.xml
   def destroy
-    service_profile = Service.find(params[:id]).service_profile
+    service_profile = @object.service_profile
     service_profile.destroy
 
     respond_to do |format|

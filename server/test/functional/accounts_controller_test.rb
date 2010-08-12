@@ -4,54 +4,45 @@ require 'accounts_controller'
 # Re-raise errors caught by the controller.
 class AccountsController; def rescue_action(e) raise e end; end
 
-class AccountsControllerTest < Test::Unit::TestCase
-  fixtures :accounts
+class AccountsControllerTest < ActionController::TestCase
 
-  def setup
-    @controller = AccountsController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
+  def test_get_index
+    assert_get_index
   end
 
-  def test_should_get_index
-    get :index
-    assert_response :success
-    assert assigns(:accounts)
-  end
-
-  def test_should_get_new
-    get :new
-    assert_response :success
+  def test_get_new
+    assert_get_new
   end
   
-  def test_should_create_account
-    old_count = Account.count
-    post :create, :account => { }
-    assert_equal old_count+1, Account.count
-    
-    assert_redirected_to account_path(assigns(:account))
+  def test_post_create
+    assert_post_create(:account,{:account => {:login => 'foo1', :name => 'Foo 1 Bar', :email_address => 'foo1@bar.com', :password_hash => '*'}})
   end
 
-  def test_should_show_account
-    get :show, :id => 1
-    assert_response :success
+  def test_post_create_xml
+    assert_post_create(:account,{:account => {:login => 'foo2', :name => 'Foo 2 Bar', :email_address => 'foo2@bar.com', :password_hash => '*'}}, 'xml')
   end
 
-  def test_should_get_edit
-    get :edit, :id => 1
-    assert_response :success
+  def test_get_show
+    assert_get_show(:account)
+  end
+
+  def test_get_edit
+    assert_get_edit(:account)
+  end
+
+  def test_put_update
+    assert_put_update(:account,{:id => accounts(:jsmith).id, :account => { :name => 'foonewbar' } })
+  end
+
+  def test_put_update_xml
+    assert_put_update(:account,{:id => accounts(:jsmith).id, :account => { :name => 'foonewbar' } }, 'xml')
   end
   
-  def test_should_update_account
-    put :update, :id => 1, :account => { }
-    assert_redirected_to account_path(assigns(:account))
+  def test_delete_destroy
+    assert_delete_destroy(:account,accounts(:jsmith))
   end
-  
-  def test_should_destroy_account
-    old_count = Account.count
-    delete :destroy, :id => 1
-    assert_equal old_count-1, Account.count
-    
-    assert_redirected_to accounts_path
+
+  def test_delete_destroy_xml
+    assert_delete_destroy(:account,accounts(:jsmith), 'xml')
   end
 end

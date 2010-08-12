@@ -5,7 +5,6 @@ require 'outlets_controller'
 class OutletsController; def rescue_action(e) raise e end; end
 
 class OutletsControllerTest < Test::Unit::TestCase
-  fixtures :outlets
 
   def setup
     @controller = OutletsController.new

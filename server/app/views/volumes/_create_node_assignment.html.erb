@@ -1,15 +1,15 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<% remote_form_for( (from + '_' + to + '_assignment').to_sym, :url => self.send(from + '_' + to + '_assignments_path') ) do |f| %>
-  <p><%= to.underscore.titleize %>:
+<% remote_form_for( :volume_node_assignment, :url => {:controller => 'volume_node_assignments',:action => :create, :div => 'volume_node_assignments'} ) do |f| %>
+  <p><%= tooltip(Volume,:node) %>:
   
-  <%- to_array = to.camelize.constantize.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+  <%- node_array = Node.def_scope.find(:all,:select => 'id,name', :order => :name).collect { |r| [ r.name, r.id ] } -%>
   
-  <%= f.select( (to+'_id').to_sym, to_array, { :include_blank => true } ) %>
-  Mount:
+  <%= f.select( :node_id, node_array, { :include_blank => true } ) %>
   <%= f.text_field :mount %>
-  <%= f.hidden_field( (from+'_id').to_sym, { :value => '0' } ) %>
+  <%= f.hidden_field( :volume_id, { :value => @volume.id } ) %>
   
-  <%= submit_tag "Assign", :onclick => "$('"+from+"_"+to+"_assignment_"+from+"_id').value = _"+from+"_id" %> | <%= link_to_function 'Cancel', "Element.show('add_" + to + "_assignment_link');Element.hide('create_" + to + "_assignment');Element.hide('new_" + to + "')"%></p>
+  <%= submit_tag "Assign" %> | <%= link_to_function 'Cancel', "Element.show('add_node_assignment_link');Element.hide('create_node_assignment')"%></p>
+
 <% end %>
 
 <%= @tooltips if ttflag %>

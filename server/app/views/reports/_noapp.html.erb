@@ -1,0 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%">
+  <td><%= link_to noapp.name,noapp %></td>
+  <td><%= noapp.node_groups.collect(&:name).join(',') %></td>
+</tr>
+
+<%= @tooltips if ttflag %>

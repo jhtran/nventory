@@ -18,22 +18,13 @@ class ApplicationController < ActionController::Base
   # will be redirected to the non-SSL (http) side.
   include SslRequirement
 
-  # Turn on the acts_as_audited plugin for appropriate models
-  audit Account, DatabaseInstance, DatabaseInstanceRelationship,
-    Datacenter, DatacenterNodeRackAssignment, LbPoolNodeAssignment,
-    DatacenterVipAssignment, HardwareProfile, UtilizationMetricName,
-    IpAddress, NetworkInterface, Node, NodeDatabaseInstanceAssignment,
-    NodeGroup, NodeGroupNodeAssignment, LbPool, LbProfile, Service,
-    VipLbPoolAssignment, NodeGroupNodeGroupAssignment, OperatingSystem, Outlet, NodeRack,
-    NodeRackNodeAssignment, Status, Subnet, Vip, ServiceServiceAssignment,
-    StorageController, Volume, VolumeNodeAssignment, NameAlias, ToolTip
-
   # Pick a unique cookie name to distinguish our session data from others'
   #session :key => '_nventory_session_id'
   #config.action_controller.session = { :key => '_nventory_session_id' }
   
   before_filter :check_authentication, :except => [:login,:sso]
-  before_filter :check_authorization, :except => [:login,:sso]
+
+  ## replaced with rails_authorization_plugin
   # Don't log passwords
   filter_parameter_logging "password"
   
@@ -52,8 +43,13 @@ class ApplicationController < ActionController::Base
       if (session[:account_id])
         session[:sso] = false
       else
-        if @sso = sso_auth
-          session[:sso] = true
+        if ENV['RAILS_ENV'] == 'test'
+          $loginuser ? (@sso = sso_auth(:test => $loginuser)) : (@sso = sso_auth(:test => true))
+        else
+          @sso = sso_auth
+        end
+
+        if @sso
           unless acct ||= Account.find_by_login(@sso.login)
             uri = URI.parse("#{SSO_AUTH_URL}#{@sso.login}")
             http = Net::HTTP::Proxy(SSO_PROXY_SERVER,SSO_PROXY_PORT).new(uri.host,uri.port)
@@ -61,20 +57,47 @@ class ApplicationController < ActionController::Base
             sso_xmldata = http.get(uri.request_uri).body
             sso_xmldoc = Hpricot::XML(sso_xmldata)
             email = (sso_xmldoc/:email).innerHTML
+            email ||= "#{@sso.login}@#{EMAIL_SUFFIX}" unless
             fname = (sso_xmldoc/'first-name').innerHTML
             lname = (sso_xmldoc/'last-name').innerHTML
-            account = Account.new(:login => @sso.login,
-                                  :name => "#{fname} #{lname}",
-                                  :email_address => email,
-                                  :password_hash => '*',
-                                  :password_salt => '*')
-            if (!account.save)
-              # FIXME
-              #errors.add
-              account.errors.each { |attr,msg| logger.info "Error #{attr}: #{msg}" }
-              account = nil
+            (!fname.empty? && !lname.empty?) ? (fullname = "#{fname} #{lname}") : (fullname = @sso.login)
+            acct = Account.new(:login => @sso.login,
+                               :name => "#{fullname}",
+                               :email_address => email,
+                               :password_hash => '*',
+                               :password_salt => '*')
+            unless acct.save
+              flash[:error] = "<strong>SSO Account Auto-Create Error(s):</strong> <br /> "
+              acct.errors.each do |attr,msg| 
+                logger.info "Error #{attr}: #{msg}" 
+                flash[:error] << "&nbsp;&nbsp* #{attr}: #{msg}"
+              end
+              acct= nil
             end
+          end # unless acct
+
+          unless acct
+            session[:sso] = false
+            redirect_to(:controller => :login,:action => :login) and return
           end
+
+          unless acct.authz
+            result = AccountGroup.find_by_name("#{acct.login}.self")
+            if result 
+              acct.authz = result
+              acct.save
+            else
+              authz = AccountGroup.create({:name => "#{acct.login}.self"})
+              acct.authz = authz
+              authz.save
+              authz.has_role 'updater', authz
+              authz.has_role 'updater', acct
+            end # if result
+          else
+            acct.authz.has_role('updater', acct.authz) unless acct.authz.has_role?('updater',authz) || acct.nil? || acct.authz.nil?
+            acct.authz.has_role('updater', acct) unless acct.authz.has_role?('updater',acct) || acct.nil?
+          end # unless acct.authz
+          session[:sso] = true
         else 
           session[:sso] = false
         end
@@ -88,41 +111,6 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  def check_authorization
-    if !request.get?
-      if session[:sso]
-        acct ||= Account.find_by_login(@sso.login)
-      else
-        acct = Account.find(session[:account_id])
-      end
-      if acct.nil? || !acct.admin?
-        logger.info "Rejecting user for lack of admin privs"
-        if params[:format] && params[:format] == 'xml'
-          # Seems like there ought to be a slightly easier way to do this
-          errs = ''
-          xm = Builder::XmlMarkup.new(:target => errs, :indent => 2)
-          xm.instruct!
-          xm.errors{ xm.error('You must have admin privileges to make changes') }
-          render :xml => errs, :status => :unauthorized
-          return false
-        else
-          flash[:error] = 'You must have admin privileges to make changes'
-          begin
-            redirect_to :back
-          # The rescue syntax here seems odd, but it works
-          # http://www.ruby-forum.com/topic/85701
-          rescue ::ActionController::RedirectBackError
-            # This seems like a reasonable default destination in this case
-            redirect_to :controller => "dashboard"
-          end
-          return false
-        end
-      end
-    end
-    # Give the thumb's up if we didn't find any reason to reject the user
-    return true
-  end
-  
   # Controllers punt to this method to implement the field_names action
   def field_names(mainclass)
     fields_xml = ''
@@ -137,6 +125,8 @@ class ApplicationController < ActionController::Base
         # Don't expose implementation details that aren't meaningful
         # to the user
         next if assoc.name == :audits
+        # from rails_authorization_plugin should not be searched
+        next if assoc.name == :users
         next if assoc.name == :utilization_metrics
         next if assoc.options.has_key?(:polymorphic)
         next if assoc.name.to_s =~ /_assignments?$/
@@ -237,38 +227,336 @@ class ApplicationController < ActionController::Base
     end
     includes
   end
-  
-  # Recursively search 'mainclass' for an association with a name matching
-  # 'target_assoc'.  Returns the association that is closest to mainclass
-  # in the association tree, a copy of the includes hash that is passed in
-  # with the necessary hierarchy of assocations inserted so that a call to
-  # 'find' with those includes could query against that association, and the
-  # depth or distance in number of associations between mainclass and the
-  # selected assocation.
-  # For example, if mainclass were Node and target_assoc were
-  # :hardware_profile then the :hardware_profile association would be
-  # returned and includes would be populated with { :hardware_profile => {} }
-  # Likewise, if mainclass were Node and target_assoc were :datacenter then
-  # the :datacenter_node_rack_assignment association to Datacenter would be
-  # returned (this method having recursively descended the
-  # Node->NodeRackNodeAssignment->NodeRack->DatacenterNodeRackAssignment assocations
-  # to find that association) and includes would be populated with
-  # {:node_rack_node_assignment => {:rack => {:datacenter_node_rack_assignment => {:datacenter => {}}}}}
-  # Note that the user may pass us an already partially populated includes
-  # hash, so we need to be careful to insert any includes we add without
-  # removing any that may already be in the hash structure.
-  # Used by acts_as_audited
-  protected
-    def current_user
-      if SSO_AUTH_SERVER
-        if (@sso = sso_auth(:redirect => false))
-          @user ||= Account.find_by_login(@sso.login)
+
+  def current_user
+    if SSO_AUTH_SERVER
+      if ENV['RAILS_ENV'] == 'test'
+        if session[:account_id]
+          @user = Account.find_by_id(session[:account_id])
         else
-          @user ||= Account.find(session[:account_id]) if session[:account_id]
+          $loginuser ? (@user ||= Account.find_by_login($loginuser)) : (@user ||= Account.find_by_login('testuser'))
         end
+      elsif (@sso = sso_auth(:redirect => false))
+        @user ||= Account.find_by_login(@sso.login)
       else
-        (@user ||= Account.find(session[:account_id])) if session[:account_id]
+        @user ||= Account.find(session[:account_id]) if session[:account_id]
+      end
+    else
+      (@user ||= Account.find(session[:account_id])) if session[:account_id]
+    end
+  end
+
+  def getauth
+    # sets only the @auth object without looking for a specific model/instance permit/deny
+    @auth = current_user.authz
+  end
+
+  def get_obj_auth(controller=nil, refid=nil, action=nil)
+    # :before_filter to get the @auth permit or deny to access each method in controller
+    controller ||= params[:controller]
+    refid ||= params[:id]
+    action ||= params['action']
+    valid_actions = %w( new edit create update destroy show )
+    xmljson = true if (params[:format] && (params[:format] == 'xml' || params[:format] == 'json'))
+    if xmljson
+      unless controller.to_s == 'accounts'
+        return true if request.get? && params[:action].to_s != 'show'
       end
     end
+    (@auth = current_user.authz) if current_user
+    return unless valid_actions.include?(action.to_s)
+    model = controller.classify.constantize
+    if action == 'new' || action == 'create'
+      # hack to allow legacy perl cli user 'autoreg' during registration
+      return true if current_user.login == 'autoreg' && params["foo"] == "bar"
+      # if in custom_auth list, then allow to pass for now so that controller can do custom refined auth
+      @object = model.new
+      return true if custom_auth_controllers.include?(controller)
+      filter_perms(@auth,@object,['creator','admin'])
+    elsif action == 'addauth'
+      refid ? (@object = model.find(refid)) : (@object = model)
+      filter_perms(@auth,@object,['admin'])
+    elsif action == 'show'
+      includes = process_includes(model, params[:include])
+      @object = model.find(refid, :include => includes) if refid
+      if xmljson
+        @xmlincludes = includes 
+      else
+        @allow_edit = true if @auth.has_role?('editor', @object) || @auth.has_role?('admin', @object)
+        @allow_delete = true if @auth.has_role?('destroyer', @object) || @auth.has_role?('admin', @object)
+      end
+    else
+      refid ? (@object = model.find(refid)) : (@object = model)
+      if action == 'update' 
+        return true if custom_auth_controllers.include?(controller)
+        roles_users = filter_perms(@auth,@object,'updater',true,:return_roles_users)
+        return if roles_users.nil?
+        roles_users_attrs = roles_users.collect(&:attrs).flatten.compact
+        # if a roles_user obj has no attrs specified, by default allows update to ALL attributes. 
+        # however, if an attr is specified, the restriction is to ONLY ALLOW update to that attribute.
+        if roles_users_attrs && !roles_users_attrs.empty?
+          params[controller.singularize] ? (requested_attrs = params[controller.singularize]) : (requested_attrs = [])
+          real_model_attrs = model.column_names
+          requested_attrs.keys.each{ |attrb| requested_attrs.delete(attrb) unless real_model_attrs.include?(attrb) }
+          requested_attrs.each_pair do |key,value|
+            if @object.respond_to?(key) # if value hasn't changed, skip
+              requested_attrs.delete(key) if @object.send(key).to_s == value.to_s
+            end
+          end
+          requested_attrs.each_pair do |attrb, value|
+            next if value.nil? || value.empty?
+            unless roles_users_attrs.include?(attrb)
+              customdenied = $denied + " to modify the attribute: #{attrb}"
+              logger.info "\n\n\n****  #{customdenied} ****\n\n\n\n"
+              replace_html_msg = "<font color=red>#{customdenied}</font>"
+              respond_to do |format|
+                format.html { flash[:error] = customdenied and redirect_to(:action => :index) and return }
+                format.js { render :update do |page| page.replace_html(params[:div],replace_html_msg ) end if params[:div] }
+                format.xml { render :text => customdenied and return }
+              end # respond_to do |format|
+            end # if !roles_users_attrs.include?(attrb)
+          end # requested_attrs.each_pair do |attrb, value|
+        end # if roles_users_attrs
+        return true unless roles_users.nil? || roles_users.empty?
+      elsif action == 'edit'
+        return true if custom_auth_controllers.include?(controller)
+        filter_perms(@auth,@object,'updater')
+      elsif action == 'destroy'
+        return true if custom_auth_controllers.include?(controller)
+        filter_perms(@auth,@object,['destroyer'])
+      end
+    end
+  end
+
+  $denied = "Permission Denied.  You do not have the proper authorization"
+
+  def filter_perms(user,obj,perms,willrender=true,*others)
+    roles_users_flag = false
+    found_roles_users = []
+    # var to return the roles_users instead of just true
+    return_roles_users = true if  others.include?(:return_roles_users)
+
+    # shortcut to detect if user's account_group and any of its inherited parent_groups have admin privilege
+    # first see if user account already has the right perms before looking at inheritance
+    if ( user.has_role?('admin',obj) ) 
+      return true unless return_roles_users
+      roles = obj.allowed_roles.select{|a| a.name == 'admin'}
+      roles.each{|role| role.roles_users.each{|roles_user| found_roles_users << roles_user if roles_user.account_group == user  } }
+      roles_users_flag = true
+    end
+    perms.each do |perm| 
+      next if perm == 'admin' # we've already processed this one
+      if user.has_role?(perm,obj)
+        return true  unless return_roles_users
+        roles = obj.allowed_roles.select{|a| a.name == perm}
+        roles.each{|role| role.roles_users.each{|roles_user| found_roles_users << roles_user if roles_user.account_group == user  } }
+        roles_users_flag = true
+      end # if user.has_role?(perm,obj)
+    end
+
+    # now check inheritance from account_groups
+    all_parent_roles = {}
+    user.self_group_parents.each{|parent_group| parent_group.roles.each{|role| all_parent_roles[role] = parent_group}}
+    # if obj is a node|node_group, can inherit pemissions from parent node_groups  ** I SEE SOME OPTIMIZING IN THE FUTURE **
+    if obj.kind_of?(Node) || obj.kind_of?(NodeGroup)
+      ngs = obj.all_parent_groups
+      inherited_roles = []
+      ngs.each do |ng|
+        ng.accepted_roles.each do |ar| 
+          ar.roles_users.each do |ru| 
+            if ru.account_group.name !~ /\.self$/
+              if ru.account_group.all_self_groups.include?(user)
+                inherited_roles << ar unless inherited_roles.include?(ar)
+              end
+            end # if ru.account_group.name !~ /\.self$/
+          end # ar.roles_users.each do |ru|
+        end # ng.accepted_roles.each do |ar|
+      end # ngs.each do |ng|
+    end # if obj.kind_of?(Node) || obj.kind_of?(NodeGroup)
+   
+    perms.each do |perm|
+      # inherit auth from account_groups
+      all_parent_roles.each_pair do |role, parent_group|
+        if (role.name == 'admin' || role.name == perm ) && !role.authorizable && !role.authorizable_type
+          return true unless return_roles_users
+          roles_users_flag = true
+        end
+        if role.authorizable_id.nil?
+          obj.kind_of?(Class) ? (authorizable_class = obj.to_s) : (authorizable_class = obj.class.to_s)
+          if (role.name == 'admin' || role.name == perm ) && (role.authorizable_type == authorizable_class)
+            return true unless return_roles_users
+            role.roles_users.each{|roles_user| (found_roles_users << roles_user) if roles_user.account_group == parent_group}
+            roles_users_flag = true
+          end #  if (role.name == 'admin' || role.name == perm ) && (role.authorizable_type == authorizable_class) )
+        end # if role.authorizable_id.nil?
+        if (role.name == 'admin' || role.name == perm ) && (role.authorizable == obj)
+          return true unless return_roles_users
+          role.roles_users.each{|roles_user| (found_roles_users << roles_user) if roles_user.account_group == parent_group}
+          roles_users_flag = true
+        end
+      end
+
+      if obj.kind_of?(Node) || obj.kind_of?(NodeGroup)
+        # inherit auth from node_group parents
+        ngs.each do |ng| 
+          if user.has_role?('admin',ng) 
+            return true unless return_roles_users
+            roles = obj.allowed_roles.select{|a| a.name == 'admin'}
+            roles.each{|role| role.roles_users.each{|roles_user| found_roles_users << roles_user if roles_user.account_group == ng} }
+            roles_users_flag = true
+          end
+          if user.has_role?(perm,ng) 
+            return true unless return_roles_users
+            roles = obj.allowed_roles.select{|a| a.name == perm}
+            roles.each{|role| role.roles_users.each{|roles_user| found_roles_users << roles_user if roles_user.account_group == user  } }
+            roles_users_flag = true
+          end
+        end
+        inherited_roles.each do |role|
+          next unless role.authorizable
+          if (role.name == 'admin' || role.name == perm )
+            return true unless return_roles_users
+            role.roles_users.each{|roles_user| found_roles_users << roles_user if roles_user.account_group == user}
+            roles_users_flag = true
+          end
+        end
+      end
+    end # perms.each do |perm|
+
+    # if hasn't returned by now, access deny
+    return found_roles_users if roles_users_flag
+    return false if willrender == false
+
+    obj.kind_of?(Class) ? label = Class.to_s : label = "#{obj.class.to_s} Object"
+
+    replace_html_msg = "<font color=red><strong>#{$denied} on #{label} as #{perms.kind_of?(Array) ? perms.join(',') : perms }</strong></font>" 
+    respond_to do |format|
+      format.html { flash[:error] = $denied and redirect_to(:action => :index) and return }
+      format.js { render :update do |page| page.replace_html(params[:div],replace_html_msg ) end if params[:div] }
+      format.xml { render :text => $denied and return }
+    end # respond_to do |format|
+  end
+
+  def list_models
+    %w( Node NodeGroup Account AccountGroup Comment DatabaseInstance Datacenter Drive HardwareProfile IpAddress LbPool LbProfile NameAlias NetworkInterface NetworkPort 
+        NodeRack OperatingSystem Outlet Service ServiceProfile Status StorageController Subnet ToolTip Vip Volume Tag )
+  end
+
+  def custom_auth_controllers
+    %w(node_group_node_assignments node_group_node_group_assignments node_group_vip_assignments name_aliases volume_node_assignments volumes datacenter_node_rack_assignments
+       service_service_assignments lb_pool_node_assignments node_group_vip_assignments node_rack_node_assignments taggings
+       account_group_account_group_assignments ip_address_network_port_assignments account_group_self_group_assignments datacenter_vip_assignments
+       node_database_instance_assignments virtual_assignments volume_drive_assignments vip_lb_pool_assignments)
+  end
+
+  def modelperms
+    # Get a hash of current user's permissions for each model class
+    @modelperms = {}
+    return unless @auth
+    list_models.each { |model| @modelperms[model.to_s] = filter_perms(@auth,model.constantize,['admin','creator'],false) }
+  end
+
+  def get_perms
+    # List all permissions for an object or model class
+    model = params[:controller].classify.constantize
+    if params[:id]
+      # instance
+      @object = model.find(params[:id])
+    else
+      # assume is a Model class
+      @object = model
+    end
+    @objects = @object.allowed_roles
+    # inherited from parent_node_groups (only if Node or NodeGroup)
+    parentperms = build_parentperms(@object)
+    respond_to do |format|
+      format.js {
+        render(:update) { |page|
+          page.replace_html 'perms', :partial => 'shared/perms_table', :locals => {:perms => @objects, :refid => params[:id], :parentperms => parentperms}
+        }
+      }
+    end
+  end
+
+  def get_roles_accounts
+    params[:refcontroller] ? (refcontroller = params[:refcontroller]) : (refcontroller = controller.controller_name)
+    @useraccs = AccountGroup.self_scope.find(:all, :select => "id,name").collect{|useracc| [useracc.name.sub(/\.self$/,''), useracc.id]}.sort{|a,b| a[0].downcase<=>b[0].downcase}.unshift(['Users:', ''])
+    @groupaccs = AccountGroup.def_scope.find(:all, :select => "id,name").collect{|useracc| [useracc.name.sub(/\.self$/,''), useracc.id]}.sort{|a,b| a[0].downcase<=>b[0].downcase}.unshift(['Groups:', ''])
+    @attrs = refcontroller.camelize.singularize.constantize.attrs.sort{|a,b| a[1] <=> b[1]}.unshift(["#{refcontroller.singularize.capitalize} Attributes:",''])
+    @rolenames = Role.role_names.collect{|rn| [rn, rn]}
+    respond_to do |format|
+      format.js {
+        render(:update) { |page|
+          page.replace_html 'perms', :partial => 'shared/add_perm', :locals => {:useraccs => @useraccs, :refcontroller => refcontroller, :refid => params[:refid]}
+        }
+      }
+    end
+  end
+
+  # deletes a user permission from an obj
+  def delauth
+    controller = params[:controller]
+    model = controller.classify.constantize
+    params[:refid] ? (@object = model.find(params[:refid])) : (@object = model)
+    if filter_perms(@auth,@object, ['admin'])
+      roles_user = RolesUser.find(params[:roles_user_id])
+      useracc = roles_user.account_group
+      role_name = roles_user.role.name
+      @object.accepts_no_role role_name, useracc
+      objects = @object.allowed_roles
+      parentperms = build_parentperms(@object)
+  
+      respond_to do |format|
+        format.js {
+          render(:update) { |page|
+            page.replace_html 'perms', :partial => 'shared/perms_table', :locals => { :perms => objects, :refid => params[:refid], :parentperms => parentperms }
+          }
+        }
+      end
+    end
+  end
+
+  def addauth
+    controller = params[:controller]
+    model = controller.classify.constantize
+    userids = params[controller]['useraccs'].compact.reject(&:blank?)
+    params[controller]['groupaccs'].compact.reject(&:blank?).each{|groupid| userids << groupid}
+    attrs = params[controller]['attrs'].compact.reject(&:blank?)
+    if params[controller][:refid] && !params[controller][:refid].empty?
+      refid = params[controller][:refid]
+      @object = model.find(refid) 
+    else
+      @object = model
+    end
+    if filter_perms(@auth,@object, ['admin'])
+      unless userids.empty?
+        useraccs = AccountGroup.find(userids) 
+        useraccs.each{ |useracc| @object.accepts_role params[controller][:role], useracc, attrs }
+      end
+    end
+    objects = @object.allowed_roles
+    parentperms = build_parentperms(@object)
+
+    respond_to do |format|
+      format.js { render(:update) { |page| page.replace_html 'perms', :partial => 'shared/perms_table', :locals => { :perms => objects, :refid => refid, :parentperms => parentperms } } }
+    end
+  end
+
+  def build_parentperms(srcobj)
+    # inherited from parent_node_groups (only if Node or NodeGroup)
+    allobjs = srcobj.allowed_roles.dup
+    parentperms = {}
+    if srcobj.kind_of?(NodeGroup) || srcobj.kind_of?(Node)
+      srcobj.all_parent_groups.each do |png|
+        parentperms[png] = []
+        png.allowed_roles.each do |role|
+          unless allobjs.include?(role)
+            parentperms[png] << role
+          end
+        end
+      end
+    end
+    return parentperms
+  end
 
 end

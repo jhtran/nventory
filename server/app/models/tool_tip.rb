@@ -1,4 +1,7 @@
 class ToolTip < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   named_scope :def_scope
   validates_presence_of :model
   validates_presence_of :attr

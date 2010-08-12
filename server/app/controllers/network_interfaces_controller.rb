@@ -1,31 +1,21 @@
 class NetworkInterfacesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /network_interfaces
   # GET /network_interfaces.xml
   def index
-    includes = process_includes(NetworkInterface, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "network_interfaces.name"
-           when "name_reverse" then "network_interfaces.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = NetworkInterface.default_search_attribute
-      sort = 'network_interfaces.' + NetworkInterface.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = NetworkInterface.find(:all,
-                                       :include => includes,
-                                       :order => sort)
-    else
-      @objects = NetworkInterface.paginate(:all,
-                                           :include => includes,
-                                           :order => sort,
-                                           :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = NetworkInterface
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -36,10 +26,7 @@ class NetworkInterfacesController < ApplicationController
   # GET /network_interfaces/1
   # GET /network_interfaces/1.xml
   def show
-    includes = process_includes(NetworkInterface, params[:include])
-    
-    @network_interface = NetworkInterface.find(params[:id],
-                                               :include => includes)
+    @network_interface = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -49,12 +36,12 @@ class NetworkInterfacesController < ApplicationController
 
   # GET /network_interfaces/new
   def new
-    @network_interface = NetworkInterface.new
+    @network_interface = @object
   end
 
   # GET /network_interfaces/1/edit
   def edit
-    @network_interface = NetworkInterface.find(params[:id])
+    @network_interface = @object
   end
 
   # POST /network_interfaces
@@ -87,7 +74,7 @@ class NetworkInterfacesController < ApplicationController
   # PUT /network_interfaces/1
   # PUT /network_interfaces/1.xml
   def update
-    @network_interface = NetworkInterface.find(params[:id])
+    @network_interface = @object
 
     # If the user specified some IP address info then handle that
     if params.include?(:ip_addresses)
@@ -148,7 +135,7 @@ class NetworkInterfacesController < ApplicationController
   # DELETE /network_interfaces/1
   # DELETE /network_interfaces/1.xml
   def destroy
-    @network_interface = NetworkInterface.find(params[:id])
+    @network_interface = @object
     @network_interface.destroy
 
     respond_to do |format|

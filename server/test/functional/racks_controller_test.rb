@@ -5,7 +5,6 @@ require 'racks_controller'
 class RacksController; def rescue_action(e) raise e end; end
 
 class RacksControllerTest < Test::Unit::TestCase
-  fixtures :racks
 
   def setup
     @controller = RacksController.new

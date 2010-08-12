@@ -1,0 +1,6 @@
+percent_cpu:
+  id: 1
+  name: percent_cpu
+login_count:
+  id: 2
+  name: login_count

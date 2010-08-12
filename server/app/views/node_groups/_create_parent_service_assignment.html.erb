@@ -1,0 +1,14 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :service_service_assignment, :url => {:controller => 'service_service_assignments', :action => :create, :div => 'parent_service_assgns'} ) do |f| %>
+  <p><%= tooltip(ServiceServiceAssignment,:parent_service) %>:
+  
+  <%- service_array = NodeGroup.find(:all,:joins => {:taggings => {:tag => {}}},:conditions => "tags.name = 'services'", :order => :name).collect { |r| [ r.name, r.id ] } -%>
+  
+  <%= f.select( :parent_id, service_array, { :include_blank => true } ) %>
+  <%= f.hidden_field( :child_id, { :value => @node_group.id } ) %>
+
+  <%= submit_tag "Assign", :onclick => "$('service_assignment_id').value = _parent_id" %> | <%= link_to_function 'Cancel', "Element.show('add_parent_service_link');Element.hide('create_parent_service_assignment')"%></p>
+
+<% end %>
+
+<%= @tooltips if ttflag %>

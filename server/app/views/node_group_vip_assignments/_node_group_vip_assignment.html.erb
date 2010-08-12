@@ -1,0 +1,6 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(NodeGroupVipAssignment,:vip) %>:</strong> <br /><%= f.select :vip_id, Vip.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(NodeGroupVipAssignment,:node_group) %>:</strong> <br /><%= f.select :node_group_id, NodeGroup.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(NodeGroupVipAssignment,:assigned_at) %>:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+
+<%= @tooltips if ttflag %>

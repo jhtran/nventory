@@ -45,7 +45,7 @@ class CsvWorker < Workling::Base
         # Finds all associated models from the reflection key and loop through them (such as network_interfaces, group_names, etc)
         myobj.class.reflections.keys.each do |keyb|
            # For some reason rack model assoc causes 500 error -- need to look into later
-           if keyb.to_s !~ /\brack\b/
+           if keyb.to_s !~ /\b(users|rack)\b/
               assoc = myobj.send(keyb)
               valid_assocobjs = []
               unless assoc.nil?
@@ -118,6 +118,9 @@ class CsvWorker < Workling::Base
               fieldstr = "#{fieldarr.join(",")}"
            else
               fieldstr = fieldarr.to_s
+           end
+           if fieldstr =~ /(\r\n|\n|\r)/
+              fieldstr = fieldstr.gsub(/(\r\n|\n|\r)/, ' ').gsub(/"/, ' ')
            end
            if fieldstr =~ /,/
               fieldstr = "\"#{fieldstr}\""

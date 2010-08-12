@@ -1,0 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= link_to_function 'Add Account', "Element.show('create_account_assignment');Element.hide('add_account_link')" %>
+
+<%= @tooltips if ttflag %>

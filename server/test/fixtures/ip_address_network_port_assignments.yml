@@ -1,0 +1,6 @@
+irvnventory1_lo_ftp:
+  ip_address: irvnventory1_lo_ip
+  network_port: ftp
+  apps: ftp
+  created_at: <%= 5.days.ago.to_s :db %>
+  assigned_at: <%= 5.days.ago.to_s :db %>

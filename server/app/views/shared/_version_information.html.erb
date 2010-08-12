@@ -1,8 +1,10 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p id="vhistory_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
 <div id="version_information">
 <p>
 <%- version_url = self.send('version_history_' + object.class.to_s.underscore + '_path', object) -%>
-<%= link_to_remote 'Fetch Version History', { :url => version_url, :method => :get, :update => 'version_information' }, :href => version_url %>
+<%= link_to_remote 'Fetch Version History', { :url => version_url, :method => :get, :update => 'version_information', :loading => "Element.hide('version_information');Element.show('vhistory_spinner')", :loaded => "Element.hide('vhistory_spinner');Element.show('version_information')", :href => version_url } %>
 </p>
 </div>
+<%= javascript_tag "Element.hide('vhistory_spinner')" %>
 <%= @tooltips if ttflag %>

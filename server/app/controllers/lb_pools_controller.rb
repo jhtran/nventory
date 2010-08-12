@@ -1,9 +1,13 @@
 class LbPoolsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /lb_pools
   # GET /lb_pools.xml
+  $protocols = %w[ tcp udp both ]
+  $lbmethods = %w[ round_robin ratio_member dynamic_ratio fastest_member least_conn_member observed_member predictive_member ]
   def index
-    # The default display index_row columns (lb_pools model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
@@ -12,12 +16,12 @@ class LbPoolsController < ApplicationController
     params['sort'] = "node_group" if ( params['sort'].nil? || params['sort'] == "name" )
     params['sort'] = "node_group_reverse" if ( params['sort'].nil? || params['sort'] == "name_reverse" )
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     
     respond_to do |format|
@@ -30,8 +34,7 @@ class LbPoolsController < ApplicationController
   # GET /lb_pools/1
   # GET /lb_pools/1.xml
   def show
-    includes = process_includes(LbPool, params[:include])
-    @lb_pool = LbPool.find(params[:id], :include => includes)
+    @lb_pool = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -42,7 +45,7 @@ class LbPoolsController < ApplicationController
 
   # GET /lb_pools/new
   def new
-    @lb_pool = LbPool.new
+    @lb_pool = @object
     @lb_pool.build_lb_profile
     respond_to do |format|
       format.html # show.html.erb
@@ -52,7 +55,7 @@ class LbPoolsController < ApplicationController
 
   # GET /lb_pools/1/edit
   def edit
-    @lb_pool = LbPool.find(params[:id])
+    @lb_pool = @object
   end
 
   # POST /lb_pools
@@ -75,7 +78,7 @@ class LbPoolsController < ApplicationController
   # PUT /lb_pools/1
   # PUT /lb_pools/1.xml
   def update
-    @lb_pool = LbPool.find(params[:id])
+    @lb_pool = @object
     respond_to do |format|
       if @lb_pool.update_attributes(params[:lb_pool])
         flash[:notice] = 'Load Balancer Service Pool was successfully updated.'
@@ -91,7 +94,7 @@ class LbPoolsController < ApplicationController
   # DELETE /lb_pools/1
   # DELETE /lb_pools/1.xml
   def destroy
-    @lb_pool = LbPool.find(params[:id])
+    @lb_pool = @object
     @lb_pool.destroy
 
     respond_to do |format|

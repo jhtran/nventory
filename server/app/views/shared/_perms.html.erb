@@ -1,0 +1,15 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p id="perms_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+<p>
+<div id="perms">
+<p>
+<%- if object -%>
+  <%= link_to_remote 'Permissions', { :url => {:action => :get_perms, :id => object.id}, :loading => "Element.hide('perms');Element.show('perms_spinner')", :loaded => "Element.hide('perms_spinner');Element.show('perms')" } %>
+<%- else -%>
+  <%= link_to_remote 'Permissions', { :url => {:action => :get_perms}, :loading => "Element.hide('perms');Element.show('perms_spinner')", :loaded => "Element.hide('perms_spinner');Element.show('perms')" } %>
+<%- end -%>
+</p>
+</div>
+</p>
+<%= javascript_tag "Element.hide('perms_spinner')" %>
+<%= @tooltips if ttflag %>

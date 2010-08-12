@@ -1,26 +1,21 @@
 class NodeGroupNodeGroupAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /node_group_node_group_assignments
   # GET /node_group_node_group_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "node_group_node_group_assignments.assigned_at"
-           when "assigned_at_reverse" then "node_group_node_group_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = NodeGroupNodeGroupAssignment.default_search_attribute
-      sort = 'node_group_node_group_assignments.' + NodeGroupNodeGroupAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = NodeGroupNodeGroupAssignment.find(:all, :order => sort)
-    else
-      @objects = NodeGroupNodeGroupAssignment.paginate(:all,
-                                                   :order => sort,
-                                                   :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = NodeGroupNodeGroupAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
   # GET /node_group_node_group_assignments/1
   # GET /node_group_node_group_assignments/1.xml
   def show
-    @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.find(params[:id])
+    @node_group_node_group_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,17 +36,22 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
 
   # GET /node_group_node_group_assignments/new
   def new
-    @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.new
+    @node_group_node_group_assignment = @object
   end
 
   # GET /node_group_node_group_assignments/1/edit
   def edit
-    @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.find(params[:id])
+    @node_group_node_group_assignment = @object
   end
 
   # POST /node_group_node_group_assignments
   # POST /node_group_node_group_assignments.xml
   def create
+    parent = NodeGroup.find(params[:node_group_node_group_assignment][:parent_id])
+    return unless filter_perms(@auth,parent,['updater'])
+    child = NodeGroup.find(params[:node_group_node_group_assignment][:child_id])
+    return unless filter_perms(@auth,child,['updater'])
+
     @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.new(params[:node_group_node_group_assignment])
     if request.env["HTTP_REFERER"] =~ /http:\/\/.*?\/(\w+)\/(\d+)/
       ref_class = $1.singularize
@@ -70,16 +70,6 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
             render(:update) { |page|
               page.replace_html 'parent_group_assgns', :partial => 'node_groups/parent_group_assignments', :locals => { :node_group => ref_obj }
               page.replace_html 'child_group_assgns', :partial => 'node_groups/child_group_assignments', :locals => { :node_group => ref_obj }
-              page.replace_html 'real_nodes', :partial => 'node_groups/real_node_assignments', :locals => { :node_group => ref_obj }
-              page.replace_html 'virtual_nodes', :partial => 'node_groups/virtual_node_assignments', :locals => { :node_group => ref_obj }
-              page.replace_html 'child_group_assignments', :partial => 'shared/child_node_group_assignment', :collection => ref_obj.assignments_as_parent
-              page.replace_html 'parent_group_assignments', :partial => 'shared/parent_node_group_assignment', :collection => ref_obj.assignments_as_child
- 
-
-              page.hide 'create_parent_assignment'
-              page.hide 'create_child_assignment'
-              page.show 'add_parent_link'
-              page.show 'add_child_link'
             }
           end
         }
@@ -95,7 +85,11 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
   # PUT /node_group_node_group_assignments/1
   # PUT /node_group_node_group_assignments/1.xml
   def update
-    @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.find(params[:id])
+    @node_group_node_group_assignment = @object
+    @parent_group = @node_group_node_group_assignment.parent_group
+    return unless filter_perms(@auth,@parent_group,['updater'])
+    @child_group = @node_group_node_group_assignment.child_group
+    return unless filter_perms(@auth,@child_group,['updater'])
 
     respond_to do |format|
       if @node_group_node_group_assignment.update_attributes(params[:node_group_node_group_assignment])
@@ -112,9 +106,11 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
   # DELETE /node_group_node_group_assignments/1
   # DELETE /node_group_node_group_assignments/1.xml
   def destroy
-    @node_group_node_group_assignment = NodeGroupNodeGroupAssignment.find(params[:id])
+    @node_group_node_group_assignment = @object
     @parent_group = @node_group_node_group_assignment.parent_group
+    return unless filter_perms(@auth,@parent_group,['updater'])
     @child_group = @node_group_node_group_assignment.child_group
+    return unless filter_perms(@auth,@child_group,['updater'])
     
     begin
       @node_group_node_group_assignment.destroy
@@ -144,15 +140,6 @@ class NodeGroupNodeGroupAssignmentsController < ApplicationController
           render(:update) { |page|
             page.replace_html 'parent_group_assgns', :partial => 'node_groups/parent_group_assignments', :locals => { :node_group => ref_obj }
             page.replace_html 'child_group_assgns', :partial => 'node_groups/child_group_assignments', :locals => { :node_group => ref_obj }
-            page.replace_html 'real_nodes', :partial => 'node_groups/real_node_assignments', :locals => { :node_group => ref_obj }
-            page.replace_html 'virtual_nodes', :partial => 'node_groups/virtual_node_assignments', :locals => { :node_group => ref_obj }
-            page.replace_html 'child_group_assignments', :partial => 'shared/child_node_group_assignment', :collection => ref_obj.assignments_as_parent
-            page.replace_html 'parent_group_assignments', :partial => 'shared/parent_node_group_assignment', :collection => ref_obj.assignments_as_child
-
-            page.hide 'create_parent_assignment'
-            page.hide 'create_child_assignment'
-            page.show 'add_parent_link'
-            page.show 'add_child_link'
           }
         end
       }

@@ -13,11 +13,6 @@
 
 </div>
 
-<p><%= link_to 'Edit', edit_name_alias_path(@name_alias) %> | 
-<%= link_to 'Delete', name_alias_path(@name_alias), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @name_alias} %>
-
 <%= javascript_tag "_name_alias_id = "+@name_alias.id.to_s %>
 
 <%= @tooltips %>

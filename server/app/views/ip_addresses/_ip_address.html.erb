@@ -1,9 +1,9 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p><strong><%= tooltip(IpAddress,:address) %></strong> <em>*</em> <br /> <%= f.text_field :address %></p>
 
-<p><strong><%= tooltip(IpAddress,:address_type) %></strong> <em>*</em> <br /> <%= f.text_field :address_type %></p>
+<p><strong><%= tooltip(IpAddress,:address_type) %>:</strong> <em>*</em> <br /><%= f.select :address_type, $address_types%></p>
 
-<p><strong><%= tooltip(IpAddress,:network_interface) %></strong> <br /> <%= select 'ip_address', 'network_interface_id', NetworkInterface.all.collect { |n| ["#{n.node.name} #{n.name}", n.id] } %></p>
+<p><strong><%= tooltip(IpAddress,:network_interface) %></strong> <br /> <%= select 'ip_address', 'network_interface_id', NetworkInterface.all.collect { |n| ["#{n.node.name} #{n.name}", n.id] },:include_blank => true %></p>
 
 <p><strong><%= tooltip(IpAddress,:netmask) %></strong> <br /> <%= f.text_field :netmask %></p>
 

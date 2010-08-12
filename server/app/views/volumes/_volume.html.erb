@@ -1,7 +1,15 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p><strong><%= tooltip(Volume,:name) %>:</strong> <em>*</em> <br/><%= f.text_field :name %></p>
-<p><strong><%= tooltip(Volume,:volume_type) %>:</strong> <em>*</em> <br/><%= f.text_field :volume_type %></p>
-<p><strong><%= tooltip(Volume,:volume_server) %>:</strong> <em>*</em> <br/><%= f.select :volume_server_id, @volume_servers %></p>
+<p><strong><%= tooltip(Volume,:volume_type) %>:</strong> <em>*</em> <br/><%= f.select :volume_type, Volume.volume_types, :include_blank => true %></p>
+<p><strong><%= tooltip(Volume,:capacity) %>:</strong> <br/><%= f.text_field :capacity%></p>
+<p><strong><%= tooltip(Volume,:size) %>:</strong> <br/><%= f.text_field :size%></p>
+<p><strong><%= tooltip(Volume,:vendor) %>:</strong> <br/><%= f.text_field :vendor%></p>
+<p><strong><%= tooltip(Volume,:businfo) %>:</strong> <br/><%= f.text_field :businfo%></p>
+<p><strong><%= tooltip(Volume,:serial) %>:</strong> <br/><%= f.text_field :serial%></p>
+<p><strong><%= tooltip(Volume,:physid) %>:</strong> <br/><%= f.text_field :physid%></p>
+<p><strong><%= tooltip(Volume,:dev) %>:</strong> <br/><%= f.text_field :dev%></p>
+<p><strong><%= tooltip(Volume,:logicalname) %>:</strong> <br/><%= f.text_field :logicalname%></p>
+<p><strong><%= tooltip(Volume,:volume_server) %>:</strong> <br/><%= f.select :volume_server_id, @volume_servers, :include_blank => true %></p>
 <p><strong><%= tooltip(Volume,:description) %>:</strong> <br/><%= f.text_area :description, {"cols" => 60, "rows" => 4} %> </p>
 
 <%= @tooltips if ttflag %>

@@ -1,31 +1,21 @@
 class DatabaseInstancesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /database_instances
   # GET /database_instances.xml
   def index
-    includes = process_includes(DatabaseInstance, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "database_instances.name"
-           when "name_reverse" then "database_instances.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = DatabaseInstance.default_search_attribute
-      sort = 'database_instances.' + DatabaseInstance.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = DatabaseInstance.find(:all,
-                                       :include => includes,
-                                       :order => sort)
-    else
-      @objects = DatabaseInstance.paginate(:all,
-                                           :include => includes,
-                                           :order => sort,
-                                           :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = DatabaseInstance
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -37,10 +27,7 @@ class DatabaseInstancesController < ApplicationController
   # GET /database_instances/1
   # GET /database_instances/1.xml
   def show
-    includes = process_includes(DatabaseInstance, params[:include])
-    
-    @database_instance = DatabaseInstance.find(params[:id],
-                                               :include => includes)
+    @database_instance = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -51,7 +38,7 @@ class DatabaseInstancesController < ApplicationController
 
   # GET /database_instances/new
   def new
-    @database_instance = DatabaseInstance.new
+    @database_instance = @object
     respond_to do |format|
       format.html # show.html.erb
       format.js  { render :action => "inline_new", :layout => false }
@@ -60,7 +47,7 @@ class DatabaseInstancesController < ApplicationController
 
   # GET /database_instances/1/edit
   def edit
-    @database_instance = DatabaseInstance.find(params[:id])
+    @database_instance = @object
   end
 
   # POST /database_instances
@@ -97,7 +84,7 @@ class DatabaseInstancesController < ApplicationController
   # PUT /database_instances/1
   # PUT /database_instances/1.xml
   def update
-    @database_instance = DatabaseInstance.find(params[:id])
+    @database_instance = @object
 
     respond_to do |format|
       if @database_instance.update_attributes(params[:database_instance])
@@ -114,7 +101,7 @@ class DatabaseInstancesController < ApplicationController
   # DELETE /database_instances/1
   # DELETE /database_instances/1.xml
   def destroy
-    @database_instance = DatabaseInstance.find(params[:id])
+    @database_instance = @object
     @database_instance.destroy
 
     respond_to do |format|

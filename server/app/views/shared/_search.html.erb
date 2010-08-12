@@ -5,65 +5,51 @@
 <% form_tag self.send(object.class.to_s.underscore.pluralize + '_path'), :method => :get do -%>
   <table>
     <th><font color="green">FIELD</font></th>
-    <th><font color="green">EXACT MATCH</font></th>
     <th><font color="green">KEYWORD SEARCH</font></th>
     <th><font color="green">REGEX ON?</font></th>
     <th><font color="green">EXCLUDE</font></th>
+  <!-- local columns -->
   <% object.class.content_columns.each do |column| %>
-    <% next if (column.name == 'description') %>
     <% next if (column.name == 'created_at') %>
     <% next if (column.name == 'updated_at') %>
     <% next if (exclude && exclude.include?(column.name))%>
     <% next if object.class.columns_hash[column.name].type == :datetime %>
     <tr>
     <td><%= h(column.name.humanize) %></td>
-    <% optionshash = {} -%>
-    <% object.class.find(:all, :select => "DISTINCT #{column.name}").each do |obj| -%>
-      <% value = obj.send(column.name) -%>
-      <% optionshash[value] = true if (!value.nil? && !value.blank?) -%>
-    <% end -%>
-    <% options = optionshash.keys.sort -%>
-    <% size = options.length -%>
-    <% size = 5 if options.length >= 5 %>
-    <td><%= select_tag column.name, options_for_select(options), :multiple => true, :id => "select_#{column.name}", :name => "exact_#{column.name}[]", :size => size %></td>
     <td><%= text_field_tag column.name %></td>
     <td><%= check_box_tag "webregex_#{column.name}" %></td>
     <td><%= text_field_tag "exclude_#{column.name}" %></td>
     </tr>
   <% end -%>
+  <!-- foreign tables/associations -->
   <% object.class.reflect_on_all_associations.each do |assoc| -%>
     <% next if assoc.name == :audits -%>
-    <% next if assoc.name == :comments -%>
+    <% next if assoc.name == :users -%>
     <% next if assoc.name == :utilization_metrics -%>
     <!-- FIXME - not sure why the following break search -->
-    <% next if assoc.name == :volumes_served -%>
     <% next if assoc.name == :volumes_mounted-%>
-    <% next if assoc.name == :consumed_outlets -%>
-    <% next if assoc.name == :produced_outlets -%>
     <!-- FIXME - these probably break because their model don't exist? (alias of another model?)  -->
-    <% next if assoc.name == :virtual_host -%>
-    <% next if assoc.name == :virtual_guests -%>
-    <% next if assoc.name == :lb_pools -%>
-    <% next if assoc.name == :services -%>
     <% if assoc.klass.respond_to?('default_search_attribute') -%>
       <% next if assoc.klass.columns_hash[assoc.klass.default_search_attribute].type == :datetime %>
       <tr>
       <td><%= h(assoc.name.to_s.humanize) %></td>
-      <% optionshash = {} -%>
-      <% assoc.klass.find(:all,:select => "DISTINCT #{assoc.klass.default_search_attribute}").each do |obj| -%>
-        <% value = obj.send(assoc.klass.default_search_attribute) -%>
-        <% optionshash[value] = true if (!value.nil? && !value.blank?) -%>
-      <% end -%>
-      <% options = optionshash.keys.sort -%>
-      <% size = options.length -%>
-      <% size = 5 if options.length >= 5 %>
-      <td><%= select_tag assoc.klass.default_search_attribute, options_for_select(options), :multiple => true, :id => "select_#{assoc.name}[#{assoc.klass.default_search_attribute}]", :name => "exact_#{assoc.name}[#{assoc.klass.default_search_attribute}][]", :size => size %></td>
       <td><%= text_field_tag "#{assoc.name}[#{assoc.klass.default_search_attribute}]" %></td>
       <td><%= check_box_tag "webregex_#{assoc.name}" %></td>
       <td><%= text_field_tag "exclude_#{assoc.name}" %></td>
       </tr>
     <% end -%>
   <% end -%>
+  <!-- future nested_has_many_through (cannot be dirctly associated at current time -->
+  <%- if object.class.respond_to?('custom_search_assocs') %>
+    <%- object.class.custom_search_assocs.each_pair do |assocname,default_search_attr| -%>
+      <tr>
+      <td><%= assocname.to_s.capitalize %></td>
+      <td><%= text_field_tag "#{assocname}[#{default_search_attr}]" %> </td>
+        <td><%= check_box_tag "webregex_#{assocname}" %></td>
+        <td><%= text_field_tag "exclude_#{assocname}" %></td>
+      </tr>
+    <%- end -%>
+  <%- end -%><!-- if object.class.responds_to?('custom_search_assocs') -->
   </table>
   <%= submit_tag 'Search', :name => '' %>
 <% end -%>

@@ -1,4 +1,7 @@
 class DatabaseInstanceRelationship < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   named_scope :def_scope
   
   belongs_to :from, :class_name => "DatabaseInstance", :foreign_key => "from_id"

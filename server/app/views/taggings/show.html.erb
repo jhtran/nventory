@@ -1,0 +1,15 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Tagging" %>
+
+<div class="record_view">
+
+<h1>Tagging</h1>
+<p>
+<strong><%= tooltip(Tagging,:Tag) %>:</strong> <%= link_to @tagging.tag.name, @tagging.tag %><br />
+<strong><%= tooltip(Node,:node_group) %>:</strong> <%= link_to @tagging.taggable.name,@tagging.taggable %><br />
+</p>
+<p class="metadata"><strong><%= tooltip(Tagging,:created_at) %>:</strong> <%= h(@tagging.created_at) %></p>
+
+</div>
+
+<%= @tooltips %>

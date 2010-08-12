@@ -1,44 +1,21 @@
 class VolumesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /volumes
   # GET /volumes.xml
   def index
-    includes = process_includes(Volume, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "volumes.name"
-           when "name_reverse" then "volumes.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = Volume.default_search_attribute
-      sort = 'volumes.' + Volume.default_search_attribute
-    end
-    
-    # The index page includes some data from associations.  If we don't
-    # include those associations then N SQL calls result as that data is
-    # looked up row by row.
-    if !params[:format] || params[:format] == 'html'
-      # FIXME: Including has_one, through is not supported, see note in
-      # process_includes for more details
-      #includes[:datacenter] = {}
-      # Need to include the node's hardware profile as that is used
-      # in calculating the free/used space columns
-      # FIXME: not sure why this stopped working
-      #includes[[:nodes => :hardware_profile]] = {}
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = Volume
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
 
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = Volume.find(:all,
-                           :include => includes,
-                           :order => sort)
-    else
-      @objects = Volume.paginate(:all,
-                               :include => includes,
-                               :order => sort,
-                               :page => params[:page])
-    end
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -50,10 +27,7 @@ class VolumesController < ApplicationController
   # GET /volumes/1
   # GET /volumes/1.xml
   def show
-    includes = process_includes(Volume, params[:include])
-    
-    @volume = Volume.find(params[:id],
-                      :include => includes)
+    @volume = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -64,7 +38,7 @@ class VolumesController < ApplicationController
 
   # GET /volumes/new
   def new
-    @volume = Volume.new
+    @volume = @object
     @volume_servers = Node.find(:all, :select => 'id, name', :order => 'name').map{|node| [node.name,node.id]}
     respond_to do |format|
       format.html # show.html.erb
@@ -74,14 +48,21 @@ class VolumesController < ApplicationController
 
   # GET /volumes/1/edit
   def edit
-    @volume = Volume.find(params[:id])
+    @volume = @object
     @volume_servers = Node.find(:all, :select => 'id, name', :order => 'name').map{|node| [node.name,node.id]}
   end
 
   # POST /volumes
   # POST /volumes.xml
   def create
+    if params[:volume][:volume_server_id]
+      volume_server = Node.find(params[:volume][:volume_server_id])
+      return unless filter_perms(@auth,volume_server,['updater'])
+    else
+      return unless filter_perms(@auth,Volume,['creator'])
+    end
     @volume = Volume.new(params[:volume])
+    @volume_servers = Node.find(:all, :select => 'id, name', :order => 'name').map{|node| [node.name,node.id]}
     respond_to do |format|
       if @volume.save
         flash[:notice] = 'Volume was successfully created.'
@@ -90,11 +71,6 @@ class VolumesController < ApplicationController
           render(:update) { |page| 
             if request.env["HTTP_REFERER"].include? "nodes"
               page.replace_html 'volume_served', :partial => 'nodes/volume_served', :locals => { :node => @volume.volume_server }
-              page.hide 'create_volume_served'
-              page.hide 'no_volumes'
-              page.show 'add_volume_served_link'
-            else
-              page.hide 'new_volume'
             end
           }
         }
@@ -110,7 +86,8 @@ class VolumesController < ApplicationController
   # PUT /volumes/1
   # PUT /volumes/1.xml
   def update
-    @volume = Volume.find(params[:id])
+    @volume = @object
+    @volume.volume_server ? (return unless filter_perms(@auth,@volume.volume_server,['updater'])) : (return unless filter_perms(@auth,@volume,['updater']))
 
     respond_to do |format|
       if @volume.update_attributes(params[:volume])
@@ -127,7 +104,8 @@ class VolumesController < ApplicationController
   # DELETE /volumes/1
   # DELETE /volumes/1.xml
   def destroy
-    @volume = Volume.find(params[:id])
+    @volume = @object
+    @volume.volume_server ? (return unless filter_perms(@auth,@volume.volume_server,['updater'])) : (return unless filter_perms(@auth,@volume,['destroyer']))
     begin
       @volume.destroy
     rescue Exception => destroy_error

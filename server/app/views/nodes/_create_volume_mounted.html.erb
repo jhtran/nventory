@@ -1,8 +1,8 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<% remote_form_for( :volume_node_assignment, :url => volume_node_assignments_path ) do |f| %>
+<% remote_form_for( :volume_node_assignment, :url => {:controller => :volume_node_assignments, :action => :create, :div => 'volume_mounted'}) do |f| %>
   <p><%= tooltip(Volume,:network_volume) %>:
   
-  <%- to_array = Volume.find(:all, :order => 'name').collect { |r| [ "* #{r.name} * - #{r.volume_server.name}", r.id ] } -%>
+  <%- to_array = Volume.find(:all, :order => 'name').collect { |r| [ "* #{r.name} * - #{r.volume_server.name}", r.id ] unless r.volume_server.nil? }.compact -%>
   
   <%= f.select( :volume_id, to_array, { :include_blank => true } ) %>&nbsp&nbsp&nbsp
   <%= tooltip(Volume,:mount) %>: <%= f.text_field :mount %>

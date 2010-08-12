@@ -1,0 +1,49 @@
+<div class="relationship">
+
+  <h2>Accounts</h2>
+
+  <p id="show_realaccounts_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="show_realaccounts">
+    <!-- in account_group <=> accounts relationship, accounts are actually account_groups named 'blah.self'. -->
+    <%= button_to_remote "Show Accounts",
+            :url => {:action => :get_deps, :id => account_group.id, :partial => 'real_account_assignments' },
+            :update => 'real_accounts', :loading => "Element.show('show_realaccounts_spinner')",
+            :after => "Element.hide('show_realaccounts')",
+            :loaded => "Element.show('hide_realaccounts');Element.hide('show_realaccounts_spinner')" %></p>  
+
+  <p id="hide_realaccounts">
+    <%= button_to_remote "Hide Accounts", :url => {:action => :get_deps}, :update => 'real_accounts', 
+            :after => "Element.hide('hide_realaccounts');Element.show('show_realaccounts');Element.hide('add_account_link')" %></p>
+
+  <div id="real_accounts"> </div>
+
+  <div id="create_account_assignment">
+    <%= render :partial => 'create_account_assignment' %>
+  </div>
+
+  <p id="add_account_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="add_account_link">
+    <%= render :partial => 'add_account_link' if allow_perm(@account_group, ['updater']) %>
+  </p>
+
+  <p id="show_virtaccounts_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>  
+
+  <p id="show_virtaccounts">
+    <%= button_to_remote "Show Virtual Accounts", :url => {:action => :get_deps, :id => account_group.id, :partial => 'virtual_account_assignments' }, 
+         :update => 'virtual_accounts', :loading => "Element.show('show_virtaccounts_spinner')", :after => "Element.hide('show_virtaccounts')", 
+         :loaded => "Element.show('hide_virtaccounts');Element.hide('show_virtaccounts_spinner')" %> </p>  
+
+  <p id="hide_virtaccounts"><%= button_to_remote "Hide Virtual Accounts", :url => {:action => :get_deps}, :update => 'virtual_accounts', 
+         :after => "Element.hide('hide_virtaccounts');Element.show('show_virtaccounts')" %></p>
+
+  <div id="virtual_accounts"> </div>
+
+</div>
+<%= javascript_tag "Element.hide('create_account_assignment')" %>
+<%= javascript_tag "Element.hide('hide_virtaccounts')" %>
+<%= javascript_tag "Element.hide('hide_realaccounts')" %>
+<%= javascript_tag "Element.hide('show_realaccounts_spinner')" %>
+<%= javascript_tag "Element.hide('show_virtaccounts_spinner')" %>
+<%= javascript_tag "Element.hide('add_account_spinner')" %>

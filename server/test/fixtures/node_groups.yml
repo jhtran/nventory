@@ -1,16 +1,7 @@
-# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  name: NodeGroupOne
-two:
-  id: 2
-  name: NodeGroupTwo
-three:
-  id: 3
-  name: NodeGroupThree
-four:
-  id: 4
-  name: NodeGroupFour
-five:
-  id: 5
-  name: NodeGroupFive
+web_servers:
+  name: web_servers
+  owner: jsmith@blah.com
+db:
+  name: db
+mysql_servers:
+  name: mysql_servers

@@ -1,4 +1,7 @@
 class NodeGroupNodeGroupAssignment < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   named_scope :def_scope
   
   acts_as_reportable
@@ -67,7 +70,7 @@ class NodeGroupNodeGroupAssignment < ActiveRecord::Base
 
     cpgs_depth.keys.each do |cg| 
       if ppgs_depth[cg] 
-        unless ppgs_depth[cg] == (cpgs_depth[cg] +=1)
+        unless (ppgs_depth[cg] +=1) == cpgs_depth[cg]
           errors.add :parent_id, "new parent #{parent_group.name} creates a loop in group hierarchy due to #{cg.name}, check that group for connection back to #{parent_group.name}"
           return false
         end

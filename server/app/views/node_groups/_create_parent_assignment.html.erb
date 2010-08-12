@@ -1,5 +1,5 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<% remote_form_for( :node_group_node_group_assignment, :url => self.send('node_group_node_group_assignments_path') ) do |f| %>
+<% remote_form_for( :node_group_node_group_assignment, :url => {:controller => 'node_group_node_group_assignments', :action => :create, :div => 'parent_group_assgns'}, :loading => "Element.show('add_parentngs_spinner')", :loaded => "Element.hide('add_parentngs_spinner')" ) do |f| %>
   <p><%= tooltip(NodeGroup,:parent_groups,'Parent Group') %>:
   
   <%- node_group_array = NodeGroup.def_scope.find(:all, :order => :name).collect { |r| [ r.name, r.id ] } -%>

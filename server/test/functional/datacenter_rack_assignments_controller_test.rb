@@ -5,7 +5,6 @@ require 'datacenter_rack_assignments_controller'
 class DatacenterRackAssignmentsController; def rescue_action(e) raise e end; end
 
 class DatacenterRackAssignmentsControllerTest < Test::Unit::TestCase
-  fixtures :datacenter_rack_assignments
 
   def setup
     @controller = DatacenterRackAssignmentsController.new

@@ -1,26 +1,21 @@
 class NodeDatabaseInstanceAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /node_database_instance_assignments
   # GET /node_database_instance_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "node_database_instance_assignments.assigned_at"
-           when "assigned_at_reverse" then "node_database_instance_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = NodeDatabaseInstanceAssignment.default_search_attribute
-      sort = 'node_database_instance_assignments.' + NodeDatabaseInstanceAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = NodeDatabaseInstanceAssignment.find(:all, :order => sort)
-    else
-      @objects = NodeDatabaseInstanceAssignment.paginate(:all,
-                                                         :order => sort,
-                                                         :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = NodeDatabaseInstanceAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class NodeDatabaseInstanceAssignmentsController < ApplicationController
   # GET /node_database_instance_assignments/1
   # GET /node_database_instance_assignments/1.xml
   def show
-    @node_database_instance_assignment = NodeDatabaseInstanceAssignment.find(params[:id])
+    @node_database_instance_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,18 +36,22 @@ class NodeDatabaseInstanceAssignmentsController < ApplicationController
 
   # GET /node_database_instance_assignments/new
   def new
-    @node_database_instance_assignment = NodeDatabaseInstanceAssignment.new
+    @node_database_instance_assignment = @object
   end
 
   # GET /node_database_instance_assignments/1/edit
   def edit
-    @node_database_instance_assignment = NodeDatabaseInstanceAssignment.find(params[:id])
+    @node_database_instance_assignment = @object
   end
 
   # POST /node_database_instance_assignments
   # POST /node_database_instance_assignments.xml
   def create
     @node_database_instance_assignment = NodeDatabaseInstanceAssignment.new(params[:node_database_instance_assignment])
+    node = Node.find(params[:node_database_instance_assignment][:node_id])
+    return unless filter_perms(@auth,node,['updater'])
+    database_instance = DatabaseInstance.find(params[:node_database_instance_assignment][:database_instance_id])
+    return unless filter_perms(@auth,database_instance,['updater'])
 
     respond_to do |format|
       if @node_database_instance_assignment.save
@@ -79,7 +78,11 @@ class NodeDatabaseInstanceAssignmentsController < ApplicationController
   # PUT /node_database_instance_assignments/1
   # PUT /node_database_instance_assignments/1.xml
   def update
-    @node_database_instance_assignment = NodeDatabaseInstanceAssignment.find(params[:id])
+    @node_database_instance_assignment = @object
+    node = @node_database_instance_assignment.node
+    return unless filter_perms(@auth,node,['updater'])
+    database_instace = @node_database_instance_assignment.database_instance
+    return unless filter_perms(@auth,database_instance,['updater'])
 
     respond_to do |format|
       if @node_database_instance_assignment.update_attributes(params[:node_database_instance_assignment])
@@ -96,9 +99,11 @@ class NodeDatabaseInstanceAssignmentsController < ApplicationController
   # DELETE /node_database_instance_assignments/1
   # DELETE /node_database_instance_assignments/1.xml
   def destroy
-    @node_database_instance_assignment = NodeDatabaseInstanceAssignment.find(params[:id])
+    @node_database_instance_assignment = @object
     @node = @node_database_instance_assignment.node
+    return unless filter_perms(@auth,@node,['updater'])
     @node_database_instance_assignment.destroy
+    return unless filter_perms(@auth,@database_instance,['updater'])
 
     respond_to do |format|
       format.html { redirect_to node_database_instance_assignments_url }

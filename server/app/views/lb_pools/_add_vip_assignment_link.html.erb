@@ -1,0 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= link_to_function 'Add Vip Assignment', "Element.show('create_vip_assignment');Element.hide('add_vip_assignment_link')" %>
+
+<%= @tooltips if ttflag %>

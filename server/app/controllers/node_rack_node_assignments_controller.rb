@@ -1,26 +1,21 @@
 class NodeRackNodeAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /node_rack_node_assignments
   # GET /node_rack_node_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "node_rack_node_assignments.assigned_at"
-           when "assigned_at_reverse" then "node_rack_node_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = NodeRackNodeAssignment.default_search_attribute
-      sort = 'node_rack_node_assignments.' + NodeRackNodeAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = NodeRackNodeAssignment.find(:all, :order => sort)
-    else
-      @objects = NodeRackNodeAssignment.paginate(:all,
-                                             :order => sort,
-                                             :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = NodeRackNodeAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class NodeRackNodeAssignmentsController < ApplicationController
   # GET /node_rack_node_assignments/1
   # GET /node_rack_node_assignments/1.xml
   def show
-    @node_rack_node_assignment = NodeRackNodeAssignment.find(params[:id])
+    @node_rack_node_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,17 +36,21 @@ class NodeRackNodeAssignmentsController < ApplicationController
 
   # GET /node_rack_node_assignments/new
   def new
-    @node_rack_node_assignment = NodeRackNodeAssignment.new
+    @node_rack_node_assignment = @object
   end
 
   # GET /node_rack_node_assignments/1/edit
   def edit
-    @node_rack_node_assignment = NodeRackNodeAssignment.find(params[:id])
+    @node_rack_node_assignment = @object
   end
 
   # POST /node_rack_node_assignments
   # POST /node_rack_node_assignments.xml
   def create
+    node_rack = NodeRack.find(params[:node_rack_node_assignment][:node_rack_id])
+    return unless filter_perms(@auth,node_rack,'updater')
+    node = Node.find(params[:node_rack_node_assignment][:node_id])
+    return unless filter_perms(@auth,node,'updater')
     @node_rack_node_assignment = NodeRackNodeAssignment.new(params[:node_rack_node_assignment])
 
     respond_to do |format|
@@ -67,11 +66,8 @@ class NodeRackNodeAssignmentsController < ApplicationController
             # which we do something slightly different.
             if request.env["HTTP_REFERER"].include? "node_racks"
               page.replace_html 'node_rack_node_assignments', :partial => 'node_racks/node_assignments', :locals => { :node_rack => @node_rack_node_assignment.node_rack }
-              page.hide 'create_node_rack_assignment'
-              page.show 'add_node_rack_assignment_link'
             elsif request.env["HTTP_REFERER"].include? "nodes"
               page.replace_html 'node_rack_node_assignments', :partial => 'nodes/node_rack_assignment', :locals => { :node => @node_rack_node_assignment.node }
-              page.hide 'create_node_rack_assignment'
             end
           }
         }
@@ -87,7 +83,11 @@ class NodeRackNodeAssignmentsController < ApplicationController
   # PUT /node_rack_node_assignments/1
   # PUT /node_rack_node_assignments/1.xml
   def update
-    @node_rack_node_assignment = NodeRackNodeAssignment.find(params[:id])
+    @node_rack_node_assignment = @object
+    node_rack = @node_rack_node_assignment.node_rack
+    return unless filter_perms(@auth,node_rack,'updater')
+    node = @node_rack_node_assignment.node
+    return unless filter_perms(@auth,node,'updater')
 
     respond_to do |format|
       if @node_rack_node_assignment.update_attributes(params[:node_rack_node_assignment])
@@ -104,9 +104,12 @@ class NodeRackNodeAssignmentsController < ApplicationController
   # DELETE /node_rack_node_assignments/1
   # DELETE /node_rack_node_assignments/1.xml
   def destroy
-    @node_rack_node_assignment = NodeRackNodeAssignment.find(params[:id])
+    @node_rack_node_assignment = @object
     @node_rack = @node_rack_node_assignment.node_rack
+    return unless filter_perms(@auth,@node_rack,'updater')
     @node = @node_rack_node_assignment.node
+    return unless filter_perms(@auth,@node,'updater')
+
     @node_rack_node_assignment.destroy
 
     respond_to do |format|
@@ -119,12 +122,8 @@ class NodeRackNodeAssignmentsController < ApplicationController
           # which we do something slightly different.
           if request.env["HTTP_REFERER"].include? "node_racks"
             page.replace_html 'node_rack_node_assignments', :partial => 'node_racks/node_assignments', :locals => { :node_rack => @node_rack }
-            page.hide 'create_node_rack_assignment'
-            page.show 'add_node_rack_assignment_link'
           elsif request.env["HTTP_REFERER"].include? "nodes"
             page.replace_html 'node_rack_node_assignments', :partial => 'nodes/node_rack_assignment', :locals => { :node => @node }
-            page.hide 'create_node_rack_assignment'
-            page.show 'add_node_rack_assignment_link'
           end
         }
       }

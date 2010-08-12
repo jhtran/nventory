@@ -1,0 +1,5 @@
+vmhost1_vmguest1:
+  virtual_host: vmhost1
+  virtual_guest: vmguest1
+  created_at: <%= 5.days.ago.to_s :db %>
+  assigned_at: <%= 5.days.ago.to_s :db %>

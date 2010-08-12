@@ -1,0 +1,41 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Account Group: #{@account_group.name}" %>
+
+<div class="record_view">
+
+  <h1><%= tooltip(Account,:account_groups,'Account Group') + ": #{@account_group.name}" %></h1>
+  <p><strong><%= tooltip(AccountGroup,:description) %>:</strong><br />
+  <%= textilize_without_paragraph(h(@account_group.description)) %></p>
+  
+  <p class="metadata"><strong><%= tooltip(AccountGroup,:created_at) %>:</strong> <%= h(@account_group.created_at) %><br />
+</div>
+
+<!-- table list of all accounts and permissions attr to this obj --%>
+<div id='roles'>
+  <%= render :partial => 'shared/roles', :locals => {:obj => @account_group} if allow_perm(@account_group, ['updater']) %>
+</div>
+
+<!-- BEGIN ACCOUNT_GROUP RELATIONSHIPS -->
+<%= render :partial => 'account_groups', :locals => {:account_group => @account_group} %>
+<!-- END ACCOUNT_GROUP RELATIONSHIPS -->
+
+<!-- BEGIN TREES -->
+<div class="relationship">
+  <h2>Visualize</h2>
+  <p><%= link_to 'View Diagram', :action => "graph_account_groups", :id => @account_group %></p>
+  <p id="show_tree"><%= button_to_remote "Show Tree", :url => {:action => :get_deps, :id => @account_group.id, :partial => 'tree' }, :update => 'tree_view', :after => "Element.hide('show_tree')", :loaded => "Element.show('hide_tree')" %></p>
+  <p id="hide_tree"><%= button_to_remote "Hide Tree", :url => {:action => :get_deps}, :update => 'tree_view', :after => "Element.hide('hide_tree');Element.show('show_tree')" %></p>
+  <div id="tree_view">
+    <!-- %= render :partial => 'tree', :locals => {:account_group => @account_group} % -->
+  </div>
+</div>
+<!-- END TREES -->
+
+<!-- BEGIN ACCOUNT RELATIONSHIPS -->
+<%= render :partial => 'accounts', :locals => {:account_group => @account_group} %>
+<!-- END ACCOUNT RELATIONSHIPS -->
+
+<%= javascript_tag "Element.hide('hide_tree')" %>
+<%= javascript_tag "Element.hide('tree')" %>
+
+<%= @tooltips %>

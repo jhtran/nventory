@@ -1,5 +1,5 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<% remote_form_for( :name_alias, :url => name_aliases_path ) do |f| %>
+<% remote_form_for( :name_alias, :url => {:controller => 'name_aliases', :action => :create, :div => 'name_aliases'}) do |f| %>
   <p>Alias:
   <%= f.text_field :name %>
   <%= f.hidden_field( :source_id, { :value => @node.id } ) %>

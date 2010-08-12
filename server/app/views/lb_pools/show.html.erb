@@ -1,9 +1,9 @@
 <%- @tooltips = [] %>
-<%- @page_title = "Load Balancer Pool: " + h(@lb_pool.name) %>
+<%- @page_title = "Load Balance Pool: " + h(@lb_pool.name) %>
 
 <div class="record_view">
 
-<h1><%= tooltip(Node,:lb_pools,'Load Balancer Pool') %>: <%=h @lb_pool.name %></h1>
+<h1><%= tooltip(Node,:lb_pools,'Load Balance Pool') %>: <%=h @lb_pool.name %></h1>
 <p><strong><%= tooltip(LbPool,:name) %>:</strong><%= @lb_pool.owner %><br /></p>
 <p><strong><%= tooltip(LbProfile,:port) %>:</strong><%= @lb_pool.lb_profile.port%><br />
 <strong><%= tooltip(LbProfile,:protocol) %>:</strong><%= @lb_pool.lb_profile.protocol%><br />
@@ -24,7 +24,7 @@
   </div>
   
   <div id="create_vip_assignment">
-    <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'vip', :to => 'lb_pool'} %>
+    <%= render :partial => 'create_vip_assignment' %>
   </div>
     
   <p id="new_vip">
@@ -32,7 +32,7 @@
   </p>
     
   <p id="add_vip_assignment_link">
-    <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'vip', :to => 'lb_pool'} %>
+    <%= render :partial => 'add_vip_assignment_link' if allow_perm(@lb_pool, ['updater']) %>
   </p>
 </div>
 
@@ -44,7 +44,7 @@
 
   <div id="create_node_assignment">
     <!-- reminder:  lb_pool model is just an alias of node_group model -->
-    <%= render :partial => 'shared/create_lb_pool_node_assignment', :locals => { :from => 'lb_pool', :to => 'node'} %>
+    <%= render :partial => 'create_lb_pool_node_assignment', :locals => { :lb_pool_id => @lb_pool.id } %>
   </div>
 
   <p id="new_node">
@@ -52,19 +52,9 @@
   </p>
 
   <p id="add_node_assignment_link">
-    <%= render :partial => 'shared/add_lb_pool_node_inline_link', :locals => { :from => 'lb_pool', :to => 'node'} %>
+    <%= render :partial => 'add_lb_pool_node_inline_link' if allow_perm(@lb_pool, ['updater']) %>
   </p>
 </div>
-
-<!-- Comments -->
-<div class="relationship">
-  <%= render :partial => 'shared/comments', :locals => { :object => @lb_pool} %>
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_lb_pool_path(@lb_pool) %> | 
-<%= link_to 'Delete', lb_pool_path(@lb_pool), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @lb_pool} %>
 
 <%= javascript_tag "Element.hide('create_vip_assignment')" %>
 <%= javascript_tag "Element.hide('create_node_assignment')" %>

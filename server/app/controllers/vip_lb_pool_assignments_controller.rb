@@ -1,26 +1,21 @@
 class VipLbPoolAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /vip_lb_pool_assignments
   # GET /vip_lb_pool_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "vip_lb_pool_assignments.assigned_at"
-           when "assigned_at_reverse" then "vip_lb_pool_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = VipLbPoolAssignment.default_search_attribute
-      sort = 'vip_lb_pool_assignments.' + VipLbPoolAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = VipLbPoolAssignment.find(:all, :order => sort)
-    else
-      @objects = VipLbPoolAssignment.paginate(:all,
-                                             :order => sort,
-                                             :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = VipLbPoolAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class VipLbPoolAssignmentsController < ApplicationController
   # GET /vip_lb_pool_assignments/1
   # GET /vip_lb_pool_assignments/1.xml
   def show
-    @vip_lb_pool_assignment = VipLbPoolAssignment.find(params[:id])
+    @vip_lb_pool_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,18 +36,22 @@ class VipLbPoolAssignmentsController < ApplicationController
 
   # GET /vip_lb_pool_assignments/new
   def new
-    @vip_lb_pool_assignment = VipLbPoolAssignment.new
+    @vip_lb_pool_assignment = @object
   end
 
   # GET /vip_lb_pool_assignments/1/edit
   def edit
-    @vip_lb_pool_assignment = VipLbPoolAssignment.find(params[:id])
+    @vip_lb_pool_assignment = @object
   end
 
   # POST /vip_lb_pool_assignments
   # POST /vip_lb_pool_assignments.xml
   def create
     @vip_lb_pool_assignment = VipLbPoolAssignment.new(params[:vip_lb_pool_assignment])
+    vip = Vip.find(params[:vip_lb_pool_assignment][:vip_id])
+    return unless filter_perms(@auth,vip,['updater'])
+    lb_pool = LbPool.find(params[:vip_lb_pool_assignment][:lb_pool_id])
+    return unless filter_perms(@auth,lb_pool,['updater'])
 
     respond_to do |format|
       if @vip_lb_pool_assignment.save
@@ -67,13 +66,8 @@ class VipLbPoolAssignmentsController < ApplicationController
             # which we do something slightly different.
             if request.env["HTTP_REFERER"].include? "vips"
               page.replace_html 'vip_lb_pool_assignments', :partial => 'vips/lb_pool_assignments', :locals => { :vip => @vip_lb_pool_assignment.vip }
-              page.replace_html 'node_assignments', :partial => 'vips/node_assignments', :locals => { :vip => @vip_lb_pool_assignment.vip }
-              page.hide 'create_lb_pool_assignment'
-              page.show 'add_lb_pool_assignment_link'
             elsif request.env["HTTP_REFERER"].include? "lb_pools"
               page.replace_html 'vip_lb_pool_assignments', :partial => 'lb_pools/vip_assignment', :locals => { :lb_pool => @vip_lb_pool_assignment.lb_pool }
-              page.hide 'create_vip_assignment'
-              page.show 'add_vip_assignment_link'
             end
           }
         }
@@ -89,7 +83,11 @@ class VipLbPoolAssignmentsController < ApplicationController
   # PUT /vip_lb_pool_assignments/1
   # PUT /vip_lb_pool_assignments/1.xml
   def update
-    @vip_lb_pool_assignment = VipLbPoolAssignment.find(params[:id])
+    @vip_lb_pool_assignment = @object
+    vip = @vip_lb_pool_assignment.vip
+    return unless filter_perms(@auth,vip,['updater'])
+    lb_pool = @vip_lb_pool_assignment.lb_pool
+    return unless filter_perms(@auth,lb_pool,['updater'])
 
     respond_to do |format|
       if @vip_lb_pool_assignment.update_attributes(params[:vip_lb_pool_assignment])
@@ -106,9 +104,12 @@ class VipLbPoolAssignmentsController < ApplicationController
   # DELETE /vip_lb_pool_assignments/1
   # DELETE /vip_lb_pool_assignments/1.xml
   def destroy
-    @vip_lb_pool_assignment = VipLbPoolAssignment.find(params[:id])
+    @vip_lb_pool_assignment = @object
     @vip = @vip_lb_pool_assignment.vip
+    return unless filter_perms(@auth,@vip,['updater'])
     @lb_pool = @vip_lb_pool_assignment.lb_pool
+    return unless filter_perms(@auth,@lb_pool,['updater'])
+
     @vip_lb_pool_assignment.destroy
 
     respond_to do |format|

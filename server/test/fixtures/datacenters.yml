@@ -1,17 +1,2 @@
-# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  name: MyString
-  physical_address: MyText
-  shipping_address: MyText
-  manager: MyString
-  support_phone_number: MyString
-  support_email: MyString
-two:
-  id: 2
-  name: MyString
-  physical_address: MyText
-  shipping_address: MyText
-  manager: MyString
-  support_phone_number: MyString
-  support_email: MyString
+ac1:
+  name: ac1

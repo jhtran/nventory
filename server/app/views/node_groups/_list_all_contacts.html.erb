@@ -1,0 +1,5 @@
+<font color=green>
+<%- allcontacts =  service.recursive_contacts.join(', ') %>
+<%= allcontacts.empty? ? 'No contacts defined' : allcontacts %>
+</font><br />
+<%= button_to_function 'Hide contacts list', "Element.show('view_all_contacts_link');Element.hide('list_all_contacts')"%></p>

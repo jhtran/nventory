@@ -1,0 +1,19 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Permission Rule: " + h(@roles_user.account_group.name.sub(/\.self/,'')) if @roles_user.account_group %>
+
+<div class="record_view">
+
+<h1><%= tooltip(Node,:roles_user, 'Permission Rule') %>:<font color=green> User <%=h @roles_user.account_group.name.sub(/\.self/,'') if @roles_user.account_group %>
+has <%= @roles_user.role.name if @roles_user.role %> permission on <%= role_classify(@roles_user.role,true) if @roles_user.role %></font> </h1>
+<p>
+<strong>Role:</strong> <font color=green><%= @roles_user.role.name %></font><br />
+<strong>Target Object:</strong> <font color=green><%= role_classify(@roles_user.role) if @roles_user.role %></font>
+</p>
+<%- acct = Account.find(@roles_user.audits.first.user_id) if !@roles_user.audits.empty? && @roles_user.audits.first.user_id %>
+<strong>Created By:</strong> <%= link_to acct.login, acct if acct %>
+<p class="metadata"><strong><%= tooltip(RolesUser,:created_at) %>:</strong> <%= h(@roles_user.created_at) %><br />
+<strong><%= tooltip(RolesUser,:updated_at) %>:</strong> <%= h(@roles_user.updated_at) %></p>
+
+</div>
+
+<%= @tooltips %>

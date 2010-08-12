@@ -1,24 +1,36 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<% remote_form_for( :outlet, :url => outlets_path ) do |f| %>
-  
-  <p>
-  <strong>Name:</strong>
-  <%= f.text_field :name %><br />
-  <strong>Outlet:</strong>
-  
-  <%- if node.hardware_profile.outlet_type == 'Network' %>
-    <%- to_array = NetworkInterface.find(:all, :include => {:node => {}}, :order => 'nodes.name').collect { |r| [ "#{r.node.name} [ #{r.name} ]", r.id ] } -%>
-    <%= f.hidden_field( :consumer_type, { :value => 'NetworkInterface' } ) %>
-  <%- else -%>
-    <%- to_array = Node.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } -%>
-    <%= f.hidden_field( :consumer_type, { :value => 'Node' } ) %>
-  <%- end -%>
-  
-  <%= f.hidden_field( :producer_id, { :value => node.id } ) %>
-  <%= f.select( :consumer_id, to_array, {:include_blank => true} ) %>
-  
-  <%= submit_tag "Create", :onclick => "$('outlet_producer_id').value = _node_id" %> | <%= link_to_function 'Cancel', "Element.show('create_outlet');Element.hide('new_outlet')" %>
-  </p>
+<%- if node.hardware_profile.outlet_count %>
+  <% remote_form_for( :outlet, :url => outlets_path ) do |f| %>
+    
+    <p>
+    <strong><%= Outlet.outlet_types[node.hardware_profile.outlet_type].to_s %> Name:</strong>
+    <%- if node.hardware_profile.outlet_type == 'Blade' %>
+      <%- used_outlets = {} %>
+      <%- node.produced_outlets.each{|outlet| used_outlets[outlet.name] = outlet.id} %>
+      <%- if node.hardware_profile.outlet_count == 0 -%>
+        <%= f.text_field :name %>
+      <%- else -%>
+        <%= f.select( :name, (1..node.hardware_profile.outlet_count).collect{|num| [num,num] unless used_outlets[num.to_s]}.compact ) %>
+      <%- end -%>
+    <%- else -%>
+      <%= f.text_field :name %><br />
+    <%- end -%>
+    <strong><%= Outlet.consumer_types[node.hardware_profile.outlet_type].table_name.singularize.humanize.titleize %>:</strong>
+    
+    <%- if node.hardware_profile.outlet_type == 'Network' %>
+      <%- to_array = NetworkInterface.find(:all, :joins=> {:node => {}}, :conditions => "network_interfaces.name not like 'lo%'", :order => 'nodes.name').collect { |r| [ "#{r.node.name} [ #{r.name} ]", r.id ] } -%>
+      <%= f.hidden_field( :consumer_type, { :value => 'NetworkInterface' } ) %>
+    <%- else -%>
+      <%- to_array = Node.find(:all, :select => "nodes.id, nodes.name", :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+      <%= f.hidden_field( :consumer_type, { :value => 'Node' } ) %>
+    <%- end -%>
+    
+    <%= f.hidden_field( :producer_id, { :value => node.id } ) %>
+    <%= f.select( :consumer_id, to_array, {:include_blank => true} ) %>
+    
+    <%= submit_tag "Create", :onclick => "$('outlet_producer_id').value = _node_id" %> | <%= link_to_function 'Cancel', "Element.show('add_outlet_link');Element.hide('create_outlet')" %>
+    </p>
+  <% end %>
 <% end %>
 
 <%= @tooltips if ttflag %>

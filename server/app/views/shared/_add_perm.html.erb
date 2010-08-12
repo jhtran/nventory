@@ -1,0 +1,15 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p>
+<% remote_form_for( controller.controller_name, :url => url_for(:action => :addauth)) do |f| %>
+  <%= f.select(:useraccs, @useraccs, {:selected => ""}, {:multiple => true, :size => 10}) %>
+  <%= f.select(:groupaccs, @groupaccs, {:selected => ""}, {:multiple => true, :size => 5}) %>
+  <%= "Role: " + f.select(:role, @rolenames,{},{ :onchange => "if (this.value == 'updater') { Element.show('add_attrs') } else { Element.hide('add_attrs') }" }) %>
+  <%= f.hidden_field(:refid, :value => refid ) %>
+  <p id='attrs'> <%= f.select(:attrs, @attrs, {:selected => ""}, {:multiple => true, :size => 10}) %> </p>
+  <p id='add_attrs'><%= link_to_function 'Only Allow Select Attributes', "Element.show('attrs');Element.hide('add_attrs')" %></p>
+  <p><%= submit_tag "Grant" %></p>
+<% end %>
+</p>
+<%= javascript_tag("Element.hide('attrs')") %>
+<%= javascript_tag("Element.hide('add_attrs')") %>
+<%= @tooltips if ttflag %>

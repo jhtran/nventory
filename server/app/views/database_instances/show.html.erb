@@ -13,14 +13,4 @@
 
 </div>
 
-<div class="relationship">
-
-<%= render :partial => 'shared/comments', :locals => { :object => @database_instance} %>
-
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_database_instance_path(@database_instance) %> | 
-<%= link_to 'Delete', database_instance_path(@database_instance), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @database_instance} %>
 <%= @tooltiops %>

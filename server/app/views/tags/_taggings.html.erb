@@ -1,0 +1,40 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<table cellspacing="0" class="styled" summary="A list of the node groups with this tag.">
+<caption><%= tooltip(Node,:node_groups) %></caption>
+<thead>
+<tr>
+    <th><%= tooltip(NodeGroup,:name) %></th>
+    <th><%= tooltip(Tagging,:created_at) %></th>
+    <th><%= tooltip(NodeGroup,:owner) %></th>
+    <th>&nbsp;</th>
+</tr>
+</thead>
+<tbody>
+<%- for tagging in tag.taggings.sort{|a,b| a.taggable.name <=> b.taggable.name} %>
+<tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(tagging) %>">
+    <td><%= link_to tagging.taggable.name, node_group_path(tagging.taggable) %></td>
+    <td><%= h(tagging.created_at.to_formatted_s(:long)) %></td>
+    <td><%= mail_to tagging.taggable.owner %></td>
+    <td><%= link_to_remote 'Delete',
+                            :url => tagging_path(tagging),
+                            :confirm => 'Are you sure?',
+                            :method => :delete if  allow_perm(tag,'updater') %></td>
+</tr>
+<%- end %>
+</tbody>
+</table>
+<p id="add_tagging_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+<p id='add_tagging_link'><%= link_to_function('Add NodeGroup',"Element.show('create_tagging');Element.hide('add_tagging_link')") if  allow_perm(tag,'updater') %></p>
+<div id='create_tagging'>
+  <% remote_form_for( :tagging, :url => {:controller => 'taggings', :action => :create, :div => 'taggings', :partial => 'tags/taggings', :refcontroller => 'tags'}, :loading => "Element.show('add_tagging_spinner')", :loaded => "Element.hide('add_tagging_spinner')" ) do |f| %>
+    <p><%= tooltip(Node,:node_group) %>:
+    <%= f.select( :taggable_id, NodeGroup.all.collect{|a| [a.name,a.id]}, { :include_blank => true } ) %>
+    <%= f.hidden_field( :taggable_type, { :value => 'NodeGroup' } ) %>
+    <%= f.hidden_field( :tag_id, { :value => tag.id } ) %>
+    <%= submit_tag "Assign" %> | <%= link_to_function 'Cancel', "Element.show('add_tagging_link');Element.hide('create_tagging')"%></p>
+
+<% end %>
+</div>
+<%= javascript_tag "Element.hide('create_tagging')" %>
+<%= javascript_tag "Element.hide('add_tagging_spinner')" %>
+<%= @tooltips if ttflag %>

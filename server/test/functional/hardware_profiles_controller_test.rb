@@ -5,7 +5,6 @@ require 'hardware_profiles_controller'
 class HardwareProfilesController; def rescue_action(e) raise e end; end
 
 class HardwareProfilesControllerTest < Test::Unit::TestCase
-  fixtures :hardware_profiles
 
   def setup
     @controller = HardwareProfilesController.new

@@ -12,16 +12,16 @@
 
 <%- f.fields_for :lb_profile do |lp_fields| -%>
   <p>
-    <strong><%= tooltip(LbProfile,:port) %>:</strong><br />
+    <strong><%= tooltip(LbProfile,:port) %>:</strong> <em>*</em><br />
     <%= lp_fields.text_field :port %>
   </p>
   <p>
-    <strong><%= tooltip(LbProfile,:protocol) %>:</strong><br />
-    <%= lp_fields.text_field :protocol %>
+    <strong><%= tooltip(LbProfile,:protocol) %>:</strong> <em>*</em> <br />
+    <%= lp_fields.select :protocol, $protocols %>
   </p>
   <p>
-    <strong><%= tooltip(LbProfile,:lbmethod) %>:</strong><br />
-    <%= lp_fields.text_field :lbmethod %>
+    <strong><%= tooltip(LbProfile,:lbmethod) %>:</strong> <em>*</em><br />
+    <%= lp_fields.select :lbmethod, $lbmethods %>
   </p>
   <p>
     <strong><%= tooltip(LbProfile,:healthcheck) %>:</strong><br />

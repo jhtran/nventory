@@ -5,7 +5,6 @@ require 'database_instances_controller'
 class DatabaseInstancesController; def rescue_action(e) raise e end; end
 
 class DatabaseInstancesControllerTest < Test::Unit::TestCase
-  fixtures :database_instances
 
   def setup
     @controller = DatabaseInstancesController.new

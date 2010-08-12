@@ -2,11 +2,9 @@
 <%form_tag('/csv/export', :method => :get) do -%>
    <%= submit_tag 'Export CSV File' %>
    <%= link_to_function 'Cancel', "Element.show('basic_csv_export');Element.show('csv_inline_link');Element.hide('advanced_csv_export')" %><br>
-   <% all_attr_names = [] %>
-   <%  @objects.first.class.column_names.each { |a| all_attr_names.push(a.to_s) } %>
-   <%  @objects.first.class.reflections.keys.each { |a| all_attr_names.push(a.to_s) } %>
+   <% all_attr_names = csv_adv_fields(@objects.first.class) %>
    <% size = all_attr_names.size; size = 10 if size >= 10 %>
-   <%= select_tag 'attributes[]', options_for_select(all_attr_names.sort.uniq), :multiple => true, :size => size %>
+   <%= select_tag 'attributes[]', options_for_select(all_attr_names), :multiple => true, :size => size %>
 <% end -%>
 
 <%= @tooltips if ttflag %>

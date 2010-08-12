@@ -1,0 +1,9 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<li>
+  <%= link_to parent_account_group_assignment.parent_group.name, :controller => 'account_groups', :action => 'show', :id => parent_account_group_assignment.parent_group.id %>
+  <% if !parent_account_group_assignment.parent_group.parent_groups.empty? %>
+    <ul><%= render :partial => 'parent_account_group_assignment', :collection => parent_account_group_assignment.parent_group.assignments_as_child.sort {|a,b| a.parent_group.name <=> b.parent_group.name} %></ul>
+  <% end %>  
+</li> 
+
+<%= @tooltips if ttflag %>

@@ -1,21 +1,23 @@
 class ServiceProfilesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /service_profiles
   # GET /service_profiles.xml
   def index
-    # The default display index_row columns (service_profiles model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = ServiceProfile
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     
     respond_to do |format|
@@ -28,8 +30,7 @@ class ServiceProfilesController < ApplicationController
   # GET /service_profiles/1
   # GET /service_profiles/1.xml
   def show
-    includes = process_includes(ServiceProfile, params[:include])
-    @service_profile = ServiceProfile.find(params[:id], :include => includes)
+    @service_profile = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,7 +42,7 @@ class ServiceProfilesController < ApplicationController
   # GET /service_profiles/new
   def new
     @services = Service.find(:all, :select => 'id,name', :order => 'name').collect{|service| [service.name,service.id]}
-    @service_profile = ServiceProfile.new
+    @service_profile = @object
     respond_to do |format|
       format.html # show.html.erb
       format.js  { render :action => "inline_new", :layout => false }
@@ -51,7 +52,7 @@ class ServiceProfilesController < ApplicationController
   # GET /service_profiles/1/edit
   def edit
     @services = Service.find(:all, :select => 'id,name', :order => 'name').collect{|service| [service.name,service.id]}
-    @service_profile = ServiceProfile.find(params[:id])
+    @service_profile = @object
   end
 
   # POST /service_profiles
@@ -76,7 +77,7 @@ class ServiceProfilesController < ApplicationController
   # PUT /service_profiles/1.xml
   def update
     @services = Service.find(:all, :select => 'id,name', :order => 'name').collect{|service| [service.name,service.id]}
-    @service_profile = ServiceProfile.find(params[:id])
+    @service_profile = @object
 
     respond_to do |format|
       if @service_profile.update_attributes(params[:service_profile])
@@ -93,7 +94,7 @@ class ServiceProfilesController < ApplicationController
   # DELETE /service_profiles/1
   # DELETE /service_profiles/1.xml
   def destroy
-    @service_profile = ServiceProfile.find(params[:id])
+    @service_profile = @object
     @service_profile.destroy
 
     respond_to do |format|

@@ -2,7 +2,7 @@
 <tr class="<%= cycle('odd', 'even') -%>">
 <td nowrap="nowrap" width="5%">
 <%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / 
-<%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+<%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %></td>
 <td><%= link_to index_row.lb_pool.name, index_row.lb_pool %></td>
 <td><%= index_row.port %></td>
 <td><%= index_row.protocol %></td>

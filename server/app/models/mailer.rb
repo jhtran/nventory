@@ -26,7 +26,7 @@ class Mailer < ActionMailer::Base
   def mail_csv(recipient, mailer_params, csv)
     recipients  recipient
     from $mail_from
-    subject = "[nventory] #{mailer_params[:object_class].to_s.tableize} CSV Export"
+    subject "[nventory] #{mailer_params[:object_class].to_s.tableize} CSV Export"
 
     attachment :content_type => "text/csv", :filename => "#{mailer_params[:object_class].to_s.tableize}_export.csv", :body => csv.join
   end

@@ -1,0 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(dup_sns.class.to_s.underscore + '_path', dup_sns) %> / <%= link_to 'Edit', self.send('edit_' + dup_sns.class.to_s.underscore + '_path', dup_sns) %>
+  <td><%= link_to dup_sns.name, self.send(dup_sns.class.to_s.underscore + '_path', dup_sns) %></td>
+  <td><%= dup_sns.serial_number %></td>
+</tr>
+
+<%= @tooltips if ttflag %>

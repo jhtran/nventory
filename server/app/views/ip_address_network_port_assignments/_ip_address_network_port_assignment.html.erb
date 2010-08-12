@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(IpAddressNetworkPortAssignment,:ip_address) %>:</strong> <br /><%= f.select :ip_address_id, IpAddress.find(:all, :order => 'address').collect { |r| [ r.address, r.id ] }, { :include_blank => true } %></p>
+
+<p><strong><%= tooltip(IpAddressNetworkPortAssignment,:network_port) %>:</strong> <br /><%= f.select :network_port_id, NetworkPort.find(:all, :order => 'number').collect { |n| [ n.number, n.id ] }, { :include_blank => true } %></p>
+<p><strong><%= tooltip(IpAddressNetworkPortAssignment,:apps) %>:</strong> <br /><%= f.text_field :apps %></p>
+
+<p><strong><%= tooltip(IpAddressNetworkPortAssignment,:assigned_at) %>:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+<p><strong><%= tooltip(IpAddressNetworkPortAssignment,:nmap_first_seen_at) %>:</strong> <br/><%= f.datetime_select :nmap_first_seen_at%><br/>
+<strong><%= tooltip(IpAddressNetworkPortAssignment,:nmap_last_seen_at) %>:</strong> <br/><%= f.datetime_select :nmap_last_seen_at %></p>
+
+<%= @tooltips if ttflag %>

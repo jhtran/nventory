@@ -15,7 +15,7 @@
 <p><strong><%= tooltip(HardwareProfile,:processor_socket_count) %>:</strong> <br /><%= f.text_field :processor_socket_count %> </p>
 <p><strong><%= tooltip(HardwareProfile,:processor_count) %>:</strong> <br /><%= f.text_field :processor_count %> </p>
 <p><strong><%= tooltip(HardwareProfile,:outlet_count) %>:</strong> <br /><%= f.text_field :outlet_count, :title => "Indicates how many outlets nodes with this profile produce. Set to 0 for dynamic allocation of outlets based on the number of outlet names specified when nodes using the profile are registered. Blank indicates this profile doesn't produce outlets." %> </p>
-<p><strong><%= tooltip(HardwareProfile,:outlet_type) %>:</strong> <br /><%= f.select :outlet_type, HardwareProfile.allowed_outlet_types.collect { |ot| [ ot, ot ] } %></p>
+<p><strong><%= tooltip(HardwareProfile,:outlet_type) %>:</strong> <br /><%= f.select :outlet_type, Outlet.outlet_types.keys.collect { |ot| [ ot, ot ] }, :include_blank => true %></p>
 <p><strong><%= tooltip(HardwareProfile,:cards) %>:</strong> <br /><%= f.text_field :cards %> </p>
 <p><strong><%= tooltip(HardwareProfile,:visualization_color) %>:</strong> <br /><%= f.text_field :visualization_color %> </p>
 <p><strong><%= tooltip(HardwareProfile,:estimated_cost) %>:</strong> <br /><%= f.text_field :estimated_cost %> </p>

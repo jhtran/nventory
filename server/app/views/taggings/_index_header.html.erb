@@ -1,0 +1,9 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th><%= tooltip(Tagging,:tag) %></th>
+  <th><%= tooltip(Node,:node_group) %></th>
+  <th><%= tooltip(Tagging,:created_at) %></th>
+</tr>
+
+<%= @tooltips if ttflag %>

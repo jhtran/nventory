@@ -1,0 +1,17 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<div class="relationship">
+  <h2><%= tooltip(node.class,:network_interfaces) %>:</h2>
+  <p id="show_nics_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+  <div id="network_interfaces"> </div>
+    <p id="show_nics">
+    <%= button_to_remote "Show Network Interfaces", :url => {:action => :get_nics, :id => node.id,
+        :partial => 'network_interfaces_basic' }, :update => 'network_interfaces', :loading => "Element.show('show_nics_spinner')",
+        :after => "Element.hide('show_nics')", :loaded => "Element.show('hide_nics');Element.hide('show_nics_spinner')" %></p>
+
+  <p id="hide_nics">
+    <%= button_to_remote "Hide Network Interfaces", :url => {:action => :get_nics}, :update => 'network_interfaces',
+        :after => "Element.hide('hide_nics');Element.show('show_nics')" %></p>
+</div>
+<%= javascript_tag("Element.hide('show_nics_spinner')") %>
+<%= javascript_tag("Element.hide('hide_nics')") %>
+<%= @tooltips if ttflag %>

@@ -1,27 +1,22 @@
 class NodeGroupNodeAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /node_group_node_assignments
   # GET /node_group_node_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "node_group_node_assignments.assigned_at"
-           when "assigned_at_reverse" then "node_group_node_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = NodeGroupNodeAssignment.default_search_attribute
-      sort = 'node_group_node_assignments.' + NodeGroupNodeAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = NodeGroupNodeAssignment.find(:all, :order => sort)
-    else
-      @objects = NodeGroupNodeAssignment.paginate(:all,
-                                              :order => sort,
-                                              :page => params[:page])
-    end
-    
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = NodeGroupNodeAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
+
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
@@ -31,7 +26,7 @@ class NodeGroupNodeAssignmentsController < ApplicationController
   # GET /node_group_node_assignments/1
   # GET /node_group_node_assignments/1.xml
   def show
-    @node_group_node_assignment = NodeGroupNodeAssignment.find(params[:id])
+    @node_group_node_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,33 +36,48 @@ class NodeGroupNodeAssignmentsController < ApplicationController
 
   # GET /node_group_node_assignments/new
   def new
-    @node_group_node_assignment = NodeGroupNodeAssignment.new
+    @node_group_node_assignment = @object
   end
 
   # GET /node_group_node_assignments/1/edit
   def edit
-    @node_group_node_assignment = NodeGroupNodeAssignment.find(params[:id])
+    @node_group_node_assignment = @object
   end
 
   # POST /node_group_node_assignments
   # POST /node_group_node_assignments.xml
   def create
+    # unfortunately, this is overlapping with model validation but can't think of better way to do it
+      # ensures both objs are authorized prior to allow user to create the ngna
+    node_group = NodeGroup.find(params[:node_group_node_assignment][:node_group_id])
+    return unless filter_perms(@auth,node_group,['updater']) 
+    node = Node.find(params[:node_group_node_assignment][:node_id])
+    return unless filter_perms(@auth,node,['updater'])
+
     @node_group_node_assignment = NodeGroupNodeAssignment.new(params[:node_group_node_assignment])
 
     respond_to do |format|
       if @node_group_node_assignment.save
-        
+        flash[:notice] = 'NodeGroupNodeAssignment was successfully created.'
         format.html { 
-          flash[:notice] = 'NodeGroupNodeAssignment was successfully created.'
           redirect_to node_group_node_assignment_url(@node_group_node_assignment) 
         }
         format.js { 
-          render(:update) { |page| 
-            
-            page.replace_html 'node_group_node_assignments', :partial => 'nodes/node_group_assignments', :locals => { :node => @node_group_node_assignment.node }
-            page.hide 'create_node_group_assignment'
-            page.show 'add_node_group_assignment_link'
-          }
+          if request.env["HTTP_REFERER"].include? "nodes"
+            render(:update) { |page| 
+              page.replace_html 'node_group_node_assignments', :partial => 'nodes/node_group_assignments', :locals => { :node => @node_group_node_assignment.node }
+            }
+          elsif request.env["HTTP_REFERER"].include? "node_groups"
+            render(:update) { |page| 
+              page.replace_html 'real_nodes', :partial => 'node_groups/real_node_assignments', :locals => { :node_group => @node_group_node_assignment.node_group }
+            }
+          elsif params[:div] && (params[:refcontroller] == 'reports')
+            link = "<a href='/node_groups/#{@node_group_node_assignment.node_group.id}'>#{@node_group_node_assignment.node_group.name}</a>"
+            render(:update) { |page| 
+              page.replace_html params[:div], :text=> link
+              page.hide "#{params[:div]}_form"
+            }
+          end
         }
         format.xml  { head :created, :location => node_group_node_assignment_url(@node_group_node_assignment) }
       else
@@ -81,7 +91,11 @@ class NodeGroupNodeAssignmentsController < ApplicationController
   # PUT /node_group_node_assignments/1
   # PUT /node_group_node_assignments/1.xml
   def update
-    @node_group_node_assignment = NodeGroupNodeAssignment.find(params[:id])
+    @node_group_node_assignment = @object
+    @node = @node_group_node_assignment.node
+    @node_group = @node_group_node_assignment.node_group
+    return unless filter_perms(@auth,@node_group,['updater'])
+    return unless filter_perms(@auth,@node,['updater'])
 
     respond_to do |format|
       if @node_group_node_assignment.update_attributes(params[:node_group_node_assignment])
@@ -98,9 +112,11 @@ class NodeGroupNodeAssignmentsController < ApplicationController
   # DELETE /node_group_node_assignments/1
   # DELETE /node_group_node_assignments/1.xml
   def destroy
-    @node_group_node_assignment = NodeGroupNodeAssignment.find(params[:id])
+    @node_group_node_assignment = @object
     @node = @node_group_node_assignment.node
     @node_group = @node_group_node_assignment.node_group
+    return unless filter_perms(@auth,@node_group,['updater'])
+    return unless filter_perms(@auth,@node,['updater'])
     
     begin
       @node_group_node_assignment.destroy
@@ -119,10 +135,17 @@ class NodeGroupNodeAssignmentsController < ApplicationController
     # Success!
     respond_to do |format|
       format.html { redirect_to node_group_node_assignments_url }
-      format.js {
-        render(:update) { |page|
-          page.replace_html 'node_group_node_assignments', {:partial => 'nodes/node_group_assignments', :locals => { :node => @node} }
-        }
+      format.js { 
+        if request.env["HTTP_REFERER"].include? "nodes"
+          render(:update) { |page| 
+            page.replace_html 'node_group_node_assignments', {:partial => 'nodes/node_group_assignments', :locals => { :node => @node} }
+          }
+        elsif request.env["HTTP_REFERER"].include? "node_groups"
+          render(:update) { |page| 
+            page.replace_html 'real_nodes', :partial => 'node_groups/real_node_assignments', :locals => { :node_group => @node_group_node_assignment.node_group }
+            page.replace_html 'virtual_nodes', :partial => 'node_groups/virtual_node_assignments', :locals => { :node_group => @node_group_node_assignment.node_group }
+          }
+        end
       }
       format.xml  { head :ok }
     end

@@ -1,0 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for volume, :update => "volume_server" do |f| %>
+  <p><%= tooltip(Volume,:volume_server) %>:
+  <%= f.select( :volume_server_id, volume_servers ) %>
+  <%= submit_tag "Assign", :onclick => "$('volume_id').value = _volume_id" %> | <%= link_to_function 'Cancel', "Element.show('add_volume_server_link');Element.hide('create_volume_server')"%></p>
+<% end %>
+
+<%= @tooltips if ttflag %>

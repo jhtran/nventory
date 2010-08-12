@@ -25,7 +25,7 @@
 </div> <!-- end node_rack_node_assignments -->
 
 <div id="create_node_assignment">
-<%= render :partial => 'shared/create_assignment', :locals => { :from => 'node_rack', :to => 'node'} %>
+<%= render :partial => 'create_node_assignment' %>
 </div>
 
 <p id="new_node">
@@ -33,7 +33,7 @@
 </p>
 
 <p id="add_node_assignment_link">
-<%= render :partial => 'shared/add_inline_link', :locals => { :from => 'node_rack', :to => 'node'} %>
+<%= render :partial => 'add_node_link' if allow_perm(@node_rack, ['updater']) %>
 </p>
 
 </div> <!-- end relationship -->
@@ -45,7 +45,7 @@
 </div> <!-- end datacenter_node_rack_assignments -->
 
 <div id="create_datacenter_assignment">
-<%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
+<%= render :partial => 'create_datacenter_assignment' %>
 </div>
 
 <p id="new_datacenter">
@@ -53,21 +53,10 @@
 </p>
 
 <p id="add_datacenter_assignment_link">
-<%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
+<%= render :partial => 'add_datacenter_link' if allow_perm(@node_rack, ['updater']) %>
 </p>
 
 </div> <!-- end relationship -->
-
-<div class="relationship">
-
-<%= render :partial => 'shared/comments', :locals => { :object => @node_rack} %>
-
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_node_rack_path(@node_rack) %> | 
-<%= link_to 'Delete', node_rack_path(@node_rack), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @node_rack} %>
 
 <%= javascript_tag "Element.hide('create_node_assignment')" %>
 <%= javascript_tag "Element.hide('create_datacenter_assignment')" %>

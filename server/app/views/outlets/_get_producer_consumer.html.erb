@@ -13,7 +13,7 @@
 <%- else -%>
 <p>
 <%= tooltip(Outlet,:consumer,'Consumers') %>:
-  <%= select_tag "outlet[consumer_id]", options_for_select(@consumers) %>
+  <%= select_tag "outlet[consumer_id]", options_for_select(@consumers.insert(0,'')) %>
 </p>
 <%- end -%>
 

@@ -4,6 +4,4 @@
 <p><strong><%= tooltip(Account,:login)%>:</strong> <em>*</em><br /><%= f.text_field :login %></p>
 <p><strong><%= tooltip(Account,:password)%>:</strong> <em>*</em><br /><%= f.password_field :password %></p>
 <p><strong>Password Confirmation:</strong> <em>*</em> <br /><%= f.password_field :password_confirmation %></p>
-<p><%= f.check_box :admin %> <strong><%= tooltip(Account,:admin,'Admin Account')%></strong></p>
-
 <%= @tooltips if ttflag %>

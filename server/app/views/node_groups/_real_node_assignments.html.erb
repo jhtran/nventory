@@ -1,7 +1,6 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if node_group.node_group_node_assignments.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of the nodes assigned to this node_group.">
-  <caption><%= tooltip(NodeGroup,:nodes) %></caption>
   <thead>
   <tr>
       <th><%= tooltip(NodeGroup,:name) %></th>
@@ -17,7 +16,7 @@
       <td><%= link_to_remote 'Delete',
                               :url => node_group_node_assignment_path(assignment),
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(node_group,'updater') && allow_perm(assignment.node,'updater') %></td>
   </tr>
   <%- end %>
   </tbody>

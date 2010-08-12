@@ -6,11 +6,12 @@
 <h3><%= tooltip(nil,:nodes,nil,nodes_tooltip)%></h3>
 <ul>
   Search by <%= tooltip(Node,:name,'name')%>: <% form_tag nodes_path, :method => :get do -%>
-    <%= text_field_tag 'name' -%><br />
+    <%= text_field_tag 'name' -%>
+    <%= check_box_tag 'enable_aliases' %><%= tooltip(Node,:aliases,'include aliases') %><br/>
   <% end %>
   <br />
-  <li><%= link_to 'Add New Node', new_node_path %></li>
-  <li><%= link_to 'Add New Hardware Profile', new_hardware_profile_path %></li>
+  <%- if @modelperms["Node"] -%><li><%= link_to 'Add New Node', new_node_path %></li><%- end -%>
+  <%- if @modelperms["HardwareProfile"] -%><li><%= link_to 'Add New Hardware Profile', new_hardware_profile_path %></li><%- end -%>
   <li><%= link_to 'View All Nodes', nodes_path %></li>
   <li><%= dashboard_pulldown_form_for_model(Node, HardwareProfile.find(:all, :order => HardwareProfile.default_search_attribute)) %></li>
   <li><%= dashboard_pulldown_form_for_model(Node, OperatingSystem.find(:all, :order => OperatingSystem.default_search_attribute)) %></li>
@@ -19,7 +20,7 @@
 
 <h3><%= tooltip(Rack,:datacenter,'Datacenters')%></h3>
 <ul>
-  <li><%= link_to 'Add New Datacenter', new_datacenter_path %></li>
+  <%- if @modelperms["Datacenter"] %><li><%= link_to 'Add New Datacenter', new_datacenter_path %></li><%- end -%>
   <li><%= link_to 'View All Datacenters', datacenters_path %></li>
   <li>
     <form action="" method="get">
@@ -31,6 +32,16 @@
   </li>
 </ul>
 
+<h3>Reports</h3>
+<ul>
+  <li><%= link_to "Audits", audits_url, :title => mtitle(Audit) %></li>
+  <form action="" method="get">
+    &nbsp;&nbsp;&nbsp;<select style="width:10em;" id="report" name="" onchange="if (this.value != '') { window.location = '/reports/' + $('report').value; }">
+      <option value="">View Report:</option>
+      <%= options_for_select(list_reports) %>
+    </select>
+  </form>
+</ul>
 
 </div>
 

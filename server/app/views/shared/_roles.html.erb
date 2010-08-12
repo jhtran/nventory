@@ -1,0 +1,62 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<h3>Roles</h3> 
+
+<table cellspacing="0" class="arversions" summary="roles_table" id="roles_table">
+  <thead>
+    <tr>
+      <th>Target Object</th>
+      <th>Role</th> 
+      <th>Inheritance</th>
+      <th>Assigned By</th>
+      <th>Assigned Date</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <%- obj.roles_users.each do |roleuser| -%>
+        <%- next if roleuser.role.authorizable && roleuser.role.authorizable.kind_of?(AccountGroup) && roleuser.role.authorizable.name =~ /\.self$/ %>
+        <%- rolehash = roles_classify(obj, roleuser.role) %>
+        <tr>
+          <td><%= rolehash[:roletag] %></td> 
+          <td><%= roleuser.role.name %></td>
+          <td></td>
+          <td><%=link_to Account.find(roleuser.audits.first.user_id).login,Account.find(roleuser.audits.first.user_id) unless roleuser.audits.empty? || !roleuser.audits.first.user_id %></td>
+          <td><%=link_to roleuser.created_at.strftime("%m/%d/%Y %H:%M"),roleuser %></td>
+          <td><%= rolehash[:deletetag] if allow_perm(@account,'admin') %></td>
+        </tr>
+    <%- end %>
+    <!-- inherited from parent groups -->
+    <%- obj.all_self_group_parents.each do |parent_group| -%>
+        <%- parent_group.roles.each do |role| -%>
+            <%- next if role.authorizable && role.authorizable.kind_of?(AccountGroup) && role.authorizable.name =~ /\.self$/ %>
+            <%- unless obj.roles.include?(role) -%>
+                <%- rolehash = roles_classify(parent_group, role) -%>
+                <tr>
+                  <td><%= rolehash[:roletag] %></td>
+                  <td><%= role.name %></td>
+                  <td><%= link_to parent_group.name, parent_group %></td>
+                  <td>
+                  <%- agsga = AccountGroupSelfGroupAssignment.find_by_account_group_id_and_self_group_id(parent_group.id,obj.id) -%>
+                  <%- unless agsga.audits.empty? %>
+                    <%- creatorid = agsga.audits.first.user_id %>
+                    <%= Account.find(creatorid).login if creatorid %>
+                  <%- end -%>
+                  </td>
+                  <td><%= link_to agsga.created_at.strftime("%m/%d/%Y %H:%M"), agsga %></td>
+                  <td></td>
+                </tr>
+            <%- end -%>
+        <%- end -%>
+    <%- end -%>
+  </tbody>
+</table>
+<font size=1>* object and class roles are issued from their views</font>
+<p id='add_role_button'><%= button_to_function 'Add Global Role', "Element.show('add_role');Element.hide('add_role_button')" if allow_perm(nil,['admin']) %></p>
+<div id='add_role'>
+<%- form_remote_tag :url => {:controller => 'account_groups', :action => 'addglobalrole', :id => obj.id} do %>
+  <%= select_tag :rolename, options_for_select(Role.role_names.each{|a| [a,a]}) %>
+  <%= submit_tag 'Assign Global' %> 
+<%- end -%><br/>
+</div>
+<%= javascript_tag "Element.hide('add_role')" %>
+<%= @tooltips if ttflag %>

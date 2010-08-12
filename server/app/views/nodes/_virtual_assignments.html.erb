@@ -17,7 +17,7 @@
       <td><%= link_to_remote 'Delete',
                               :url => virtual_assignment_path(assignment),
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(node,'updater') && allow_perm(assignment.virtual_guest,'updater') %></td>
   </tr>
   <%- end %>
   </tbody>

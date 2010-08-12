@@ -1,0 +1,28 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+
+<table cellspacing="0" class="styled">
+<%= will_paginate objects, :renderer => 'RemoteLinkRenderer', :params => { :mode => params[:mode] } %>
+<thead>
+<tr>
+  <th <%= sort_td_class_helper "name" %> > <%= sort_link_helper "Name", "name" %></th>
+  <th>business_unit</th>
+  <th>service</th>
+  <th>environment</th>
+  <th>tier</th>
+</tr>
+</thead>
+<tbody>
+  <%- objects.each do |node| -%>
+    <tr>
+      <td><%= link_to node.name, node %></td>
+      <td><%= build_ng_list(node,:business_unit,@business_unit_ngs) %></td>
+      <td><%= build_ng_list(node,:service,@service_ngs) %></td>
+      <td><%= build_ng_list(node,:environment,@environment_ngs) %></td>
+      <td><%= build_ng_list(node,:tier,@tier_ngs) %></td>
+    </tr>
+  <%- end -%>
+</tbody>
+</table>
+<%= will_paginate objects, :renderer => 'RemoteLinkRenderer', :params => { :mode => params[:mode] } %>
+
+<%= @tooltips if ttflag %>

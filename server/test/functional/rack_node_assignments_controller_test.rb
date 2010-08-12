@@ -5,7 +5,6 @@ require 'rack_node_assignments_controller'
 class RackNodeAssignmentsController; def rescue_action(e) raise e end; end
 
 class RackNodeAssignmentsControllerTest < Test::Unit::TestCase
-  fixtures :rack_node_assignments
 
   def setup
     @controller = RackNodeAssignmentsController.new

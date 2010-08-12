@@ -1,0 +1,7 @@
+audit1:
+  auditable_type: 'Node'
+  auditable_id: nodes(:first).object_id
+  user_id: accounts(:jsmith).object_id
+  user_type: 'Account'
+  action: 'create'
+  created_at: <%= 5.days.ago.to_s :db %>

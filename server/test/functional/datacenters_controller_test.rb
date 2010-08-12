@@ -5,7 +5,6 @@ require 'datacenters_controller'
 class DatacentersController; def rescue_action(e) raise e end; end
 
 class DatacentersControllerTest < Test::Unit::TestCase
-  fixtures :datacenters
 
   def setup
     @controller = DatacentersController.new

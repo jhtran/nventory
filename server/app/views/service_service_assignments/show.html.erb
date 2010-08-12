@@ -14,9 +14,9 @@
 
 </div>
 
-<p><%= link_to 'Edit', edit_service_service_assignment_path(@service_service_assignment) %> | 
-<%= link_to 'Delete', service_service_assignment_path(@service_service_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
-
+<p><%= link_to('Edit', edit_service_service_assignment_path(@service_service_assignment)) if allow_perm(@service_service_assignment, ['updater']) %> 
+<%= " | " if allow_perm(@service_service_assignment, ['destroyer']) && allow_perm(@service_service_assignment, ['updater']) %>
+<%= link_to('Delete', service_service_assignment_path(@service_service_assignment), :confirm => 'Are you sure?', :method => :delete) if allow_perm(@service_service_assignment, ['destroyer']) %>
 <%= render :partial => 'shared/version_information', :locals => { :object => @service_service_assignment} %>
 
 <%= @tooltips %>

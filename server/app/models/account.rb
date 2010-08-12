@@ -3,13 +3,27 @@ require 'resolv'
 require 'net/ldap'
 
 class Account < ActiveRecord::Base
+  acts_as_audited
+  acts_as_commentable
+  acts_as_authorizable
+  
   named_scope :def_scope
     
   validates_presence_of   :login, :email_address, :name
   validates_uniqueness_of :login, :email_address
+
+  has_one :account_group_authz_assignment, :foreign_key => 'authz_id', :dependent => :destroy
+  has_one :authz, :through => :account_group_authz_assignment, :source=> :account_group, :dependent => :destroy
  
   attr_accessor :password_confirmation
   validates_confirmation_of :password
+
+  after_create :create_authz
+  #after_save :check_admin
+
+  def create_authz
+    self.authz = AccountGroup.create({:name => "#{self.login}.self"})
+  end
 
   def validate
     errors.add("password", "can't be blank") if password_hash.blank?
@@ -154,7 +168,7 @@ class Account < ActiveRecord::Base
     create_new_salt
     self.password_hash = Account.encrypted_password(self.password, self.password_salt)
   end
- 
+
   private
 
   def self.encrypted_password(password, salt)
@@ -164,6 +178,11 @@ class Account < ActiveRecord::Base
  
   def create_new_salt
     self.password_salt = self.object_id.to_s + rand.to_s
+  end
+
+  def check_admin
+    self.authz.has_role 'admin' if self.admin == true && self.has_role?('admin') == false
+    (self.authz.has_no_role 'admin' if self.admin == false || self.admin.nil?) if self.authz.has_role? 'admin'
   end
  
 end

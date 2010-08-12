@@ -3,37 +3,74 @@
 
 <div class="record_view">
   <h1><%= tooltip(VolumeNodeAssignment,:volume) %>: <%=h @volume.name %></h1>
-  <p><strong><%= tooltip(Volume,:volume_server) %>: <%=link_to @volume.volume_server.name, @volume.volume_server %></strong><br></p>
-  <p><strong><%= tooltip(Volume,:volume_type) %>: <%= @volume.volume_type %></strong><br></p>
-  <p><strong><%= tooltip(Volume,:description) %>:</strong><br />
+  <p><strong><%= tooltip(Volume,:volume_type) %>: </strong><%= @volume.volume_type %><br></p>
+  <%- if @volume.volume_type == 'nfs' %>
+    <p><strong><%= tooltip(Volume,:volume_server) %>:</strong> <%=link_to @volume.volume_server.name, @volume.volume_server if @volume.volume_server %><br></p>
+  <%- else -%>
+    <p><strong><%= tooltip(Volume,:nodes) %>: </strong>
+    <%- if @volume.drives -%>
+      <ul>
+      <%- @volume.drives.collect{|drive| drive.node}.uniq.each do |node| -%> 
+        <%= "<li>" +  link_to(node.name, node) + "</li>" -%>
+      <%- end -%>
+      </ul>
+    <%- end -%></p>
+    <p><strong><%= tooltip(Volume,:drives) %>: </strong>
+    <%- if @volume.drives -%>
+      <ul>
+      <%- @volume.drives.each do |drive| -%>
+        <%= "<li>" + link_to(drive.name, drive) -%>
+        <%= (drive.size > 1073741824 ? "[#{drive.size/1024/1024/1024} GB]" :"[#{drive.size/1024/1024} MB]") if drive.size %>
+        <%= "</li>" -%>
+      <%- end -%>
+      </ul>
+    <%- end -%>
+    <p><strong><%= tooltip(Volume,:capacity) %>: </strong><%= (@volume.capacity > 1073741824 ? "#{@volume.capacity/1024/1024/1024} GB" : "#{@volume.capacity/1024/1024} MB") if @volume.capacity%><br></p>
+    <p><strong><%= tooltip(Volume,:size) %>: </strong><%= (@volume.size > 1073741824 ? "#{@volume.size/1024/1024/1024} GB" : "#{@volume.size/1024/1024} MB") if @volume.size %><br></p>
+    <p><strong><%= tooltip(Volume,:vendor) %>: </strong><%= @volume.vendor%><br></p>
+    <p><strong><%= tooltip(Volume,:businfo) %>: </strong><%= @volume.businfo%><br></p>
+    <p><strong><%= tooltip(Volume,:serial) %>: </strong><%= @volume.serial%><br></p>
+    <p><strong><%= tooltip(Volume,:physid) %>: </strong><%= @volume.physid%><br></p>
+    <p><strong><%= tooltip(Volume,:dev) %>: </strong><%= @volume.dev%><br></p>
+    <p><strong><%= tooltip(Volume,:logicalname) %>: </strong><%= @volume.logicalname%><br></p>
+    <p><strong><%= tooltip(Volume,:description) %>:</strong><br />
+  <%- end -%>
   <%= textilize_without_paragraph(h(@volume.description)) %></p>
   
   <p class="metadata"><strong><%= tooltip(Volume,:created_at) %>:</strong> <%= h(@volume.created_at) %><br />
   <strong><%= tooltip(Volume,:updated_at) %>:</strong> <%= h(@volume.updated_at) %></p>
   </div>
 
-<div class="relationship">
-  <div id="volume_node_assignments">
-    <%= render :partial => 'node_assignments', :locals => { :volume => @volume} %>
-  </div> <!-- end volume_node_assignments -->
-  <div id="create_node_assignment">
-    <%= render :partial => 'create_node_assignment', :locals => { :from => 'volume', :to => 'node'} %>
-  </div>
-  <p id="add_node_assignment_link">
-    <%= render :partial => 'shared/add_inline_link', :locals => { :from => 'volume', :to => 'node'} %>
-  </p>
-</div> <!-- end relationship -->
-
-<div class="relationship">
-  <%= render :partial => 'shared/comments', :locals => { :object => @volume} %>
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_volume_path(@volume) %> | 
-<%= link_to 'Delete', volume_path(@volume), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @volume} %>
+<%- if @volume.volume_type == 'nfs' -%>
+  <!-- to be cleaned up -->
+  <%- if false -%>
+    <div class="relationship">
+      <div id="volume_server">
+        <%= render :partial => 'volume_server', :locals => {:volume => @volume} %>
+      </div>
+      <p id="add_volume_server_link">
+        <%= render :partial => 'add_volume_server_inline_link', :locals => { :volume => @volume } if allow_perm(VolumeNodeAssignment, ['creator']) %>
+      </p>
+      <div id="create_volume_server">
+        <%= render :partial => 'create_volume_server', :locals => { :volume => @volume } %>
+      </div>
+    </div>
+  <%- end -%>
+  <div class="relationship">
+    <div id="volume_node_assignments">
+      <%= render :partial => 'node_assignments', :locals => { :volume => @volume} %>
+    </div> <!-- end volume_node_assignments -->
+    <div id="create_node_assignment">
+      <%= render :partial => 'create_node_assignment', :locals => { :from => 'volume', :to => 'node'} %>
+    </div>
+    <p id="add_node_assignment_link">
+      <%= render :partial => 'add_node_link', :locals => { :from => 'volume', :to => 'node'} if allow_perm(@volume, ['updater']) %>
+    </p>
+  </div> <!-- end relationship -->
+<%- end -%>
 
 <%= javascript_tag "Element.hide('create_node_assignment')" %>
+<%= javascript_tag "Element.hide('create_volume_server')" %>
 
 <%= javascript_tag "_volume_id = "+@volume.id.to_s %>
 

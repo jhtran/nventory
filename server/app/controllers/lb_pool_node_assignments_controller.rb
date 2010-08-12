@@ -1,27 +1,22 @@
 class LbPoolNodeAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /lb_pool_node_assignments
   # GET /lb_pool_node_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "lb_pool_node_assignments.assigned_at"
-           when "assigned_at_reverse" then "lb_pool_node_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = LbPoolNodeAssignment.default_search_attribute
-      sort = 'lb_pool_node_assignments.' + LbPoolNodeAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = LbPoolNodeAssignment.find(:all, :order => sort)
-    else
-      @objects = LbPoolNodeAssignment.paginate(:all,
-                                              :order => sort,
-                                              :page => params[:page])
-    end
-    
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = LbPoolNodeAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
+
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @objects.to_xml(:dasherize => false) }
@@ -31,7 +26,7 @@ class LbPoolNodeAssignmentsController < ApplicationController
   # GET /lb_pool_node_assignments/1
   # GET /lb_pool_node_assignments/1.xml
   def show
-    @lb_pool_node_assignment = LbPoolNodeAssignment.find(params[:id])
+    @lb_pool_node_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,18 +36,22 @@ class LbPoolNodeAssignmentsController < ApplicationController
 
   # GET /lb_pool_node_assignments/new
   def new
-    @lb_pool_node_assignment = LbPoolNodeAssignment.new
+    @lb_pool_node_assignment = @object
   end
 
   # GET /lb_pool_node_assignments/1/edit
   def edit
-    @lb_pool_node_assignment = LbPoolNodeAssignment.find(params[:id])
+    @lb_pool_node_assignment = @object
   end
 
   # POST /lb_pool_node_assignments
   # POST /lb_pool_node_assignments.xml
   def create
     @lb_pool_node_assignment = LbPoolNodeAssignment.new(params[:lb_pool_node_assignment])
+    lb_pool = LbPool.find(params[:lb_pool_node_assignment][:node_group_id])
+    return unless filter_perms(@auth,lb_pool,['updater'])
+    node = Node.find(params[:lb_pool_node_assignment][:node_id])
+    return unless filter_perms(@auth,node,['updater'])
 
     respond_to do |format|
       if @lb_pool_node_assignment.save
@@ -63,10 +62,7 @@ class LbPoolNodeAssignmentsController < ApplicationController
         }
         format.js { 
           render(:update) { |page| 
-            
             page.replace_html 'node_assignments', :partial => 'lb_pools/node_assignments', :locals => { :lb_pool => @lb_pool_node_assignment.lb_pool }
-            page.hide 'create_node_assignment'
-            page.show 'add_node_assignment_link'
           }
         }
         format.xml  { head :created, :location => lb_pool_node_assignment_url(@lb_pool_node_assignment) }
@@ -81,7 +77,11 @@ class LbPoolNodeAssignmentsController < ApplicationController
   # PUT /lb_pool_node_assignments/1
   # PUT /lb_pool_node_assignments/1.xml
   def update
-    @lb_pool_node_assignment = LbPoolNodeAssignment.find(params[:id])
+    @lb_pool_node_assignment = @object
+    lb_pool = @lb_pool_node_assignment.lb_pool
+    return unless filter_perms(@auth,lb_pool,['updater'])
+    node = @lb_pool_node_assignment.node
+    return unless filter_perms(@auth,node,['updater'])
 
     respond_to do |format|
       if @lb_pool_node_assignment.update_attributes(params[:lb_pool_node_assignment])
@@ -98,9 +98,11 @@ class LbPoolNodeAssignmentsController < ApplicationController
   # DELETE /lb_pool_node_assignments/1
   # DELETE /lb_pool_node_assignments/1.xml
   def destroy
-    @lb_pool_node_assignment = LbPoolNodeAssignment.find(params[:id])
+    @lb_pool_node_assignment = @object
     @node = @lb_pool_node_assignment.node
+    return unless filter_perms(@auth,@node,['updater'])
     @lb_pool = @lb_pool_node_assignment.lb_pool
+    return unless filter_perms(@auth,@lb_pool,['updater'])
     
     begin
       @lb_pool_node_assignment.destroy
@@ -121,8 +123,7 @@ class LbPoolNodeAssignmentsController < ApplicationController
       format.html { redirect_to lb_pool_node_assignments_url }
       format.js {
         render(:update) { |page|
-          
-          page.replace_html 'lb_pool_node_assignments', {:partial => 'nodes/node_assignments', :locals => { :node => @node} }
+          page.replace_html 'node_assignments', {:partial => 'lb_pools/node_assignments', :locals => { :lb_pool => @lb_pool} }
         }
       }
       format.xml  { head :ok }

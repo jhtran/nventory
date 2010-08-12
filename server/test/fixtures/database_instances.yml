@@ -1,9 +1,4 @@
-# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  name: MyString
-  notes: MyText
-two:
-  id: 2
-  name: MyString
-  notes: MyText
+fastdb:
+  name: fastdb
+fastdbjr:
+  name: fastdbjr

@@ -14,9 +14,9 @@
 
 </div>
 
-<p><%= link_to 'Edit', edit_datacenter_node_rack_assignment_path(@datacenter_node_rack_assignment) %> | 
-<%= link_to 'Delete', datacenter_node_rack_assignment_path(@datacenter_node_rack_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
-
+<p><%= link_to('Edit', edit_datacenter_node_rack_assignment_path(@datacenter_node_rack_assignment)) if allow_perm(@datacenter_node_rack_assignment, ['updater']) %> 
+<%= " | " if allow_perm(@datacenter_node_rack_assignment, ['destroyer']) && allow_perm(@datacenter_node_rack_assignment, ['updater']) %>
+<%= link_to('Delete', datacenter_node_rack_assignment_path(@datacenter_node_rack_assignment), :confirm => 'Are you sure?', :method => :delete) if allow_perm(@datacenter_node_rack_assignment, ['destroyer']) %>
 <%= render :partial => 'shared/version_information', :locals => { :object => @datacenter_node_rack_assignment} %>
 
 <%= @tooltips %>

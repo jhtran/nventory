@@ -1,26 +1,21 @@
 class UtilizationMetricsGlobalController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /utilization_metrics_global
   # GET /utilization_metrics_global.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "utilization_metrics_global.assigned_at"
-           when "assigned_at_reverse" then "utilization_metrics_global.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = UtilizationMetricsGlobal.default_search_attribute
-      sort = 'utilization_metrics_global.' + UtilizationMetricsGlobal.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = UtilizationMetricsGlobal.find(:all, :order => sort)
-    else
-      @objects = UtilizationMetricsGlobal.paginate(:all,
-                                             :order => sort,
-                                             :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = UtilizationMetricsGlobal
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class UtilizationMetricsGlobalController < ApplicationController
   # GET /utilization_metrics_global/1
   # GET /utilization_metrics_global/1.xml
   def show
-    @utilization_metrics_global = UtilizationMetricsGlobal.find(params[:id])
+    @utilization_metrics_global = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,12 +36,12 @@ class UtilizationMetricsGlobalController < ApplicationController
 
   # GET /utilization_metrics_global/new
   def new
-    @utilization_metrics_global = UtilizationMetricsGlobal.new
+    @utilization_metrics_global = @object
   end
 
   # GET /utilization_metrics_global/1/edit
   def edit
-    @utilization_metrics_global = UtilizationMetricsGlobal.find(params[:id])
+    @utilization_metrics_global = @object
   end
 
   # POST /utilization_metrics_global
@@ -76,7 +71,7 @@ class UtilizationMetricsGlobalController < ApplicationController
   # PUT /utilization_metrics_global/1
   # PUT /utilization_metrics_global/1.xml
   def update
-    @utilization_metrics_global = UtilizationMetricsGlobal.find(params[:id])
+    @utilization_metrics_global = @object
 
     respond_to do |format|
       if @utilization_metrics_global.update_attributes(params[:utilization_metric])
@@ -93,7 +88,7 @@ class UtilizationMetricsGlobalController < ApplicationController
   # DELETE /utilization_metrics_global/1
   # DELETE /utilization_metrics_global/1.xml
   def destroy
-    @utilization_metrics_global = UtilizationMetricsGlobal.find(params[:id])
+    @utilization_metrics_global = @object
     @utilization_metrics_global.destroy
 
     respond_to do |format|

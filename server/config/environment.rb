@@ -1,5 +1,4 @@
 # Be sure to restart your web server when you modify this file.
-CONFIGFILE = 'config/nventory.conf'
 
 # Uncomment below to force Rails into production mode when 
 # you don't control web/app server and can't set it the proper way
@@ -10,6 +9,7 @@ RAILS_GEM_VERSION = '2.3.2' unless defined? RAILS_GEM_VERSION
 
 # Bootstrap the Rails environment, frameworks, and default configuration
 require File.join(File.dirname(__FILE__), 'boot')
+CONFIGFILE = RAILS_ROOT + '/' + 'config/nventory.conf'
 
 Rails::Initializer.run do |config|
   # Settings in config/environments/* take precedence over those specified here
@@ -42,22 +42,42 @@ Rails::Initializer.run do |config|
 
   # Make Active Record use UTC-base instead of local time
   # config.active_record.default_timezone = :utc
+
+  # Authorization plugin for role based access control
+  # You can override default authorization system constants here.
+
+  # Can be 'object roles' or 'hardwired'
+  AUTHORIZATION_MIXIN = "object roles"
+
+  # NOTE : If you use modular controllers like '/admin/products' be sure
+  # to redirect to something like '/sessions' controller (with a leading slash)
+  # as shown in the example below or you will not get redirected properly
+  #
+  # This can be set to a hash or to an explicit path like '/login'
+  #
+  LOGIN_REQUIRED_REDIRECTION = { :controller => '/login', :action => 'login' }
+  PERMISSION_DENIED_REDIRECTION = { :controller => '/login', :action => 'login' }
+
+  # The method your auth scheme uses to store the location to redirect back to
+  STORE_LOCATION_METHOD = :store_location
   
   # See Rails::Configuration for more options
   config.after_initialize do
     require 'ruport'
+    Workling::Remote.dispatcher = Workling::Remote::Runners::StarlingRunner.new
   end
   #require 'ruport/acts_as_reportable'
 end
 
 # Add new inflection rules using the following format 
 # (all these examples are active by default):
-# Inflector.inflections do |inflect|
+ActiveSupport::Inflector.inflections do |inflect|
 #   inflect.plural /^(ox)$/i, '\1en'
 #   inflect.singular /^(ox)en/i, '\1'
 #   inflect.irregular 'person', 'people'
+  inflect.irregular 'drive', 'drives'
 #   inflect.uncountable %w( fish sheep )
-# end
+end
 
 # Add new mime types for use in respond_to blocks:
 # Mime::Type.register "text/richtext", :rtf
@@ -87,7 +107,6 @@ require 'hpricot'
 require 'graphviz'
 require 'redcloth'
 # Needed for offline background jobs (starling/workling)
-Workling::Remote.dispatcher = Workling::Remote::Runners::StarlingRunner.new
 
 ## Pull the environment specific config settings
 confighash = {}
@@ -116,13 +135,12 @@ if File.exist?(CONFIGFILE)
   confighash['sso_proxy_server'] ? (SSO_PROXY_SERVER = confighash['sso_proxy_server']) : (SSO_PROXY_SERVER = false)
   confighash['sso_proxy_port'] ? (SSO_PROXY_PORT = confighash['sso_proxy_port']) : (SSO_PROXY_PORT = false)
   confighash['help_url'] ? (HELP_URL = confighash['help_url']) : (HELP_URL = 'http://sourceforge.net/apps/trac/nventory/wiki')
-  confighash['email_suffix'] ? (EMAIL_SUFFIX = confighash['email_suffix']) : (EMAIL_SUFFIX  = 'test.com')
+  confighash['email_suffix'] ? (EMAIL_SUFFIX = confighash['email_suffix']) : (EMAIL_SUFFIX  = 'example.com')
   confighash['mail_from'] ? ($mail_from = confighash['mail_from']) : ($mail_from = "nventory@#{EMAIL_SUFFIX}")
   confighash['prod_users_email'] ? ($prod_users_email= confighash['prod_users_email']) : ($prod_users_email = "nventory@#{EMAIL_SUFFIX}")
   confighash['dev_users_email'] ? ($dev_users_email= confighash['dev_users_email']) : ($dev_users_email = "nventory@#{EMAIL_SUFFIX}")
   confighash['admin_email'] ? ($admin_email = confighash['admin_email']) : ($admin_email = "admin@#{EMAIL_SUFFIX}")
 else # if File.exist?(CONFIGFILE)
-  logger.info "\n\n\n***** Config file: #{CONFIGFILE} does not exit.  Using default values. *****\n\n\n"
   LDAP_SERVER = false
   LDAP_SERVERS = false
   LDAP_BASE = false
@@ -143,3 +161,5 @@ end # if File.exist?(CONFIGFILE)
 
 # Email receipients for the exception_notification plugin
 ExceptionNotifier.exception_recipients = $admin_email
+require 'model_extensions'
+ActiveRecord::Base.send(:extend, ModelExtensions)

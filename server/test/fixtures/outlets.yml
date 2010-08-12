@@ -1,7 +1,5 @@
-# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  name: MyString
-two:
-  id: 2
-  name: MyString
+gi2_23:
+  name: Gi2/23
+  producer: switch1
+  consumer: vmhost1eth0
+  consumer_type: NetworkInterface

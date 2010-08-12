@@ -1,0 +1,27 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if account_group.assignments_as_self_group_parent.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the accounts assigned to this account_group.">
+  <thead>
+  <tr>
+      <th><%= tooltip(AccountGroup,:name) %></th>
+      <th><%= tooltip(AccountGroup,:assigned_at) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in account_group.real_account_group_self_group_assignments.sort{|a,b| a.self_group.name <=> b.self_group.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.self_group.name.sub(/\.self/,''), assignment.self_group.authz %></td>
+      <td><%= assignment.assigned_at.to_formatted_s(:long) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => account_group_self_group_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+
+<%- end -%>
+
+<%= @tooltips if ttflag %>

@@ -1,31 +1,21 @@
 class DatacentersController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /datacenters
   # GET /datacenters.xml
   def index
-    includes = process_includes(Datacenter, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "datacenters.name"
-           when "name_reverse" then "datacenters.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = Datacenter.default_search_attribute
-      sort = 'datacenters.' + Datacenter.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = Datacenter.find(:all,
-                                 :include => includes,
-                                 :order => sort)
-    else
-      @objects = Datacenter.paginate(:all,
-                                     :include => includes,
-                                     :order => sort,
-                                     :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = Datacenter
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -38,10 +28,7 @@ class DatacentersController < ApplicationController
   # GET /datacenters/1
   # GET /datacenters/1.xml
   def show
-    includes = process_includes(Datacenter, params[:include])
-    
-    @datacenter = Datacenter.find(params[:id],
-                                  :include => includes)
+    @datacenter = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -52,12 +39,12 @@ class DatacentersController < ApplicationController
 
   # GET /datacenters/new
   def new
-    @datacenter = Datacenter.new
+    @datacenter = @object
   end
 
   # GET /datacenters/1/edit
   def edit
-    @datacenter = Datacenter.find(params[:id])
+    @datacenter = @object
   end
 
   # POST /datacenters
@@ -80,7 +67,7 @@ class DatacentersController < ApplicationController
   # PUT /datacenters/1
   # PUT /datacenters/1.xml
   def update
-    @datacenter = Datacenter.find(params[:id])
+    @datacenter = @object
 
     respond_to do |format|
       if @datacenter.update_attributes(params[:datacenter])
@@ -97,7 +84,7 @@ class DatacentersController < ApplicationController
   # DELETE /datacenters/1
   # DELETE /datacenters/1.xml
   def destroy
-    @datacenter = Datacenter.find(params[:id])
+    @datacenter = @object
     begin
       @datacenter.destroy
     rescue Exception => destroy_error

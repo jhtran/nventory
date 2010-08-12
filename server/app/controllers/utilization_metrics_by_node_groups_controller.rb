@@ -1,26 +1,21 @@
 class UtilizationMetricsByNodeGroupsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /utilization_metrics_by_node_group
   # GET /utilization_metrics_by_node_group.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "utilization_metrics_by_node_groups.assigned_at"
-           when "assigned_at_reverse" then "utilization_metrics_by_node_groups.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = UtilizationMetricsByNodeGroup.default_search_attribute
-      sort = 'utilization_metrics_by_node_groups.' + UtilizationMetricsByNodeGroup.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = UtilizationMetricsByNodeGroup.find(:all, :order => sort)
-    else
-      @objects = UtilizationMetricsByNodeGroup.paginate(:all,
-                                             :order => sort,
-                                             :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = UtilizationMetricsByNodeGroup
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class UtilizationMetricsByNodeGroupsController < ApplicationController
   # GET /utilization_metrics_by_node_group/1
   # GET /utilization_metrics_by_node_group/1.xml
   def show
-    @utilization_metrics_by_node_group = UtilizationMetricsByNodeGroup.find(params[:id])
+    @utilization_metrics_by_node_group = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,12 +36,12 @@ class UtilizationMetricsByNodeGroupsController < ApplicationController
 
   # GET /utilization_metrics_by_node_group/new
   def new
-    @utilization_metrics_by_node_group = UtilizationMetricsByNodeGroup.new
+    @utilization_metrics_by_node_group = @object
   end
 
   # GET /utilization_metrics_by_node_group/1/edit
   def edit
-    @utilization_metrics_by_node_group = UtilizationMetricsByNodeGroup.find(params[:id])
+    @utilization_metrics_by_node_group = @object
   end
 
   # POST /utilization_metrics_by_node_group
@@ -76,7 +71,7 @@ class UtilizationMetricsByNodeGroupsController < ApplicationController
   # PUT /utilization_metrics_by_node_group/1
   # PUT /utilization_metrics_by_node_group/1.xml
   def update
-    @utilization_metrics_by_node_group = UtilizationMetricsByNodeGroup.find(params[:id])
+    @utilization_metrics_by_node_group = @object
 
     respond_to do |format|
       if @utilization_metrics_by_node_group.update_attributes(params[:utilization_metric])
@@ -93,7 +88,7 @@ class UtilizationMetricsByNodeGroupsController < ApplicationController
   # DELETE /utilization_metrics_by_node_group/1
   # DELETE /utilization_metrics_by_node_group/1.xml
   def destroy
-    @utilization_metrics_by_node_group = UtilizationMetricsByNodeGroup.find(params[:id])
+    @utilization_metrics_by_node_group = @object
     @utilization_metrics_by_node_group.destroy
 
     respond_to do |format|

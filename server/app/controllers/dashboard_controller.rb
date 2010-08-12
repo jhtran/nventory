@@ -1,4 +1,6 @@
 class DashboardController < ApplicationController
+  before_filter :getauth
+  before_filter :modelperms
 
   def index
     UtilizationMetricsGlobal.last.nil? ? @percent_cpu_node_count = 0 : @percent_cpu_node_count = UtilizationMetricsGlobal.last.node_count.to_i
@@ -87,17 +89,23 @@ class DashboardController < ApplicationController
 
   def nodes_over_time_chart_method
     data = {}
-    data[:months] = []
     data[:values] = []
+    vmdata = {}
+    vmdata[:values] = []
+    months = []
 
     # Create datapoints for the past 12 months and keep them in array so that their order is retained
     counter = 12
-    while counter > 0
+    while counter >= 0
       month = counter.months.ago.month
+      lastmonth = (counter+1).months.ago.month
       year = counter.months.ago.year
-      data[:months] << "#{Date::ABBR_MONTHNAMES[month]}\n#{year}"
+      months << "#{Date::ABBR_MONTHNAMES[lastmonth]}\n#{year}"
       date = Date.new(year,month)
-      data[:values] << Node.count(:all,:conditions => ["created_at < ?", date.to_s(:db)])
+      data[:values] << Node.count(:all,:include => {:virtual_host => {}},
+                                  :conditions => ["nodes.created_at < ? and (virtual_assignments.parent_id is null or virtual_assignments.parent_id = '')", date.to_s(:db)])
+      vmdata[:values] << Node.count(:all,:include => {:virtual_host => {}},
+                                  :conditions => ["nodes.created_at < ? and (virtual_assignments.parent_id is not null and virtual_assignments.parent_id != '')", date.to_s(:db)])
       counter -= 1
     end
 
@@ -105,16 +113,21 @@ class DashboardController < ApplicationController
     title = Title.new("Nodes Over Time")
     title.set_style('{font-size: 20px; color: #778877}')
     line = Line.new
-    line.text = "Nodes"
+    line.text = "Real Nodes"
     line.set_values(data[:values])
+    vmline = Line.new
+    vmline.text = "VM Nodes"
+    vmline.colour = '#FF0000'
+    vmline.set_values(vmdata[:values])
     y = YAxis.new
-    y.set_range(0,3000,300)
+    y.set_range(0,Node.count,300)
     x = XAxis.new
-    x.set_labels(data[:months])
+    x.set_labels(months)
 
     chart = OpenFlashChart.new
     chart.set_title(title)
     chart.add_element(line)
+    chart.add_element(vmline)
     chart.x_axis = x
     chart.y_axis = y
 
@@ -132,7 +145,7 @@ class DashboardController < ApplicationController
       day = counter
       data[:days] << day.days.ago.strftime("%m/%d")
       values = UtilizationMetricsGlobal.find(
-          :all, :include => {:utilization_metric_name => {}},
+          :all, :select => :value, :joins => {:utilization_metric_name => {}},
           :conditions => ["assigned_at like ? and utilization_metric_names.name = ?", "%#{day.days.ago.strftime("%Y-%m-%d")}%", 'percent_cpu'])
       # each day should only have 1 value, if not then create an averageA
       if values.size == 0 

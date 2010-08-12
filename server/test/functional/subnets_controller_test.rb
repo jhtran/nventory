@@ -5,7 +5,6 @@ require 'subnets_controller'
 class SubnetsController; def rescue_action(e) raise e end; end
 
 class SubnetsControllerTest < Test::Unit::TestCase
-  fixtures :subnets
 
   def setup
     @controller = SubnetsController.new

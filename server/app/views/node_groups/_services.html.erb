@@ -1,0 +1,63 @@
+<p id="show_childsvcs">
+  <%= button_to_remote "Child Services", :url => {:action => :get_svc_deps, :id => service.id, :partial => 'child_service_assignments' },
+      :update => 'child_service_assgns', :after => "Element.hide('show_childsvcs')", :loading => "Element.show('show_childsvcs_spinner')",
+      :loaded => "Element.show('hide_childsvcs');Element.hide('show_childsvcs_spinner')#{add_services_tag(:child)}" %>
+</p>
+
+<p id="hide_childsvcs">
+  <%= button_to_remote "Hide Child Services", :url => {:action => :get_svc_deps}, :update => 'child_service_assgns',
+      :after => "Element.hide('hide_childsvcs');Element.show('show_childsvcs');Element.hide('add_child_service_link')" %>
+</p>
+
+<p id="show_childsvcs_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+<div id="child_service_assgns"> </div>
+
+<div id="create_child_service_assignment">
+  <%= render :partial => 'create_child_service_assignment' %>
+</div>
+
+<p id="add_childsvcs_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+<p id="add_child_service_link">
+  <%- if allow_perm(service, ['updater']) %>
+    <%= link_to_function 'Add Child Service', "Element.show('create_child_service_assignment');Element.hide('add_child_service_link')" %>
+  <%- end -%>
+</p>
+
+<p id="show_parentsvcs">
+  <%= button_to_remote "Parent Services", :url => {:action => :get_svc_deps, :id => service.id, :partial => 'parent_service_assignments' },
+      :update => 'parent_service_assgns', :after => "Element.hide('show_parentsvcs')", :loading => "Element.show('show_parentsvcs_spinner')",
+      :loaded => "Element.show('hide_parentsvcs');Element.hide('show_parentsvcs_spinner')#{add_services_tag(:parent)}" %>
+</p>
+
+<p id="hide_parentsvcs">
+  <%= button_to_remote "Hide Parent Services", :url => {:action => :get_svc_deps}, :update => 'parent_service_assgns',
+      :after => "Element.hide('hide_parentsvcs');Element.show('show_parentsvcs');Element.hide('add_parent_service_link')" %>
+</p>
+
+<p id="show_parentsvcs_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+<div id="parent_service_assgns"> </div>
+
+<div id="create_parent_service_assignment">
+  <%= render :partial => 'create_parent_service_assignment' %>
+</div>
+
+<p id="add_parent_service_link">
+  <%- if allow_perm(service, ['updater']) %>
+    <%= link_to_function 'Add Parent Service', "Element.show('create_parent_service_assignment');Element.hide('add_parent_service_link')" %>
+  <%- end -%>
+</p>
+
+<%= javascript_tag "Element.hide('create_parent_service_assignment')" %>
+<%= javascript_tag "Element.hide('create_child_service_assignment')" %>
+<%= javascript_tag "Element.hide('add_parent_service_link')" %>
+<%= javascript_tag "Element.hide('hide_parentsvcs')" %>
+<%= javascript_tag "Element.hide('add_parentsvcs_spinner')" %>
+<%= javascript_tag "Element.hide('show_parentsvcs_spinner')" %>
+<%= javascript_tag "Element.hide('add_child_service_link')" %>
+<%= javascript_tag "Element.hide('hide_childsvcs')" %>
+<%= javascript_tag "Element.hide('add_childsvcs_spinner')" %>
+<%= javascript_tag "Element.hide('show_childsvcs_spinner')" %>
+

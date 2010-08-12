@@ -15,15 +15,10 @@
       <tr class="<%= cycle('odd', 'even') -%>">
         <td>
           <%= h(audit.version) %><br/>
-          <span class="arversion_date">(<%= h(audit.created_at.to_formatted_s(:short)) %>)</span>
+          <span class="arversion_date">(<%= audit.created_at.strftime("%m/%d/%Y %H:%M") %>)</span>
         </td>
         <td>
-          <%- if !audit.user_type.nil? && !audit.user_id.nil? -%>
-            <%- audit_user = audit.user_type.constantize.find(audit.user_id)-%>
-            <%- if !audit_user.nil? -%>
-              <%= h(audit_user.login) %>
-            <%- end -%>
-          <%- end -%>
+          <%= h(audit.user.login) if audit.user %>
         </td>
         <td>
           <%= h(audit.action) %>
@@ -41,7 +36,7 @@
                 <%- else -%>
                   <%- newvalue = oldnew -%>
                   <%- previous_audit = audit.ancestors[-2] -%>
-                  <%- if !previous_audit.nil? -%>
+                  <%- if !previous_audit.nil? && previous_audit.revision.methods.include?(attribute) -%>
                     <%- oldvalue = previous_audit.revision.send(attribute) -%>
                   <%- end -%>
                 <%- end -%>

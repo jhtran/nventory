@@ -186,8 +186,6 @@ class JobsController < ApplicationController
   end # def cso_feed
 
   def get_all_node_objects
-    # The default display index_row columns
-    default_includes = [:operating_system, :hardware_profile, :node_groups, :status]
     special_joins = {
       'preferred_operating_system' =>
         'LEFT OUTER JOIN operating_systems AS preferred_operating_systems ON nodes.preferred_operating_system_id = preferred_operating_systems.id'
@@ -197,11 +195,11 @@ class JobsController < ApplicationController
     allparams = {}
     allparams[:mainmodel] = Node
     allparams[:webparams] = {:format => 'xml' }
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     return @objects
   end

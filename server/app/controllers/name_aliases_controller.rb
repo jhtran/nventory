@@ -1,31 +1,21 @@
 class NameAliasesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /name_aliases
   # GET /name_aliases.xml
   def index
-    includes = process_includes(NameAlias, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "name_aliases.name"
-           when "name_reverse" then "name_aliases.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = NameAlias.default_search_attribute
-      sort = 'name_aliases.' + NameAlias.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = NameAlias.find(:all,
-                          :include => includes,
-                          :order => sort)
-    else
-      @objects = NameAlias.paginate(:all,
-                              :include => includes,
-                              :order => sort,
-                              :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = NameAlias
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -37,10 +27,7 @@ class NameAliasesController < ApplicationController
   # GET /name_aliases/1
   # GET /name_aliases/1.xml
   def show
-    includes = process_includes(NameAlias, params[:include])
-    
-    @name_alias = NameAlias.find(params[:id],
-                    :include => includes)
+    @name_alias = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -52,26 +39,25 @@ class NameAliasesController < ApplicationController
   # GET /name_aliases/new
   def new
     @models = []
-    ObjectSpace.each_object(Class) do |klass|
-      @models << klass.to_s if (klass.ancestors.include?(ActiveRecord::Base)) && (klass.to_s !~ /(ActiveRecord|NameAlias)/) && (klass.default_search_attribute == "name")
-    end
+    list_models.each {|model| @models << model if (model != 'NameAlias') && (model.constantize.default_search_attribute == "name")}
     @models = @models.sort.uniq
-    @name_alias = NameAlias.new
+    @name_alias = @object
   end
 
   # GET /name_aliases/1/edit
   def edit
     @models = []
-    ObjectSpace.each_object(Class) do |klass|
-      @models << klass.to_s if (klass.ancestors.include?(ActiveRecord::Base)) && (klass.to_s !~ /(ActiveRecord|NameAlias)/) && (klass.default_search_attribute == "name")
-    end
+    list_models.each {|model| @models << model if (model != 'NameAlias') && (model.constantize.default_search_attribute == "name")}
     @models = @models.sort.uniq
-    @name_alias = NameAlias.find(params[:id])
+    @name_alias = @object
   end
 
   # POST /name_aliases
   # POST /name_aliases.xml
   def create
+    model = params[:name_alias][:source_type].constantize
+    obj = model.find(params[:name_alias][:source_id])
+    return unless filter_perms(@auth,obj,['updater'])
     @name_alias = NameAlias.new(params[:name_alias])
 
     respond_to do |format|
@@ -99,7 +85,8 @@ class NameAliasesController < ApplicationController
   # PUT /name_aliases/1
   # PUT /name_aliases/1.xml
   def update
-    @name_alias = NameAlias.find(params[:id])
+    @name_alias = @object
+    return unless filter_perms(@auth,@name_alias.source,['updater'])
 
     respond_to do |format|
       if @name_alias.update_attributes(params[:name_alias])
@@ -116,7 +103,8 @@ class NameAliasesController < ApplicationController
   # DELETE /name_aliases/1
   # DELETE /name_aliases/1.xml
   def destroy
-    @name_alias = NameAlias.find(params[:id])
+    @name_alias = @object
+    return unless filter_perms(@auth,@name_alias.source,['updater'])
     @name_alias.destroy
 
     respond_to do |format|
@@ -145,7 +133,7 @@ class NameAliasesController < ApplicationController
   def get_sources
     source_type = request.raw_post
     unless source_type.blank? || source_type.nil?
-      @model = source_type.constantize
+      @model = source_type.gsub(/&_=*/,'').constantize
       @allobjects = @model.find(:all, :select => "id, name", :order => "name").collect{|a| [a.name,a.id]}
     else
       @model = ""

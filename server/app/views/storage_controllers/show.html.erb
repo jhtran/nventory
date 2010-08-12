@@ -6,43 +6,31 @@
 <h1><%= tooltip(StorageController,:name) %>: <%=h @storage_controller.name %></h1>
 
 <p><strong><%= tooltip(StorageController,:node) %>:</strong> <%= link_to h(@storage_controller.node.name), node_url(@storage_controller.node_id) if !@storage_controller.node_id.nil? %></p>
-
-<p><strong><%= tooltip(StorageController,:controller_type) %>:</strong> <%= h(@storage_controller.controller_type) %></p>
-<p><strong><%= tooltip(StorageController,:physical) %>:</strong> <%= h(@storage_controller.physical) %></p>
-<p><strong><%= tooltip(StorageController,:bus_interface) %>:</strong> <%= h(@storage_controller.bus_interface) %></p>
-<p><strong><%= tooltip(StorageController,:slot) %>:</strong> <%= h(@storage_controller.slot) %></p>
-<p><strong><%= tooltip(StorageController,:firmware) %>:</strong> <%= h(@storage_controller.firmware) %></p>
-<p><strong><%= tooltip(StorageController,:cache_size) %>:</strong> <%= h(@storage_controller.cache_size) + 'MB' %></p>
-<p><strong><%= tooltip(StorageController,:batteries) %>:</strong> <%= h(@storage_controller.batteries) %></p>
-
-<%- if false -%>
-  <!-- to be replaced with logical volume/physical disks info -->
-  <p>
-  <strong>IP addresses:</strong>
+<p><strong><%= tooltip(StorageController,:drives) %>: </strong>
+<%- if @storage_controller.drives -%> 
   <ul>
-  <%- @storage_controller.ip_addresses.each do |ip| -%>
-    <li><%= link_to ip.address, ip_address_url(ip) %></li>
+  <%- @storage_controller.drives.each do |drive| -%> 
+    <%= "<li>" + link_to(drive.name, drive) + "</li>" -%>
   <%- end -%>
   </ul>
-  </p>
 <%- end -%>
+
+<p><strong><%= tooltip(StorageController,:product) %>:</strong> <%= h(@storage_controller.product) %></p>
+<p><strong><%= tooltip(StorageController,:description) %>:</strong> <%= h(@storage_controller.description) %></p>
+<p><strong><%= tooltip(StorageController,:physid) %>:</strong> <%= h(@storage_controller.physid) %></p>
+<p><strong><%= tooltip(StorageController,:vendor) %>:</strong> <%= h(@storage_controller.vendor) %></p>
+<p><strong><%= tooltip(StorageController,:handle) %>:</strong> <%= h(@storage_controller.handle) %></p>
+<p><strong><%= tooltip(StorageController,:controller_type) %>:</strong> <%= h(@storage_controller.controller_type) %></p>
+<p><strong><%= tooltip(StorageController,:businfo) %>:</strong> <%= h(@storage_controller.businfo) %></p>
+<p><strong><%= tooltip(StorageController,:slot) %>:</strong> <%= h(@storage_controller.slot) %></p>
+<p><strong><%= tooltip(StorageController,:firmware) %>:</strong> <%= h(@storage_controller.firmware) %></p>
+<p><strong><%= tooltip(StorageController,:logicalname) %>:</strong> <%= h(@storage_controller.logicalname) %></p>
+<p><strong><%= tooltip(StorageController,:cache_size) %>:</strong> <%= h(@storage_controller.cache_size) + 'MB' unless @storage_controller.cache_size.nil? %></p>
+<p><strong><%= tooltip(StorageController,:batteries) %>:</strong> <%= h(@storage_controller.batteries) %></p>
 
 <p class="metadata"><strong><%= tooltip(StorageController,:created_at) %>:</strong> <%= h(@storage_controller.created_at) %><br />
 <strong><%= tooltip(StorageController,:updated_at) %>:</strong> <%= h(@storage_controller.updated_at) %></p>
 
 </div>
-
-<%- if false -%>
-  <div class="relationship">
-  
-  <%= render :partial => 'shared/comments', :locals => { :object => @storage_controller} %>
-  
-  </div> <!-- end relationship -->
-<%- end -%>
-
-<p><%= link_to 'Edit', edit_storage_controller_path(@storage_controller) %> | 
-<%= link_to 'Delete', storage_controller_path(@storage_controller), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @storage_controller} %>
 
 <%= @tooltips %>

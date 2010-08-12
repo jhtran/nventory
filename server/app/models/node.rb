@@ -1,9 +1,10 @@
 class Node < ActiveRecord::Base
   named_scope :def_scope
   
+  acts_as_authorizable
   acts_as_reportable
   acts_as_commentable
-  acts_as_audited :except => [:used_space, :avail_space]
+  acts_as_audited :except => [:used_space, :avail_space, :vmspace_used]
 
   has_many :hosted_vips, :foreign_key => "load_balancer_id", :class_name => "Vip"
   has_one :node_rack_node_assignment, :dependent => :destroy
@@ -25,6 +26,7 @@ class Node < ActiveRecord::Base
   
   has_many :node_group_node_assignments, :dependent => :destroy
   has_many :node_groups, :through => :node_group_node_assignments
+  accepts_nested_attributes_for :node_groups, :allow_destroy => true
   # Services is an alias of node_groups
   has_many :services, :source => :service, :through => :node_group_node_assignments
   
@@ -32,11 +34,14 @@ class Node < ActiveRecord::Base
   has_many :database_instances, :through => :node_database_instance_assignments
   
   has_many :produced_outlets, :class_name => "Outlet", :foreign_key => "producer_id", :order => "name", :dependent => :destroy
+  accepts_nested_attributes_for :produced_outlets, :allow_destroy => true
   has_many :name_aliases, :foreign_key => "source_id", :order => "name", :dependent => :destroy
 
   has_many :network_interfaces, :dependent => :destroy
   has_many :ip_addresses, :through => :network_interfaces
   has_many :consumed_outlets, :class_name => "Outlet", :as => :consumer, :dependent => :destroy
+  has_many :storage_controllers, :dependent => :destroy
+  has_many :drives, :through => :storage_controllers
   
   has_many :utilization_metrics, :dependent => :destroy
 
@@ -96,7 +101,7 @@ class Node < ActiveRecord::Base
   def validates_contact
     if (contact.blank? || contact.nil?)
       return true
-    else
+    elsif SSO_AUTH_SERVER
       flag = []
       users = contact.split(',')
       users.each do |user|
@@ -106,10 +111,14 @@ class Node < ActiveRecord::Base
         http.use_ssl = true
         sso_xmldata = http.get(uri.request_uri).body
         sso_xmldoc = Hpricot::XML(sso_xmldata)
-        kind = (sso_xmldoc/:kind).first.innerHTML
-        unless kind == "employee"
+        if (sso_xmldoc/:kind).first
+          kind = (sso_xmldoc/:kind).first.innerHTML
+          unless kind == "employee"|| kind == "contractor"
+            flag << user
+          end
+        else
           flag << user
-        end
+        end # if (sso_xmldoc/:kind).first
       end
     end
     if (flag.nil? || flag.empty?)
@@ -122,6 +131,32 @@ class Node < ActiveRecord::Base
 
   def self.default_search_attribute
     'name'
+  end
+
+  def self.default_includes
+    # The default display index_row columns
+    return [:operating_system, :hardware_profile, :node_groups, :status, :name_aliases]
+  end
+
+  def self.custom_search_assocs
+    # used in search view for each model, assumption is that search_for_association method in search.rb model will auto find the nested include path 
+    # provide a hash pair { :name_of_assoc => :assoc's_search_attr }
+    {:tag => 'name'}
+  end
+
+  def self.preferred_includes
+    incls = {}
+    incls[:ip_addresses] = { :assoc => NetworkInterface.reflect_on_association(:ip_addresses),
+                             :include => {:network_interfaces=>{:ip_addresses=>{}}}}
+    incls[:node_groups] = { :assoc => NodeGroupNodeAssignment.reflect_on_association(:node_group),
+                             :include => {:node_group_node_assignments=>{:node_group=>{}}}}
+    incls[:node_group] = { :assoc => NodeGroupNodeAssignment.reflect_on_association(:node_group),
+                             :include => {:node_group_node_assignments=>{:node_group=>{}}}}
+    incls[:tag] = { :assoc => Tagging.reflect_on_association(:tag),
+                             :include => {:node_group_node_assignments=>{:node_group=>{:taggings=>{:tag=>{}}}}}}
+    incls[:tags] = { :assoc => Tagging.reflect_on_association(:tag),
+                             :include => {:node_group_node_assignments=>{:node_group=>{:taggings=>{:tag=>{}}}}}}
+    return incls
   end
 
   def virtual_host?
@@ -141,6 +176,15 @@ class Node < ActiveRecord::Base
   end
 
  
+  def all_parent_groups
+    list = []
+    node_groups.each do |ng|
+      list << ng
+      ng.all_parent_groups.each{|a| list << a}
+    end
+    return list
+  end
+
   def real_node_group_node_assignments
     node_group_node_assignments.reject { |ngna| ngna.virtual_assignment? }
   end
@@ -161,10 +205,9 @@ class Node < ActiveRecord::Base
     node_group_node_assignments.select { |ngna| ngna.virtual_assignment? }
   end
   def virtual_node_groups
-    virtual_ngnas.collect { |ngna| ngna.node_group }
+    virtual_node_group_node_assignments.collect { |ngna| ngna.node_group }
   end
 
-  after_save :update_outlets
   
   def consumed_network_outlets
     return self.network_interfaces.collect{|nic| nic.switch_port}.compact
@@ -259,14 +302,11 @@ class Node < ActiveRecord::Base
           end
         end
 
-        require 'generator'
-        s = SyncEnumerator.new(available_outlet_names.keys.sort, outlet_needs_renaming)
-        s.each do |name, outlet|
-          # The two lists may not be the same length
-          if name && outlet
-            outlet.name = name
-            outlet.save
-          end
+        available_outlet_names.keys.sort.each do |oname|
+          next if outlet_needs_renaming.empty?
+          outlet = outlet_needs_renaming.last
+          outlet.update_attributes({:name => oname}) unless outlet.frozen?
+          outlet_needs_renaming.pop
         end
       end
     end
@@ -316,11 +356,19 @@ class Node < ActiveRecord::Base
     self.ip_addresses.collect{|ip| ip.address}.find_all{ |ip| ip =~ /\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/ && ip !~ /127\.0\.0\.1/}
   end
 
+  def after_save 
+    unless self.hardware_profile.outlet_type.nil? || self.hardware_profile.outlet_type.empty?
+      RAILS_DEFAULT_LOGGER.info "*** Updating outlets"
+      update_outlets 
+    end
+  end
+
   def before_destroy
     raise "A node can not be destroyed that has database instances assigned to it." if !self.node_database_instance_assignments.nil? && self.node_database_instance_assignments.count > 0
   end
 
   def services?
+    # need to be revisited - what's it used for?  diff than :services habtm
     self.services.each do |ng|
       return true unless (ng.parent_services.empty? && ng.child_services.empty?)
     end
@@ -333,6 +381,10 @@ class Node < ActiveRecord::Base
 
   def names
     self.name_aliases.collect {|na| na.name}.push(self.name).sort
+  end
+
+  def consumed_blade
+    results = self.consumed_outlets.find(:first,:include => {:producer => {:hardware_profile =>{}} } , :conditions => "hardware_profiles.outlet_type = 'Blade'")
   end
   
 end

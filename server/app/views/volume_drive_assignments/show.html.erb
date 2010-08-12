@@ -1,0 +1,16 @@
+<%- @tooltips = [] %>
+<%- @page_title =  "Volume Drive Assignment: " + h(@volume_drive_assignment.volume.name) + '<->' + h(@volume_drive_assignment.drive.name) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(Volume,:volume_drive_assignment) %></h1>
+
+<p><strong><%= tooltip(VolumeDriveAssignment,:volume) %>:</strong> <%= link_to @volume_drive_assignment.volume.name, @volume_drive_assignment.volume %><br />
+<strong><%= tooltip(VolumeDriveAssignment,:drive) %>:</strong> <%= link_to @volume_drive_assignment.drive.name, @volume_drive_assignment.drive %><br />
+<strong><%= tooltip(VolumeDriveAssignment,:assigned_at) %>:</strong> <%= h(@volume_drive_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong><%= tooltip(VolumeDriveAssignment,:created_at) %>:</strong> <%= h(@volume_drive_assignment.created_at) %><br />
+<strong><%= tooltip(VolumeDriveAssignment,:updated_at) %>:</strong> <%= h(@volume_drive_assignment.updated_at) %></p>
+
+</div>
+<%= @tooltips %>

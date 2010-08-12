@@ -1,0 +1,39 @@
+<h3>Assigned Nodes: <%= "<font color=green>" +  @nodes_size.to_s + "</font>" %></h3>
+  <p><font color=green size=1>** Based on known keywords matched to node_groups</font></p>
+<div id="add_keyword_link1"><%= link_to_function 'Add Keyword', "Element.show('create_keyword1');Element.show('create_keyword2');Element.hide('add_keyword_link1');Element.hide('add_keyword_link2')" %></div><br />
+<div id="create_keyword1">
+  <% form_remote_tag :url => {:controller => 'reports', :action => :addkeyword} do -%>
+    <%= text_field_tag :keyword %>
+    <%= submit_tag 'Submit' %>
+  <% end -%>
+</div>
+<p><%= button_to_remote 'Hide', :url => {:controller => 'reports', :action => :assigned_keywords, :hide => 1},
+       :loading => "Element.show('assigned_keywords_spinner')",
+       :loaded => "Element.hide('assigned_keywords_spinner')" %></p>
+<table cellspacing="0" class="styled">
+  <thead>
+    <tr>
+      <th nowrap="nowrap" width="5%">&nbsp;</th>
+      <th>Keyword</th>
+      <th>NodeGroup</th>
+      <th>FuzzyMatches</th>
+      <th>Nodes</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <%= render :partial => 'keyword', :collection => keywords.sort{|a,b| a.name <=> b.name} %> 
+  </tbody>
+</table>
+<div id="add_keyword_link2"><%= link_to_function 'Add Keyword', "Element.show('create_keyword1');Element.show('create_keyword2');Element.hide('add_keyword_link1');Element.hide('add_keyword_link2')" %></div><br />
+<div id="create_keyword2">
+  <% form_remote_tag :url => {:controller => 'reports', :action => :addkeyword} do -%>
+    <%= text_field_tag :keyword %>
+    <%= submit_tag 'Submit' %>
+  <% end -%>
+</div>
+<p><%= button_to_remote 'Hide', :url => {:controller => 'reports', :action => :assigned_keywords, :hide => 1},
+       :loading => "Element.show('assigned_keywords_spinner')",
+       :loaded => "Element.hide('assigned_keywords_spinner')" %></p>
+
+<%= javascript_tag("Element.hide('create_keyword1');Element.hide('create_keyword2')") %>

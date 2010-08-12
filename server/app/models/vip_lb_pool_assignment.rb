@@ -1,5 +1,6 @@
 class VipLbPoolAssignment < ActiveRecord::Base
-
+  acts_as_audited
+  acts_as_authorizable
   acts_as_reportable
   acts_as_commentable 
 

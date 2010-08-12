@@ -5,7 +5,6 @@ require 'statuses_controller'
 class StatusesController; def rescue_action(e) raise e end; end
 
 class StatusesControllerTest < Test::Unit::TestCase
-  fixtures :statuses
 
   def setup
     @controller = StatusesController.new

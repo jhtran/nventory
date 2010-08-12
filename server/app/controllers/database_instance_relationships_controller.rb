@@ -1,28 +1,21 @@
 class DatabaseInstanceRelationshipsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /database_instance_relationships
   # GET /database_instance_relationships.xml
   def index
-    sort = case params['sort']
-           when "name" then "database_instance_relationships.name"
-           when "name_reverse" then "database_instance_relationships.name DESC"
-           when "assigned_at" then "database_instance_relationships.assigned_at"
-           when "assigned_at_reverse" then "database_instance_relationships.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = DatabaseInstanceRelationship.default_search_attribute
-      sort = 'database_instance_relationships.' + DatabaseInstanceRelationship.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = DatabaseInstanceRelationship.find(:all, :order => sort)
-    else
-      @objects = DatabaseInstanceRelationship.paginate(:all,
-                                                       :order => sort,
-                                                       :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = DatabaseInstanceRelationship
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -35,7 +28,7 @@ class DatabaseInstanceRelationshipsController < ApplicationController
   # GET /database_instance_relationships/1
   # GET /database_instance_relationships/1.xml
   def show
-    @database_instance_relationship = DatabaseInstanceRelationship.find(params[:id])
+    @database_instance_relationship = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -45,12 +38,12 @@ class DatabaseInstanceRelationshipsController < ApplicationController
 
   # GET /database_instance_relationships/new
   def new
-    @database_instance_relationship = DatabaseInstanceRelationship.new
+    @database_instance_relationship = @object
   end
 
   # GET /database_instance_relationships/1/edit
   def edit
-    @database_instance_relationship = DatabaseInstanceRelationship.find(params[:id])
+    @database_instance_relationship = @object
   end
 
   # POST /database_instance_relationships
@@ -73,7 +66,7 @@ class DatabaseInstanceRelationshipsController < ApplicationController
   # PUT /database_instance_relationships/1
   # PUT /database_instance_relationships/1.xml
   def update
-    @database_instance_relationship = DatabaseInstanceRelationship.find(params[:id])
+    @database_instance_relationship = @object
 
     respond_to do |format|
       if @database_instance_relationship.update_attributes(params[:database_instance_relationship])
@@ -90,7 +83,7 @@ class DatabaseInstanceRelationshipsController < ApplicationController
   # DELETE /database_instance_relationships/1
   # DELETE /database_instance_relationships/1.xml
   def destroy
-    @database_instance_relationship = DatabaseInstanceRelationship.find(params[:id])
+    @database_instance_relationship = @object
     @database_instance_relationship.destroy
 
     respond_to do |format|

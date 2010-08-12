@@ -1,7 +1,7 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if vip.vip_lb_pool_assignments.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of all lb_pools that belong to this vip">
-  <caption><%= tooltip(Vip,:lb_pool) %></caption>
+  <caption><%= tooltip(Vip,:lb_pools,'Load Balance Pools') %></caption>
   <thead>
   <tr>
       <th><%= tooltip(VipLbPoolAssignment,:name) %></th>
@@ -32,7 +32,7 @@
   </table>
 
 <%- else -%>
-  <p>No Lb Pools assigned to this VIP.</p>
+  <p>No <%= tooltip(Vip,:lb_pools,'Load Balance Pool') %> assigned to this VIP.</p>
 <%- end -%>
 
 <%= @tooltips if ttflag %>

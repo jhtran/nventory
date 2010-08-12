@@ -5,7 +5,6 @@ require 'operating_systems_controller'
 class OperatingSystemsController; def rescue_action(e) raise e end; end
 
 class OperatingSystemsControllerTest < Test::Unit::TestCase
-  fixtures :operating_systems
 
   def setup
     @controller = OperatingSystemsController.new

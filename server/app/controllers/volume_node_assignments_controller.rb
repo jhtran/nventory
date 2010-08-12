@@ -1,26 +1,21 @@
 class VolumeNodeAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /volume_node_assignments
   # GET /volume_node_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "volume_node_assignments.assigned_at"
-           when "assigned_at_reverse" then "volume_node_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = VolumeNodeAssignment.default_search_attribute
-      sort = 'volume_node_assignments.' + VolumeNodeAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = VolumeNodeAssignment.find(:all, :order => sort)
-    else
-      @objects = VolumeNodeAssignment.paginate(:all,
-                                             :order => sort,
-                                             :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = VolumeNodeAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class VolumeNodeAssignmentsController < ApplicationController
   # GET /volume_node_assignments/1
   # GET /volume_node_assignments/1.xml
   def show
-    @volume_node_assignment = VolumeNodeAssignment.find(params[:id])
+    @volume_node_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,17 +36,21 @@ class VolumeNodeAssignmentsController < ApplicationController
 
   # GET /volume_node_assignments/new
   def new
-    @volume_node_assignment = VolumeNodeAssignment.new
+    @volume_node_assignment = @object
   end
 
   # GET /volume_node_assignments/1/edit
   def edit
-    @volume_node_assignment = VolumeNodeAssignment.find(params[:id])
+    @volume_node_assignment = @object
   end
 
   # POST /volume_node_assignments
   # POST /volume_node_assignments.xml
   def create
+    volume = Volume.find(params[:volume_node_assignment][:volume_id])
+    return unless filter_perms(@auth,volume,['updater'])
+    node = Node.find(params[:volume_node_assignment][:node_id])
+    return unless filter_perms(@auth,node,['updater'])
     @volume_node_assignment = VolumeNodeAssignment.new(params[:volume_node_assignment])
 
     respond_to do |format|
@@ -67,13 +66,8 @@ class VolumeNodeAssignmentsController < ApplicationController
             # which we do something slightly different.
             if request.env["HTTP_REFERER"].include? "volumes"
               page.replace_html 'volume_node_assignments', :partial => 'volumes/node_assignments', :locals => { :volume => @volume_node_assignment.volume }
-              page.hide 'create_node_assignment'
-              page.show 'add_node_assignment_link'
             elsif request.env["HTTP_REFERER"].include? "nodes"
               page.replace_html 'volume_mounted', :partial => 'nodes/volume_mounted', :locals => { :node => @volume_node_assignment.node }
-              page.hide 'create_volume_mounted'
-              page.hide 'no_volumes'
-              page.show 'add_volume_mounted_link'
             end
           }
         }
@@ -89,7 +83,11 @@ class VolumeNodeAssignmentsController < ApplicationController
   # PUT /volume_node_assignments/1
   # PUT /volume_node_assignments/1.xml
   def update
-    @volume_node_assignment = VolumeNodeAssignment.find(params[:id])
+    @volume_node_assignment = @object
+    @volume = @volume_node_assignment.volume
+    @node = @volume_node_assignment.node
+    return unless filter_perms(@auth,@volume,['updater'])
+    return unless filter_perms(@auth,@node,['updater'])
 
     respond_to do |format|
       if @volume_node_assignment.update_attributes(params[:volume_node_assignment])
@@ -106,23 +104,20 @@ class VolumeNodeAssignmentsController < ApplicationController
   # DELETE /volume_node_assignments/1
   # DELETE /volume_node_assignments/1.xml
   def destroy
-    @volume_node_assignment = VolumeNodeAssignment.find(params[:id])
+    @volume_node_assignment = @object
     @volume = @volume_node_assignment.volume
     @node = @volume_node_assignment.node
+    return unless filter_perms(@auth,@volume,['updater'])
+    return unless filter_perms(@auth,@node,['updater'])
     @volume_node_assignment.destroy
-
     respond_to do |format|
       format.html { redirect_to volume_node_assignments_url }
       format.js {
         render(:update) { |page|
           if request.env["HTTP_REFERER"].include? "volumes"
             page.replace_html 'volume_node_assignments', :partial => 'volumes/node_assignments', :locals => { :volume => @volume }
-            page.hide 'create_volume_assignment'
-            page.show 'add_volume_assignment_link'
           elsif request.env["HTTP_REFERER"].include? "nodes"
             page.replace_html 'volume_mounted', :partial => 'nodes/volume_mounted', :locals => { :node => @node }
-            page.hide 'create_volume_mounted'
-            page.show 'add_volume_mounted_link'
           end
         }
       }

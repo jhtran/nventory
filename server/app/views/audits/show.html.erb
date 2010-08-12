@@ -15,8 +15,8 @@
       <%= link_to @audit.auditable_type + (descript unless descript.nil?), @audit.auditable %>
     <%- else -%>
       <%- if !@audit.changes.nil? && @audit.changes[def_attr.to_s] -%>
-          <%- descript = " : #{@audit.changes[def_attr.to_s]}" -%>
-          <%= @audit.auditable_type + "#{descript} (no longer exists)" %>
+          <%- descript = ":<font color=green> #{@audit.changes[def_attr.to_s]}</font>" -%>
+          <%= " <strong><font color=green>#{@audit.auditable_type}</font></strong>" + "#{descript} (ID: <font color=orange>#{@audit.auditable_id}</font></strong> no longer exists)" %>
       <%- else -%>
         <%= @audit.auditable_type + " no longer exists" %>
       <%- end -%>
@@ -45,7 +45,12 @@
           <%- # Treat nil and '' as the same -%>
           <%- if oldvalue == '' then oldvalue = nil end -%>
           <%- if newvalue == '' then newvalue = nil end -%>
-          <%- if oldvalue != newvalue -%>
+          <%- if (@audit.action == 'destroy') && newvalue -%>
+            <tr>
+              <th><%= h(attribute) %></th>
+              <td><%=newvalue %> </td>
+            </tr>
+          <%- elsif oldvalue != newvalue -%>
             <tr>
               <th><%= h(attribute) %></th>
               <td>

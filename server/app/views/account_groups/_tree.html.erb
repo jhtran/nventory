@@ -1,0 +1,13 @@
+  <h3><%= tooltip(AccountGroup,:child_groups) %>:</h3>
+    <ul>
+    <div id="child_group_assignments">
+      <%= render :partial => 'child_account_group_assignment', :collection => account_group.assignments_as_parent %>
+    </div>
+    </ul>
+
+  <h3><%= tooltip(AccountGroup,:parent_groups) %>:</h3>
+    <ul>
+    <div id="parent_group_assignments">
+    <%= render :partial => 'parent_account_group_assignment', :collection => account_group.assignments_as_child %>
+    </div>
+    </ul>

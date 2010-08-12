@@ -1,0 +1,33 @@
+<%- @tooltips = [] %>
+<%- @page_title = "NetworkPort: " + h(@network_port.number) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(NetworkPort,:number,'Port Number') %>: <%=h @network_port.number %></h1>
+<p><strong># Nodes:</strong> <%= @network_port.node_count.to_s %></p>
+<p><strong><%= tooltip(NetworkPort, :ip_addresses) %>:</strong> 
+  <%- unless @network_port.ip_addresses.empty? %>
+    <ul>
+    <%- @network_port.ip_address_network_port_assignments.each do |ipa| %>
+      <li>
+      <%= link_to ipa.ip_address.address,ipa.ip_address %> :
+      <%= link_to " (#{ipa.ip_address.node.name})",ipa.ip_address.node %>
+        <%- if ipa.nmap_last_seen_at || ipa.nmap_first_seen_at %>
+          <ul>
+            <li><%= tooltip(ipa.class,:nmap_first_seen_at) %>: <%=ipa.nmap_first_seen_at%></li>
+            <li><%= tooltip(ipa.class,:nmap_last_seen_at) %>: <%=ipa.nmap_last_seen_at%></li>
+          </ul>
+        <%- end -%>
+      </li>
+    <%- end -%>
+    </ul>
+  <%- else -%>
+    <br/>
+  <%- end %>
+<strong><%= tooltip(NetworkPort,:protocol) %>:</strong> <%= @network_port.protocol %><br/>
+<p class="metadata"><strong><%= tooltip(NetworkPort,:created_at) %>:</strong> <%= h(@network_port.created_at) %><br />
+<strong><%= tooltip(NetworkPort,:updated_at) %>:</strong> <%= h(@network_port.updated_at) %></p>
+
+</div>
+
+<%= @tooltips %>

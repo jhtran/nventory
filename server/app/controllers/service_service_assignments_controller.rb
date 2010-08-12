@@ -1,26 +1,21 @@
 class ServiceServiceAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /service_service_assignments
   # GET /service_service_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "service_service_assignments.assigned_at"
-           when "assigned_at_reverse" then "service_service_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = ServiceServiceAssignment.default_search_attribute
-      sort = 'service_service_assignments.' + ServiceServiceAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = ServiceServiceAssignment.find(:all, :order => sort)
-    else
-      @objects = ServiceServiceAssignment.paginate(:all,
-                                                   :order => sort,
-                                                   :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = ServiceServiceAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class ServiceServiceAssignmentsController < ApplicationController
   # GET /service_service_assignments/1
   # GET /service_service_assignments/1.xml
   def show
-    @service_service_assignment = ServiceServiceAssignment.find(params[:id])
+    @service_service_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,18 +36,22 @@ class ServiceServiceAssignmentsController < ApplicationController
 
   # GET /service_service_assignments/new
   def new
-    @service_service_assignment = ServiceServiceAssignment.new
+    @service_service_assignment = @object
   end
 
   # GET /service_service_assignments/1/edit
   def edit
-    @service_service_assignment = ServiceServiceAssignment.find(params[:id])
+    @service_service_assignment = @object
   end
 
   # POST /service_service_assignments
   # POST /service_service_assignments.xml
   def create
     @service_service_assignment = ServiceServiceAssignment.new(params[:service_service_assignment])
+    child = Service.find(params[:service_service_assignment][:child_id])
+    return unless filter_perms(@auth,child,['updater'])
+    parent = Service.find(params[:service_service_assignment][:parent_id])
+    return unless filter_perms(@auth,parent,['updater'])
 
     if request.env["HTTP_REFERER"] =~ /http:\/\/.*?\/(\w+)\/(\d+)/
       ref_class = $1.singularize
@@ -69,13 +68,6 @@ class ServiceServiceAssignmentsController < ApplicationController
             render(:update) { |page|
               page.replace_html 'parent_service_assgns', :partial => 'services/parent_service_assignments', :locals => { :service => ref_obj }
               page.replace_html 'child_service_assgns', :partial => 'services/child_service_assignments', :locals => { :service => ref_obj }
-              page.replace_html 'child_service_assignments', :partial => 'shared/child_service_assignment', :collection => ref_obj.service_assignments_as_parent
-              page.replace_html 'parent_service_assignments', :partial => 'shared/parent_service_assignment', :collection => ref_obj.service_assignments_as_child
-              
-              page.hide 'create_parent_assignment'
-              page.hide 'create_child_assignment'
-              page.show 'add_parent_link'
-              page.show 'add_child_link'
             }
           end
         }
@@ -91,7 +83,11 @@ class ServiceServiceAssignmentsController < ApplicationController
   # PUT /service_service_assignments/1
   # PUT /service_service_assignments/1.xml
   def update
-    @service_service_assignment = ServiceServiceAssignment.find(params[:id])
+    @service_service_assignment = @object
+    child = @service_service_assignment.child_service
+    return unless filter_perms(@auth,child,['updater'])
+    parent = @service_service_assignment.parent_service
+    return unless filter_perms(@auth,parent,['updater'])
 
     respond_to do |format|
       if @service_service_assignment.update_attributes(params[:service_service_assignment])
@@ -108,9 +104,11 @@ class ServiceServiceAssignmentsController < ApplicationController
   # DELETE /service_service_assignments/1
   # DELETE /service_service_assignments/1.xml
   def destroy
-    @service_service_assignment = ServiceServiceAssignment.find(params[:id])
+    @service_service_assignment = @object
     @parent_service = @service_service_assignment.parent_service
+    return unless filter_perms(@auth,@parent_service,['updater'])
     @child_service = @service_service_assignment.child_service
+    return unless filter_perms(@auth,@child_service,['updater'])
     
     begin
       @service_service_assignment.destroy
@@ -138,13 +136,6 @@ class ServiceServiceAssignmentsController < ApplicationController
           render(:update) { |page|
             page.replace_html 'parent_service_assgns', :partial => 'services/parent_service_assignments', :locals => { :service => ref_obj }
             page.replace_html 'child_service_assgns', :partial => 'services/child_service_assignments', :locals => { :service => ref_obj }
-            page.replace_html 'child_service_assignments', :partial => 'shared/child_service_assignment', :collection => ref_obj.service_assignments_as_parent
-            page.replace_html 'parent_service_assignments', :partial => 'shared/parent_service_assignment', :collection => ref_obj.service_assignments_as_child
-            
-            page.hide 'create_parent_assignment'
-            page.hide 'create_child_assignment'
-            page.show 'add_parent_link'
-            page.show 'add_child_link'
           }
         end
       }

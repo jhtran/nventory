@@ -1,4 +1,4 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<%= link_to_function 'Add Outlet', "Element.show('create_outlet');Element.hide('add_outlet_link');$('outlet_consumer_id').value=''" %>
+<%= link_to_function "Add #{Outlet.outlet_types[node.hardware_profile.outlet_type].to_s}", "Element.show('create_outlet');Element.hide('add_outlet_link');$('outlet_consumer_id').value=''" %>
 
 <%= @tooltips if ttflag %>

@@ -1,20 +1,23 @@
 class AccountsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /accounts
   # GET /accounts.xml
   def index
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = Account
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
 
     respond_to do |format|
@@ -27,11 +30,7 @@ class AccountsController < ApplicationController
   # GET /accounts/1
   # GET /accounts/1.xml
   def show
-    includes = process_includes(Account, params[:include])
-    
-    @account = Account.find(params[:id],
-                            :include => includes)
-
+    @account = @object
     respond_to do |format|
       format.html # show.html.erb
       format.xml  { render :xml => @account.to_xml(:include => convert_includes(includes),
@@ -41,12 +40,12 @@ class AccountsController < ApplicationController
 
   # GET /accounts/new
   def new
-    @account = Account.new
+    @account = @object
   end
 
   # GET /accounts/1/edit
   def edit
-    @account = Account.find(params[:id])
+    @account = @object
   end
 
   # POST /accounts
@@ -69,7 +68,7 @@ class AccountsController < ApplicationController
   # PUT /accounts/1
   # PUT /accounts/1.xml
   def update
-    @account = Account.find(params[:id])
+    @account = @object
 
     respond_to do |format|
       if @account.update_attributes(params[:account])
@@ -86,7 +85,7 @@ class AccountsController < ApplicationController
   # DELETE /accounts/1
   # DELETE /accounts/1.xml
   def destroy
-    @account = Account.find(params[:id])
+    @account = @object
     @account.destroy
 
     respond_to do |format|
@@ -111,6 +110,15 @@ class AccountsController < ApplicationController
     @account = Account.find(:first)
     @exclude = ['password_hash', 'password_salt']
     render :action => 'search'
+  end
+
+  def get_deps
+    if params[:id] && params[:partial]
+      @account = Account.find(params[:id])
+      render :partial => params[:partial], :locals => { :account => @account }
+    else
+      render :text => ''
+    end
   end
 
 end

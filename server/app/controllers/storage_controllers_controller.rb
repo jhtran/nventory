@@ -1,31 +1,21 @@
 class StorageControllersController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /storage_controllers
   # GET /storage_controllers.xml
   def index
-    includes = process_includes(StorageController, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "storage_controllers.name"
-           when "name_reverse" then "storage_controllers.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = StorageController.default_search_attribute
-      sort = 'storage_controllers.' + StorageController.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = StorageController.find(:all,
-                                       :include => includes,
-                                       :order => sort)
-    else
-      @objects = StorageController.paginate(:all,
-                                           :include => includes,
-                                           :order => sort,
-                                           :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = StorageController
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -36,10 +26,7 @@ class StorageControllersController < ApplicationController
   # GET /storage_controllers/1
   # GET /storage_controllers/1.xml
   def show
-    includes = process_includes(StorageController, params[:include])
-    
-    @storage_controller = StorageController.find(params[:id],
-                                               :include => includes)
+    @storage_controller = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -49,12 +36,12 @@ class StorageControllersController < ApplicationController
 
   # GET /storage_controllers/new
   def new
-    @storage_controller = StorageController.new
+    @storage_controller = @object
   end
 
   # GET /storage_controllers/1/edit
   def edit
-    @storage_controller = StorageController.find(params[:id])
+    @storage_controller = @object
   end
 
   # POST /storage_controllers
@@ -87,7 +74,7 @@ class StorageControllersController < ApplicationController
   # PUT /storage_controllers/1
   # PUT /storage_controllers/1.xml
   def update
-    @storage_controller = StorageController.find(params[:id])
+    @storage_controller = @object
 
 #    # If the user specified some IP address info then handle that
 #    if params.include?(:ip_addresses)
@@ -148,7 +135,7 @@ class StorageControllersController < ApplicationController
   # DELETE /storage_controllers/1
   # DELETE /storage_controllers/1.xml
   def destroy
-    @storage_controller = StorageController.find(params[:id])
+    @storage_controller = @object
     @storage_controller.destroy
 
     respond_to do |format|

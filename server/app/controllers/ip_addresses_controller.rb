@@ -1,43 +1,24 @@
 class IpAddressesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /ip_addresses
   # GET /ip_addresses.xml
+  $address_types = %w( ipv4 ipv6 )
   def index
-    includes = process_includes(IpAddress, params[:include])
-    
-    sort = case params['sort']
-           when "address"                   then "ip_addresses.address"
-           when "address_reverse"           then "ip_addresses.address DESC"
-           when "network_interface"         then includes[:network_interface] = {}; "network_interface.name"
-           when "network_interface_reverse" then includes[:network_interface] = {}; "network_interface.name DESC"
-           when "node"                      then includes[[:network_interface => :node]] = {}; "node.name"
-           when "node_reverse"              then includes[[:network_interface => :node]] = {}; "node.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = IpAddress.default_search_attribute
-      sort = 'ip_addresses.' + IpAddress.default_search_attribute
-    end
+    special_joins = {}
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = IpAddress
+    allparams[:webparams] = params
+    allparams[:special_joins] = special_joins
+    results = Search.new(allparams).search
 
-    # The index page includes some data from associations.  If we don't
-    # include those associations then N SQL calls result as that data is
-    # looked up row by row.
-    if !params[:format] || params[:format] == 'html'
-      # FIXME: not sure why this stopped working
-      #includes[[:network_interface => :node]] = {}
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = IpAddress.find(:all,
-                                :include => includes,
-                                :order => sort)
-    else
-      @objects = IpAddress.paginate(:all,
-                                    :include => includes,
-                                    :order => sort,
-                                    :page => params[:page])
-    end
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
     
     respond_to do |format|
       format.html # index.html.erb
@@ -49,10 +30,7 @@ class IpAddressesController < ApplicationController
   # GET /ip_addresses/1
   # GET /ip_addresses/1.xml
   def show
-    includes = process_includes(IpAddress, params[:include])
-    
-    @ip_address = IpAddress.find(params[:id],
-                                 :include => includes)
+    @ip_address = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -63,12 +41,12 @@ class IpAddressesController < ApplicationController
 
   # GET /ip_addresses/new
   def new
-    @ip_address = IpAddress.new
+    @ip_address = @object
   end
 
   # GET /ip_addresses/1/edit
   def edit
-    @ip_address = IpAddress.find(params[:id])
+    @ip_address = @object
   end
 
   # POST /ip_addresses
@@ -91,7 +69,12 @@ class IpAddressesController < ApplicationController
   # PUT /ip_addresses/1
   # PUT /ip_addresses/1.xml
   def update
-    @ip_address = IpAddress.find(params[:id])
+    @ip_address = @object
+    if params[:network_ports]
+      portshashes = params[:network_ports]
+      process_network_ports(@ip_address,portshashes)
+      params.delete(:network_ports)
+    end
 
     respond_to do |format|
       if @ip_address.update_attributes(params[:ip_address])
@@ -105,10 +88,45 @@ class IpAddressesController < ApplicationController
     end
   end
 
+  def process_network_ports(ip, porthashes)
+    logger.info "\n\n*********** PROCESSING NETWORK PORTS ***************"
+    logger.info "IP: #{ip.address}\n" + porthashes.to_yaml + "\n\n"
+
+    porthashes.each_pair do |key,porthash|
+      if porthash["nmap"] == "1"
+        nmap = true
+        porthash.delete(:nmap)
+        ip.nmap_last_scanned_at = DateTime.now
+      end
+      logger.info "Search for PORT: #{porthash[:number]}/#{porthash[:protocol]}"
+      port = NetworkPort.find_or_create_by_number_and_protocol(porthash[:number].to_i,porthash[:protocol])
+      ipnpa = IpAddressNetworkPortAssignment.find_or_create_by_ip_address_id_and_network_port_id(ip.id,port.id)
+      if ipnpa
+        # we want to append to the :app field instead of overwriting unless that appname already is listed
+        if ipnpa.apps && ipnpa.apps =~ /\w/
+          if ipnpa.apps =~ /\b#{porthash[:apps]}\b/
+            ipnpa.apps = ipnpa.apps.gsub(/\s/,'')
+          else
+            ipnpa.apps = [ipnpa.apps.gsub(/\s/,''), porthash[:apps]].join(',')
+          end
+        else
+          ipnpa.apps = porthash[:apps]
+        end
+        if nmap
+          ipnpa.nmap_first_seen_at = DateTime.now unless ipnpa.nmap_first_seen_at
+          ipnpa.nmap_last_seen_at = DateTime.now
+        end
+        ipnpa.save
+      end  # if ipnpa
+      logger.info "** NetworkPortIpAddressAssignment RESULT (ID): #{ipnpa.id}"
+    end
+  end
+  private :process_network_ports
+
   # DELETE /ip_addresses/1
   # DELETE /ip_addresses/1.xml
   def destroy
-    @ip_address = IpAddress.find(params[:id])
+    @ip_address = @object
     @ip_address.destroy
 
     respond_to do |format|

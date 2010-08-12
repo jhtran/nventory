@@ -1,7 +1,7 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <div id="comments">
 <p>
-<strong><%= tooltip(nil,:comments,nil,comments_tooltip) %>:</strong>
+<h2><%= tooltip(nil,:comments,nil,comments_tooltip) %>:</h2>
 <%- if object.comments.length > 0 -%>
   <ul>
   <%- object.comments.each do |comment| -%>
@@ -28,7 +28,7 @@
 
 
 <div id="add_comment_link">
-<p><%= link_to_function 'Add Comment', "Element.show('add_comment');Element.hide('add_comment_link')" %></p>
+<p><%= link_to_function 'Add Comment', "Element.show('add_comment');Element.hide('add_comment_link')" if allow_perm(@object, ['updater']) %></p>
 </div>
 
 </p>

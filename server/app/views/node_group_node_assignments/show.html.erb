@@ -15,13 +15,4 @@
 
 </div>
 
-<p><%= link_to 'Edit', edit_node_group_node_assignment_path(@node_group_node_assignment) %> | 
-<%- confirm_message = 'Are you sure?' -%>
-<%- if @node_group_node_assignment.virtual_assignment? -%>
-  <%- confirm_message = 'Virtual assignments should not be manually deleted, are you REALLY sure?' -%>
-<%- end -%>
-<%= link_to 'Delete', node_group_node_assignment_path(@node_group_node_assignment), :confirm => confirm_message, :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @node_group_node_assignment} %>
-
 <%= @tooltips %>

@@ -22,17 +22,10 @@
 
 <p id="account_links">
 <%- if logged_in_account -%>
-Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account) %>! 
- | <%= link_to "Help", HELP_URL %> 
- | 
-  <%- if session[:sso] -%>
-    <%= link_to "Logout (SSO)", sso_obj.logout_url %>
-  <%- else -%>
-    <%= link_to "Logout", :controller => 'login', :action => 'logout' %>
-  <%- end -%>
+  <%= "Welcome back, #{link_to logged_in_account.name, account_path(logged_in_account)}! | #{link_to "Help", HELP_URL} | " %>
+  <%= session[:sso] ? link_to("Logout (SSO)", sso_obj.logout_url) : link_to("Logout", :controller => 'login', :action => 'logout') %>
 <%- else -%>
-<%= link_to "Login", :controller => 'login', :action => 'login' %> 
-    <%= "|" . link_to "Login (SSO)", SSO_LOGIN_URL if SSO_SERVER %> 
+  <%= (SSO_AUTH_SERVER && SSO_LOGIN_URL) ?  " | #{link_to "Login (SSO)", SSO_LOGIN_URL}" : " | #{link_to("Login", :controller => 'login', :action => 'login')}" %>
 <%- end -%>
 </p>
 
@@ -51,8 +44,25 @@ Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account
 <div id="error"><%= flash[:error] %></div> 
 <% end -%>
 
-<%- # Calling yield here triggers the insertion of the specific view -%>
+<!--  # Calling yield here triggers the insertion of the specific view -->
 <%= yield %>
+
+<!-- action specific calls -->
+<%- if controller.action_name == 'show' %>
+  <%- unless controller.controller_name == CommentsController || !@object.respond_to?(:comments) %>
+    <div class="relationship">
+      <%= render :partial => 'shared/comments', :locals => { :object => @object} %>
+    </div> 
+  <%- end -%>
+
+  <div id="edit_delete">
+    <!-- edit del gets @auth && @object from get_auth_obj method -->
+    <%= render :partial => 'shared/edit_delete', :locals => { :refcontroller => controller.controller_name } %>
+  </div>
+<%- end -%>
+
+<p><%= ((render(:partial => 'shared/perms', :locals => { :object => @object}) if allow_perm(@object, ['admin']) ) if controller.action_name =~ /^(index|show)$/) unless controller.controller_name == 'dashboard' %></p>
+<%= render :partial => 'shared/version_information', :locals => { :object => @object} if controller.action_name == 'show' %>
 
 <hr />
 </div> <!-- end content -->
@@ -63,52 +73,54 @@ Welcome back, <%= link_to logged_in_account.name, account_path(logged_in_account
 
 <h3>Manage</h3>
 <ul>
-    <li><%= link_to 'N', new_datacenter_path %>&nbsp;&nbsp;<%= link_to "Datacenters", datacenters_url, :title => mtitle(Datacenter) %></li>
-    <li><%= link_to 'N', new_node_rack_path %>&nbsp;&nbsp;<%= link_to "Racks", node_racks_url, :title => mtitle(NodeRack) %></li>
-    <li><%= link_to 'N', new_node_path %>&nbsp;&nbsp;<%= link_to "Nodes", nodes_url, :title => mtitle(Node) %></li>
-    <li><%= link_to 'N', new_vip_path %>&nbsp;&nbsp;<%= link_to "VIPs", vips_url, :title => mtitle(Vip) %></li>
-    <li><%= link_to 'N', new_volume_path %>&nbsp;&nbsp;<%= link_to "Volumes", volumes_url, :title => mtitle(Volume) %></li>
+    <li><%= @modelperms["Datacenter"] ? link_to('N', new_datacenter_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Datacenters", datacenters_url, :title => mtitle(Datacenter) %></li>
+    <li><%= @modelperms["Node"] ? link_to('N', new_node_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Nodes", nodes_url, :title => mtitle(Node) %></li>
+</ul>
+
+<h3>Groups</h3>
+<ul>
+    <li><%= @modelperms["Tag"] ? link_to('N', new_tag_path) : '&nbsp&nbsp&nbsp'%>&nbsp;&nbsp;<%= link_to "Tags", tags_url, :title => mtitle(Tag) %></li>
+    <li><%= @modelperms["NodeGroup"] ? link_to('N', new_node_group_path) : '&nbsp&nbsp&nbsp'%>&nbsp;&nbsp;<%= link_to "Node Groups", node_groups_url, :title => mtitle(NodeGroup) %></li>
+    <li>&nbsp;&nbsp;&nbsp;&nbsp;<%= link_to "Services", '/node_groups?exact_tag[name]=services', :title => mtitle(Service) %></li>
+    <li><%= @modelperms["LbPool"] ? link_to('N', new_lb_pool_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Load Balancer Pools", lb_pools_url, :title => mtitle(LbPool) %></li>
+</ul>
+
+<h3>Network</h3>
+<ul>
+    <li><%= @modelperms["Vip"] ? link_to('N', new_vip_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "VIPs", vips_url, :title => mtitle(Vip) %></li>
+    <li><%= @modelperms["IpAddress"] ? link_to('N', new_ip_address_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Ip Addresses", ip_addresses_url, :title => mtitle(IpAddress) %></li>
+    <li><%= @modelperms["NetworkPort"] ? link_to('N', new_network_port_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Network Ports", network_ports_url, :title => mtitle(NetworkPort) %></li>
+    <li><%= @modelperms["Subnet"] ? link_to('N', new_subnet_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Subnets", subnets_url, :title => mtitle(Subnet) %></li>
+</ul>
+
+<h3>Storage</h3>
+<ul>
+    <li><%= @modelperms["Drive"] ? link_to('N', new_drive_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Drive", drives_url, :title => mtitle(Drive) %></li>
+    <li><%= @modelperms["Volume"] ? link_to('N', new_volume_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Volumes", volumes_url, :title => mtitle(Volume) %></li>
+    <li><%= @modelperms["StorageController"] ? link_to('N', new_storage_controller_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Storage Controllers", storage_controllers_url, :title => mtitle(StorageController) %></li>
 </ul>
 
 <h3>Meta</h3>
 <ul>
-    <li><%= link_to 'N', new_node_group_path %>&nbsp;&nbsp;<%= link_to "Node Groups", node_groups_url, :title => mtitle(NodeGroup) %></li>
-    <li><%= link_to 'N', new_service_path %>&nbsp;&nbsp;<%= link_to "Services", services_url, :title => mtitle(Service) %></li>
-    <li><%= link_to 'N', new_lb_pool_path %>&nbsp;&nbsp;<%= link_to "Load Balancer Pools", lb_pools_url, :title => mtitle(LbPool) %></li>
-    <li><%= link_to 'N', new_hardware_profile_path %>&nbsp;&nbsp;<%= link_to "Hardware Profiles", hardware_profiles_url, :title => mtitle(HardwareProfile) %></li>
-    <li><%= link_to 'N', new_operating_system_path %>&nbsp;&nbsp;<%= link_to "Operating Systems", operating_systems_url, :title => mtitle(OperatingSystem) %></li>
-    <li><%= link_to 'N', new_status_path %>&nbsp;&nbsp;<%= link_to "Statuses", statuses_url, :title => mtitle(Status) %></li>
-    <li><%= link_to 'N', new_outlet_path %>&nbsp;&nbsp;<%= link_to "Outlets", outlets_url, :title => mtitle(Outlet) %></li>
-    <li><%= link_to 'N', new_subnet_path %>&nbsp;&nbsp;<%= link_to "Subnets", subnets_url, :title => mtitle(Subnet) %></li>
+    <li><%= @modelperms["HardwareProfile"] ? link_to('N', new_hardware_profile_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Hardware Profiles", hardware_profiles_url, :title => mtitle(HardwareProfile) %></li>
+    <li><%= @modelperms["OperatingSystem"] ? link_to('N', new_operating_system_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Operating Systems", operating_systems_url, :title => mtitle(OperatingSystem) %></li>
+    <li><%= @modelperms["Status"] ? link_to('N', new_status_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Statuses", statuses_url, :title => mtitle(Status) %></li>
+    <li><%= @modelperms["NodeRack"] ? link_to('N', new_node_rack_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Racks", node_racks_url, :title => mtitle(NodeRack) %></li>
+    <li><%= @modelperms["Outlet"] ? link_to('N', new_outlet_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Outlets", outlets_url, :title => mtitle(Outlet) %></li>
 </ul>
 
-<h3>Reports</h3>
+<h3>Admin</h3>
 <ul>
   <li><%= link_to "Audits", audits_url, :title => mtitle(Audit) %></li>
-  <form action="" method="get">
-    <select style="width:20em;" id="report" name="" onchange="if (this.value != '') { window.location = '/reports/' + $('report').value; }">
-      <option value="">View Report:</option>
-      <%= options_for_select(list_reports) %>
-    </select>
-  </form>
+  <%- if @auth.has_role? 'admin' -%>
+    <li><%= @modelperms["ToolTip"] ? link_to('N', new_tool_tip_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Tool Tips", tool_tips_url, :title => mtitle(ToolTip) %></li>
+  <%- end -%>
+  <li><%= @modelperms["Account"] ? link_to('N', new_account_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Accounts", accounts_url, :title => mtitle(Account) %></li>
+  <li><%= @modelperms["AccountGroup"] ? link_to('N', new_account_group_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Account Groups", account_groups_url, :title => mtitle(AccountGroup) %></li>
 </ul>
-
-<%- if logged_in_account.admin? %>
-  <h3>Admin</h3>
-  <ul>
-    <li><%= link_to 'N', new_tool_tip_path %>&nbsp;&nbsp;<%= link_to "Tool Tips", tool_tips_url, :title => mtitle(ToolTip) %></li>
-    <li><%= link_to 'N', new_account_path %>&nbsp;&nbsp;<%= link_to "Accounts", accounts_url, :title => mtitle(Account) %></li>
-  </ul>
-<%- end -%>
 <hr />
 
 </div> <!-- end sidepanel -->
-
-<% if false -%>
-<div id="footer">
-<p>Some cool footer here.</p>
-</div> <!-- end footer -->
-<% end -%>
 
 </div> <!-- end container -->
 </body>

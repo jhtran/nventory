@@ -1,0 +1,20 @@
+<tr class="<%= cycle('odd', 'even') -%>">
+  <td nowrap="nowrap" width="5%">
+  <td><%= keyword.name %></td>
+  <%- ng = @appresults[keyword.name] %>
+  <td><%= ng ? (link_to ng.name,ng) : "<font color=red>NO MATCH</font>" %></td>
+  <%- unless ng -%>
+    <%- fuzzies = NodeGroup.find(:all,:select => 'id,name',:conditions => "name like '%#{keyword.name}%'") -%>
+  <%- end -%>
+  <td>
+    <%- if fuzzies && !fuzzies.empty? -%>
+      <ul>
+      <%- fuzzies.each do |fuzzyng| -%>
+        <%= "<li>" + link_to(fuzzyng.name,fuzzyng) + "</li>" %>
+      <%- end -%>
+      </ul>
+    <%- end -%>
+  </td>
+  <td><%= link_to(ng.nodes.size, :controller => 'nodes', :exact_node_group => ng.name) if ng %></td>
+  <td><%= link_to_remote('Delete', :url => {:controller => 'reports', :action => 'delkeyword', :keywordid => keyword.id}, :confirm => 'Are you sure?') %></td>
+</tr>

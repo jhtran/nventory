@@ -1,15 +1,5 @@
-# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-# Fixture data is loaded directly into the database, bypassing Active Record
-# and any callbacks we've defined.  As such these assignments don't trigger
-# the creation of virtual assignments to any parent groups.  Only use this
-# fixture in tests where the lack of virtual assignments doesn't matter,
-# otherwise create the assignments in your test case.
-one:
-  id: 1
-  node_id: 1
-  node_group_id: 3
-two:
-  id: 2
-  node_id: 1
-  node_group_id: 5
-
+nventory_80_pool_irvnventory1:
+  node_group: nventory_80_pool
+  node: irvnventory1
+  created_at: <%= 5.days.ago.to_s :db %>
+  assigned_at: <%= 5.days.ago.to_s :db %>

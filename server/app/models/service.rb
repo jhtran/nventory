@@ -1,4 +1,7 @@
 class Service < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   set_table_name 'node_groups'
   named_scope :def_scope, :joins => :service_profile
   
@@ -40,17 +43,50 @@ class Service < ActiveRecord::Base
   end
 
   def recursive_child_services
-    @all_child_services = []
     recurse_child_services(self)
-    @all_child_services
   end
 
   def recurse_child_services(ng)
-    @all_child_services << ng
+    children = []
     if ng.child_services.size > 0
       ng.child_services.each do |child|
-        recurse_child_services(child)
+        children << child
+        results = recurse_child_services(child)
+        results.each{|a| children << a}
       end
+    else
+      return []
+    end
+    return children
+  end
+
+  def recursive_contacts
+    data = {}
+    owners = []
+    contacts = []
+    self.owner.split(',').each{|a| owners << a} if self.owner
+    self.service_profile.contact.split(',').each{|a| contacts << a} if self.service_profile.contact
+    recursive_child_services.each do |child|
+      child.owner.split(',').each {|a| owners << a} if child.owner
+      child.service_profile.contact.split(',').each {|a| contacts << a} if child.service_profile.contact
+    end
+    data[:owners] = owners.collect {|a| lookup_email(a)}.uniq.compact
+    data[:contacts] = contacts.collect {|a| lookup_email(a)}.uniq.compact
+    data[:all] = data[:owners] + data[:contacts]
+  end
+
+  def lookup_email(contact)
+    return contact if contact =~ /@/
+    if SSO_AUTH_SERVER && SSO_PROXY_SERVER
+      uri = URI.parse("https://#{SSO_AUTH_SERVER}/users.xml?login=#{contact}")
+      http = Net::HTTP::Proxy(SSO_PROXY_SERVER,8080).new(uri.host,uri.port)
+      http.use_ssl = true
+      sso_xmldata = http.get(uri.request_uri).body
+      sso_xmldoc = Hpricot::XML(sso_xmldata)
+      email = (sso_xmldoc/:email).first.innerHTML if (sso_xmldoc/:email).first
+      email ? (return email) : (return nil)
+    else
+      return nil
     end
   end
 

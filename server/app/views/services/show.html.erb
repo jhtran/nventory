@@ -10,7 +10,28 @@
 <strong><%= tooltip(Service,:owner) %>:</strong><br />
 <%= mail_to @service.owner %><br />
 <strong><%= tooltip(Service,:contact,'Emergency Contact') %>:</strong><br />
-<%= mail_to @service.service_profile.contact%>
+<%- unless @service.service_profile.contact.nil? %>
+  <%- contacts = [] %>
+  <%- @service.service_profile.contact.split(',').each do |login| -%>
+    <%- if (SSO_AUTH_SERVER && login !~ /@/) -%>
+      <%- contacts << link_to(login,"https://#{SSO_AUTH_SERVER}/users?login=#{login}") -%>
+    <%- elsif (login =~ /@/) -%>
+      <%- contacts << (mail_to login) -%>
+    <%- else -%>
+      <%- (contacts << login) %>
+    <%- end %>
+  <%- end -%>
+<%- end -%>
+<%= contacts.join(', ') unless contacts.nil? || contacts.empty? %><br />
+<p>
+<div id="view_all_contacts_link">
+  <%= render :partial => 'view_all_contacts_link' %><font size=small><i><font color=green>* list all contacts belonging to all dependent services (recursive)</font></i></font>
+</div>
+<div id="list_all_contacts">
+  <%= render :partial => 'list_all_contacts', :locals => {:service => @service} %>
+</div>
+</p>
+
 </p>
 <p>
  <%- @app_locs.each_pair do |name, location| -%>
@@ -46,7 +67,7 @@
     <%= render :partial => 'create_child_assignment' %>
   </div>
   <p id="add_child_link">
-    <%= render :partial => 'add_child_link' %>
+    <%= render :partial => 'add_child_link' if allow_perm(@service, ['updater']) %>
   </p>
 
   <div id="parent_service_assgns">
@@ -56,7 +77,7 @@
     <%= render :partial => 'create_parent_assignment' %>
   </div>
   <p id="add_parent_link">
-    <%= render :partial => 'add_parent_link' %>
+    <%= render :partial => 'add_parent_link' if allow_perm(@service, ['updater']) %>
   </p>
 </div>
 <!-- END SERVICES RELATIONSHIPS -->
@@ -68,14 +89,14 @@
   <strong><%= tooltip(Service,:child_services,'Service Clients') %>:</strong>
     <ul>
     <div id="child_service_assignments">
-      <%= render :partial => 'shared/child_service_assignment', :collection => @service.service_assignments_as_parent %>
+      <%= render :partial => 'child_service_assignment', :collection => @service.service_assignments_as_parent %>
     </div>
     </ul>
 
   <strong><%= tooltip(Service,:parent_services,'Service Parents') %>:</strong>
     <ul>
     <div id="parent_service_assignments">
-    <%= render :partial => 'shared/parent_service_assignment', :collection => @service.service_assignments_as_child %>
+    <%= render :partial => 'parent_service_assignment', :collection => @service.service_assignments_as_child %>
     </div>
     </ul>
 </div>
@@ -92,7 +113,7 @@
     <%= render :partial => 'create_node_assignment' %>
   </div>
   <p id="add_node_link">
-    <%= render :partial => 'add_node_link' %>
+    <%= render :partial => 'add_node_link' if allow_perm(@service, ['updater']) %>
   </p>
 
   <div id="virtual_node_assgns">
@@ -103,19 +124,8 @@
 <!-- END NODES RELATIONSHIPS -->
 <%- end -%>
 
-
-
-<div class="relationship">
-
-<%= render :partial => 'shared/comments', :locals => { :object => @service} %>
-
-</div> <!-- end comments relationship -->
-
-<p><%= link_to 'Edit', edit_service_path(@service) %> | 
-<%= link_to 'Delete', service_path(@service), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @service} %>
 <%= javascript_tag "Element.hide('create_parent_assignment')" %>
 <%= javascript_tag "Element.hide('create_child_assignment')" %>
+<%= javascript_tag "Element.hide('list_all_contacts')" %>
 
 <%= @tooltips %>

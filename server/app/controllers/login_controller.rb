@@ -6,16 +6,15 @@ class LoginController < ApplicationController
 
   def index
     unless session[:sso] == true
-      redirect_to :action => "login"
+      redirect_to :action => "login" and return
     else
-      redirect_to :controller => 'dashboard'
+      redirect_to :controller => 'dashboard' and return
     end
   end
   
   def login
     if session[:sso] == true
-      redirect_to :controller => 'dashboard'
-      return
+      redirect_to :controller => 'dashboard' and return
     end
     session[:account_id] = nil
     if request.post? 
@@ -35,14 +34,14 @@ class LoginController < ApplicationController
 
   def sso
     if @sso = sso_auth
-      redirect_to :controller => 'dashboard'
+      redirect_to :controller => 'dashboard' and return
     end
   end
   
   def logout
     session[:account_id] = nil 
     flash[:notice] = "Logged out" 
-    redirect_to(:action => "login")
+    redirect_to(:action => "login") and return
   end
   
 end

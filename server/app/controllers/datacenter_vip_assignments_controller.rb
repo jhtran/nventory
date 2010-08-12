@@ -1,26 +1,21 @@
 class DatacenterVipAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /datacenter_vip_assignments
   # GET /datacenter_vip_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "datacenter_vip_assignments.assigned_at"
-           when "assigned_at_reverse" then "datacenter_vip_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = DatacenterVipAssignment.default_search_attribute
-      sort = 'datacenter_vip_assignments.' + DatacenterVipAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = DatacenterVipAssignment.find(:all, :order => sort)
-    else
-      @objects = DatacenterVipAssignment.paginate(:all,
-                                                  :order => sort,
-                                                  :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = DatacenterVipAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class DatacenterVipAssignmentsController < ApplicationController
   # GET /datacenter_vip_assignments/1
   # GET /datacenter_vip_assignments/1.xml
   def show
-    @datacenter_vip_assignment = DatacenterVipAssignment.find(params[:id])
+    @datacenter_vip_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,18 +36,22 @@ class DatacenterVipAssignmentsController < ApplicationController
 
   # GET /datacenter_vip_assignments/new
   def new
-    @datacenter_vip_assignment = DatacenterVipAssignment.new
+    @datacenter_vip_assignment = @object
   end
 
   # GET /datacenter_vip_assignments/1/edit
   def edit
-    @datacenter_vip_assignment = DatacenterVipAssignment.find(params[:id])
+    @datacenter_vip_assignment = @object
   end
 
   # POST /datacenter_vip_assignments
   # POST /datacenter_vip_assignments.xml
   def create
     @datacenter_vip_assignment = DatacenterVipAssignment.new(params[:datacenter_vip_assignment])
+    datacenter = Datacenter.find(params[:datacenter_vip_assignment][:datacenter_id])
+    return unless filter_perms(@auth,datacenter,['updater'])
+    vip = Vip.find(params[:datacenter_vip_assignment][:vip_id])
+    return unless filter_perms(@auth,vip,['updater'])
 
     respond_to do |format|
       if @datacenter_vip_assignment.save
@@ -79,7 +78,11 @@ class DatacenterVipAssignmentsController < ApplicationController
   # PUT /datacenter_vip_assignments/1
   # PUT /datacenter_vip_assignments/1.xml
   def update
-    @datacenter_vip_assignment = DatacenterVipAssignment.find(params[:id])
+    @datacenter_vip_assignment = @object
+    datacenter = @datacenter_vip_assignment.datacenter
+    return unless filter_perms(@auth,datacenter,['updater'])
+    vip = @datacenter_vip_assignment.vip
+    return unless filter_perms(@auth,vip,['updater'])
 
     respond_to do |format|
       if @datacenter_vip_assignment.update_attributes(params[:datacenter_vip_assignment])
@@ -96,8 +99,11 @@ class DatacenterVipAssignmentsController < ApplicationController
   # DELETE /datacenter_vip_assignments/1
   # DELETE /datacenter_vip_assignments/1.xml
   def destroy
-    @datacenter_vip_assignment = DatacenterVipAssignment.find(params[:id])
+    @datacenter_vip_assignment = @object
     @datacenter = @datacenter_vip_assignment.datacenter
+    return unless filter_perms(@auth,@datacenter,['updater'])
+    @vip = @datacenter_vip_assignment.vip
+    return unless filter_perms(@auth,@vip,['updater'])
     @datacenter_vip_assignment.destroy
 
     respond_to do |format|

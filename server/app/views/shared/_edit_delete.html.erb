@@ -1,0 +1,3 @@
+  <p><%= link_to('Edit', url_for(:controller => refcontroller, :action => :edit, :id => @object.id)) if allow_perm(@object,['updater']) %>
+  <%= " | " if allow_perm(@object,['updater']) && allow_perm(@object,['destroyer']) %>
+  <%= link_to('Delete', url_for(:controller => refcontroller, :action => :destroy, :id => @object.id), :confirm => 'Are you sure?', :method => :delete) if allow_perm(@object,['destroyer'])  %></p>

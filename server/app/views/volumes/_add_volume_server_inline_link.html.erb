@@ -1,0 +1,3 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= link_to_function 'Add Volume Server', "Element.show('create_volume_server');Element.hide('add_volume_server_link');$('volume_server_id').value=''" %>
+<%= @tooltips if ttflag %>

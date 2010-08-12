@@ -16,9 +16,9 @@
 
 </div>
 
-<p><%= link_to 'Edit', edit_volume_node_assignment_path(@volume_node_assignment) %> | 
-<%= link_to 'Delete', volume_node_assignment_path(@volume_node_assignment), :confirm => 'Are you sure?', :method => :delete %></p>
-
+<p><%= link_to('Edit', edit_volume_node_assignment_path(@volume_node_assignment)) if allow_perm(@volume_node_assignment, ['updater']) %> 
+<%= " | " if allow_perm(@volume_node_assignment, ['destroyer']) && allow_perm(@volume_node_assignment, ['updater']) %>
+<%= link_to('Delete', volume_node_assignment_path(@volume_node_assignment), :confirm => 'Are you sure?', :method => :delete) if allow_perm(@volume_node_assignment, ['destroyer']) %>
 <%= render :partial => 'shared/version_information', :locals => { :object => @volume_node_assignment} %>
 
 <%= @tooltips %>

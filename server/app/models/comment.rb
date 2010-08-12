@@ -1,6 +1,8 @@
 class Comment < ActiveRecord::Base
+  acts_as_authorizable
   named_scope :def_scope
   belongs_to :commentable, :polymorphic => true
+  belongs_to :user, :foreign_key => 'user_id', :class_name => 'Account'
   
   # NOTE: install the acts_as_votable plugin if you 
   # want user to vote on the quality of comments.
@@ -11,6 +13,11 @@ class Comment < ActiveRecord::Base
 
   def self.default_search_attribute
     'comment'
+  end
+
+  def self.default_includes
+    # The default display index_row columns
+    return [:account]
   end
   
   # Helper class method to lookup all comments assigned

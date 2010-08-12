@@ -1,0 +1,29 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if account.authz.assignments_as_self_group.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the account_groups assigned to this account.">
+  <thead>
+  <tr>
+      <th><%= tooltip(AccountGroup,:name) %></th>
+      <th><%= tooltip(AccountGroup,:assigned_at) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in account.authz.assignments_as_self_group.sort{|a,b| a.account_group.name <=> b.account_group.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.account_group.name, account_group_path(assignment.account_group) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), account_group_self_group_assignment_path(assignment) %></td>
+      <td><%= link_to_remote('Delete',
+                              :url => {:controller => 'account_group_self_group_assignments',
+                                       :id => assignment.id, :refcontroller => 'accounts',
+                                       :partial => 'account_group_assignments',
+                                       :div => 'account_groups', :refid => account.id,
+                                       :action => 'destroy'},
+                              :confirm => 'Are you sure?',
+                              :method => :delete) if allow_perm(account, ['updater']) && allow_perm(assignment.account_group,'updater') %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- end -%>
+<%= @tooltips if ttflag %>

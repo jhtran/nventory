@@ -17,13 +17,13 @@
       <td><%= link_to_remote 'Delete',
                               :url => node_rack_node_assignment_path(assignment),
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(node,'updater') && allow_perm(assignment.node_rack,'updater') %></td>
   </tr>
   <%- end %>
   </tbody>
   </table>
 <%- else -%>
-  <p><strong><%= tooltip(@node.class,:node_rack,'Rack') %>:</strong></p>
+  <p><h2><%= tooltip(@node.class,:node_rack,'Rack') %>:</h2></p>
   <p>This node is not assigned to a server rack.</p>
 <%- end -%>
 

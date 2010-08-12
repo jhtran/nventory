@@ -1,9 +1,11 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if node.node_group_node_assignments.count > 0 -%>
-  <strong><%= tooltip(@node.class,:node_group_tree) %></strong><br /><br />
-  <%= link_to 'View Diagram', :action => "graph_node_groups", :id => @node, :title => 'View a GraphViz diagram showing the node_groups hierarchy of all the node groups this node is a member of.' %> | 
+  <h2><%= tooltip(@node.class,:node_group_tree) %></h2>
+  <p><%= link_to 'View Diagram', :action => "graph_node_groups", :id => @node, :title => 'View a GraphViz diagram showing the node_groups hierarchy of all the node groups this node is a member of.' %> 
   <%- confirm_msg = "This will clear all node group assignments!!\n\nAre you sure?" -%>
-  <%= link_to_remote 'Reset', :url=> {:controller => "nodes", :action => :reset_ngs, :id => node.id}, :confirm => confirm_msg, :title => 'Will remove all node group associations to this node' %><br /><br />
+  <%- if allow_perm(NodeGroupNodeAssignment, ['creator']) %>
+    | <%= link_to_remote 'Reset', :url=> {:controller => "nodes", :action => :reset_ngs, :id => node.id, :partial => 'node_group_node_assignments' }, :confirm => confirm_msg, :title => 'Will remove all node group associations to this node' %>
+  <%- end -%></p>
   <table cellspacing="0" class="styled" summary="A list of the node groups assigned to this node.">
   <caption><%= tooltip(@node.class,:node_groups) %></caption>
   <thead>
@@ -23,7 +25,7 @@
       <td><%= link_to_remote 'Delete',
                               :url => node_group_node_assignment_path(assignment),
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(node,['updater']) && allow_perm(assignment.node_group,['updater']) %></td>
   </tr>
   <%- end %>
   </tbody>
@@ -68,7 +70,7 @@
   </tbody>
   </table>
 <%- else -%>
-  <strong><%= tooltip(@node.class,:node_groups) %></strong><br /><br />
+  <h2><%= tooltip(@node.class,:node_groups) %></h2><br /><br />
   <p>This node is not assigned to any node groups.</p>
 <%- end -%>
 

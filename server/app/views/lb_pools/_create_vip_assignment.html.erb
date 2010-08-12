@@ -1,0 +1,13 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :vip_lb_pool_assignment, :url => {:controller => 'vip_lb_pool_assignments', :action => :create, :div => 'vip_lb_pool_assignments' }) do |f| %>
+  <p><%= tooltip(LbPool,:vip) %>
+  
+  <%- to_array = Vip.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+  
+  <%= f.select( :vip_id, to_array, { :include_blank => true } ) %>
+  <%= f.hidden_field( :lb_pool_id, { :value => @lb_pool.id } ) %>
+  
+  <%= submit_tag "Assign" %> | <%= link_to_function 'Cancel', "Element.show('add_vip_assignment_link');Element.hide('create_vip_assignment')"%></p>
+<% end %>
+
+<%= @tooltips if ttflag %>

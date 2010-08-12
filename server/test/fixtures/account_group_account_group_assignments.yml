@@ -1,0 +1,5 @@
+admin_sysadmin:
+  parent_group: administrators
+  child_group: unix_administrators
+  created_at: <%= 5.days.ago.to_s :db %>
+  assigned_at: <%= 5.days.ago.to_s :db %>

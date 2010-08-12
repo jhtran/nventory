@@ -1,31 +1,21 @@
 class SubnetsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /subnets
   # GET /subnets.xml
   def index
-    includes = process_includes(Subnet, params[:include])
-    
-    sort = case params['sort']
-           when "network" then "subnets.network"
-           when "network_reverse" then "subnets.network DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = Subnet.default_search_attribute
-      sort = 'subnets.' + Subnet.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = Subnet.find(:all,
-                             :include => includes,
-                             :order => sort)
-    else
-      @objects = Subnet.paginate(:all,
-                                 :include => includes,
-                                 :order => sort,
-                                 :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = Subnet
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -37,10 +27,7 @@ class SubnetsController < ApplicationController
   # GET /subnets/1
   # GET /subnets/1.xml
   def show
-    includes = process_includes(Subnet, params[:include])
-    
-    @subnet = Subnet.find(params[:id],
-                          :include => includes)
+    @subnet = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -51,12 +38,12 @@ class SubnetsController < ApplicationController
 
   # GET /subnets/new
   def new
-    @subnet = Subnet.new
+    @subnet = @object
   end
 
   # GET /subnets/1/edit
   def edit
-    @subnet = Subnet.find(params[:id])
+    @subnet = @object
   end
 
   # POST /subnets
@@ -79,7 +66,7 @@ class SubnetsController < ApplicationController
   # PUT /subnets/1
   # PUT /subnets/1.xml
   def update
-    @subnet = Subnet.find(params[:id])
+    @subnet = @object
 
     respond_to do |format|
       if @subnet.update_attributes(params[:subnet])
@@ -96,7 +83,7 @@ class SubnetsController < ApplicationController
   # DELETE /subnets/1
   # DELETE /subnets/1.xml
   def destroy
-    @subnet = Subnet.find(params[:id])
+    @subnet = @object
     @subnet.destroy
 
     respond_to do |format|

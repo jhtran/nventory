@@ -1,36 +1,52 @@
 class NodeGroupsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /node_groups
   # GET /node_groups.xml
   def index
-    # The default display index_row columns (node_groups model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = NodeGroup
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @objects.to_xml(:include => convert_includes(includes),
-						   :methods => [:virtual_nodes_names, :real_nodes_names],
-                                                   :dasherize => false) }
+      format.xml  { 
+        # PS-704 
+        if params[:nodefmeth]
+          render :xml => @objects.to_xml(:include => convert_includes(includes), :dasherize => false)
+        else
+          render :xml => @objects.to_xml(:include => convert_includes(includes),
+	            :methods => [:virtual_nodes_names, :real_nodes_names], :dasherize => false)
+        end
+      }
     end
   end
 
   # GET /node_groups/1
   # GET /node_groups/1.xml
   def show
-    includes = process_includes(NodeGroup, params[:include])
-    @node_group = NodeGroup.find(params[:id], :include => includes)
+    @node_group = @object
+    if @node_group.is_service? 
+      convert_to_service(@node_group) unless @node_group.service_profile
+      @app_locs = {}
+      @app_locs['Development'] = return_url_or_node(@node_group.service_profile.dev_url)
+      @app_locs['QA'] = return_url_or_node(@node_group.service_profile.qa_url)
+      @app_locs['Production'] = return_url_or_node(@node_group.service_profile.prod_url)
+      @app_locs['Staging'] = return_url_or_node(@node_group.service_profile.stg_url)
+      @app_locs['Code Repository'] = return_url_or_node(@node_group.service_profile.repo_url)
+    end
     percent_cpu_obj = UtilizationMetricName.find_by_name('percent_cpu')
     percent_cpus = UtilizationMetricsByNodeGroup.find(:all,:include => {:node_group => {},:utilization_metric_name=> {}},
                                         :conditions => ["node_groups.id = ? and utilization_metric_names.id = ? and assigned_at like ?", @node_group.id, percent_cpu_obj.id, "%#{1.days.ago.strftime("%Y-%m-%d")}%"])
@@ -57,12 +73,12 @@ class NodeGroupsController < ApplicationController
 
   # GET /node_groups/new
   def new
-    @node_group = NodeGroup.new
+    @node_group = @object
   end
 
   # GET /node_groups/1/edit
   def edit
-    @node_group = NodeGroup.find(params[:id])
+    @node_group = @object
   end
 
   # POST /node_groups
@@ -97,7 +113,7 @@ class NodeGroupsController < ApplicationController
   # PUT /node_groups/1
   # PUT /node_groups/1.xml
   def update
-    @node_group = NodeGroup.find(params[:id])
+    @node_group = @object
     if (defined?(params[:node_group_node_group_assignments][:child_groups]) && params[:node_group_node_group_assignments][:child_groups].include?('nil'))
       params[:node_group_node_group_assignments][:child_groups] = []
     end
@@ -126,12 +142,33 @@ class NodeGroupsController < ApplicationController
   # DELETE /node_groups/1
   # DELETE /node_groups/1.xml
   def destroy
-    @node_group = NodeGroup.find(params[:id])
+    @node_group = @object
     @node_group.destroy
 
     respond_to do |format|
       format.html { redirect_to node_groups_url }
       format.xml  { head :ok }
+    end
+  end
+
+  def add_tag
+    return unless filter_perms(@auth,Tag,['creator'])
+    @node_group = NodeGroup.find(params[:id])
+    return unless filter_perms(@auth,@node_group,['updater'])
+    @node_group.tag_list << params[:tag].to_s
+    respond_to do |format|
+      format.js {
+        if @node_group.save
+          render(:update) { |page|
+            page.replace_html 'tag_list', :partial => 'node_groups/tag_list', :locals => { :tags => @node_group.tags }
+            page.hide 'add_tag'
+            page.hide 'new_tag'
+            page.show 'add_tag_link'
+          }
+        else
+          render(:update) { |page| page.alert(@node_group.errors.full_messages) }
+        end
+      }
     end
   end
   
@@ -270,21 +307,37 @@ class NodeGroupsController < ApplicationController
   end
   private :dot_parent_groups
 
-  def convert_to_appservice
-    ng = NodeGroup.find(params[:id])
-    unless ng.is_service?
-      service = Service.find(params[:id])
-      service.service_profile_attributes = {}
-      success_code = service.save
-    end
-    respond_to do |format|
-      if success_code
-        format.html { redirect_to service_url(service) }
-      else
-        flash[:error] = "Unable to convert to a service"
-        format.html { redirect_to node_group_url(service) }
-      end
+  def convert_to_service(node_group)
+    if node_group.is_service?
+      node_group.service_profile_attributes = {}
+      node_group.save
     end
   end
+
+  def get_deps
+    if params[:id] && params[:partial]
+      @node_group = NodeGroup.find(params[:id])
+      render :partial => params[:partial], :locals => { :node_group => @node_group, :virtuals_through => @virtuals_through } 
+    else
+      render :text => ''
+    end
+  end
+
+  def get_svc_deps
+    if params[:id] && params[:partial]
+      @node_group = NodeGroup.find(params[:id])
+      render :partial => params[:partial], :locals => { :service => @node_group } 
+    else
+      render :text => ''
+    end
+  end
+
+  def return_url_or_node(env_url=nil)
+    return nil if env_url.nil?
+    return env_url if env_url =~ /^http.:\/\//i
+    result = Node.find_by_name(env_url)
+    result ? (return result) : (return env_url)
+  end
+  private :return_url_or_node
 
 end

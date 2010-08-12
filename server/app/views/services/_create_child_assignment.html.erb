@@ -1,5 +1,5 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<% remote_form_for( :service_service_assignment, :url => self.send('service_service_assignments_path') ) do |f| %>
+<% remote_form_for( :service_service_assignment, :url => {:controller => 'service_service_assignments', :action => :create, :div => 'child_service_assgns' } ) do |f| %>
   <p><%= tooltip(ServiceServiceAssignment,:child_service) %>:
   
   <%- service_array = Service.def_scope.find(:all, :order => :name).collect { |r| [ r.name, r.id ] } -%>

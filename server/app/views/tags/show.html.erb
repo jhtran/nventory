@@ -1,0 +1,20 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Tag" %>
+
+<div class="record_view">
+
+<h1><%= tooltip(nil,:tags,'Tag') %>: <%= @tag.name %></h1>
+
+<strong><%= tooltip(Tag,:name) %>:</strong> <%= @tag.name%><br />
+<p><strong><%= tooltip(Tag,:description) %>:</strong><br />
+<%= textilize_without_paragraph(h(@tag.description )) %></p>
+
+<p class="metadata"><strong><%= tooltip(Tag,:created_at) %>:</strong> <%= h(@tag.created_at) %></p>
+
+</div>
+
+<div class=relationship>
+  <div id="taggings"><%= render :partial => 'taggings', :locals => {:tag => @tag} %></div>
+</div>
+
+<%= @tooltips %>

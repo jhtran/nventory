@@ -5,13 +5,13 @@
 
 <h1><%= tooltip(VipLbPoolAssignment,:vip) %>: <%=h @vip.name %></h1>
 
-<p><strong><%= tooltip(Vip,:ip_address) %>:</strong> <%= @vip.ip_address %></strong><br />
+<p><strong><%= tooltip(Vip,:ip_address) %>:</strong> <%= link_to @vip.ip_address.address, @vip.ip_address %></strong><br />
 <strong><%= tooltip(Vip,:protocol) %>:</strong> <%= @vip.protocol %></strong><br />
 <strong><%= tooltip(Vip,:port) %>:</strong> <%= @vip.port %></strong><br /></p>
 
-<p><strong><%= tooltip(Vip,:load_balancer) %>:</strong> <%= link_to @vip.load_balancer.name, @vip.load_balancer %></strong><br />
+<p><strong><%= tooltip(Vip,:load_balancer) %>:</strong> <%= link_to @vip.load_balancer.name, @vip.load_balancer if @vip.load_balancer %></strong><br />
 <strong><%= tooltip(NodeRack,:datacenter) %>:</strong> 
-<%- unless ( @vip.load_balancer.node_rack.nil? || @vip.load_balancer.node_rack.datacenter.nil? ) -%>
+<%- unless ( @vip.load_balancer.nil? || @vip.load_balancer.node_rack.nil? || @vip.load_balancer.node_rack.datacenter.nil? ) -%>
   <%= link_to @vip.load_balancer.node_rack.datacenter.name, @vip.load_balancer.node_rack.datacenter %>
 <%- end -%>
 </strong></p>
@@ -24,40 +24,43 @@
 
 </div>
 
+<!-- BEGIN LB_POOL RELATIONSHIP -->
 <div class="relationship">
   <div id="vip_lb_pool_assignments">
     <%= render :partial => 'lb_pool_assignments', :locals => { :vip => @vip } %>
   </div>
   <div id="create_lb_pool_assignment">
-    <%= render :partial => 'shared/create_vip_lb_pool_assignment', :locals => { :from => 'vip', :to => 'lb_pool'} %>
+    <%= render :partial => 'create_vip_lb_pool_assignment' %>
   </div>
   <p id="new_lb_pool">
 
   </p>
   <p id="add_lb_pool_assignment_link">
-    <%= render :partial => 'shared/add_vip_lb_pool_inline_link', :locals => { :from => 'vip', :to => 'lb_pool'} %>
+    <%= render :partial => 'add_vip_lb_pool_inline_link' if allow_perm(@vip, ['updater']) %>
   </p>
-</div>
-
-<div class="relationship">
   <div id="node_assignments">
     <%= render :partial => 'node_assignments', :locals => { :vip => @vip } %>
   </div>
 </div>
+<!-- END LB_POOL RELATIONSHIP -->
 
+<!-- BEGIN NODE_GROUP RELATIONSHIPS -->
 <div class="relationship">
-  <%= render :partial => 'shared/comments', :locals => { :object => @vip} %>
-</div> <!-- end relationship -->
+  <div id="node_group_assignments">
+    <%= render :partial => 'node_group_assignments', :locals => { :vip => @vip } %>
+  </div>
+  <div id="create_node_group_assignment">
+    <%= render :partial => 'create_node_group_vip_assignment' %>
+  </div>
+  <p id="add_node_group_assignment_link">
+    <%= render :partial => 'add_node_group_vip_inline_link' if allow_perm(@vip, ['updater']) %>
+  </p>
+</div>
+<!-- END NODE_GROUP RELATIONSHIP -->
 
 
-<p><%= link_to 'Edit', edit_vip_path(@vip) %> | 
-<%= link_to 'Delete', vip_path(@vip), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @vip} %>
-
-<%- if true -%>
-  <%= javascript_tag "Element.hide('create_lb_pool_assignment')" %>
-<%- end -%>
+<%= javascript_tag "Element.hide('create_lb_pool_assignment')" %>
+<%= javascript_tag "Element.hide('create_node_group_assignment')" %>
 
 <%= javascript_tag "_vip_id = "+@vip.id.to_s %>
 

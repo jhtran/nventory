@@ -1,26 +1,21 @@
 class DatacenterNodeRackAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /datacenter_node_rack_assignments
   # GET /datacenter_node_rack_assignments.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "datacenter_node_rack_assignments.assigned_at"
-           when "assigned_at_reverse" then "datacenter_node_rack_assignments.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = DatacenterNodeRackAssignment.default_search_attribute
-      sort = 'datacenter_node_rack_assignments.' + DatacenterNodeRackAssignment.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = DatacenterNodeRackAssignment.find(:all, :order => sort)
-    else
-      @objects = DatacenterNodeRackAssignment.paginate(:all,
-                                                   :order => sort,
-                                                   :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = DatacenterNodeRackAssignment
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class DatacenterNodeRackAssignmentsController < ApplicationController
   # GET /datacenter_node_rack_assignments/1
   # GET /datacenter_node_rack_assignments/1.xml
   def show
-    @datacenter_node_rack_assignment = DatacenterNodeRackAssignment.find(params[:id])
+    @datacenter_node_rack_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,18 +36,22 @@ class DatacenterNodeRackAssignmentsController < ApplicationController
 
   # GET /datacenter_node_rack_assignments/new
   def new
-    @datacenter_node_rack_assignment = DatacenterNodeRackAssignment.new
+    @datacenter_node_rack_assignment = @object
   end
 
   # GET /datacenter_node_rack_assignments/1/edit
   def edit
-    @datacenter_node_rack_assignment = DatacenterNodeRackAssignment.find(params[:id])
+    @datacenter_node_rack_assignment = @object
   end
 
   # POST /datacenter_node_rack_assignments
   # POST /datacenter_node_rack_assignments.xml
   def create
     @datacenter_node_rack_assignment = DatacenterNodeRackAssignment.new(params[:datacenter_node_rack_assignment])
+    datacenter = Datacenter.find(params[:datacenter_node_rack_assignment][:datacenter_id])
+    return unless filter_perms(@auth,datacenter,'updater')
+    node_rack = NodeRack.find(params[:datacenter_node_rack_assignment][:node_rack_id])
+    return unless filter_perms(@auth,node_rack,'updater')
 
     respond_to do |format|
       if @datacenter_node_rack_assignment.save
@@ -68,11 +67,8 @@ class DatacenterNodeRackAssignmentsController < ApplicationController
             # which we do something slightly different.
             if request.env["HTTP_REFERER"].include? "datacenters"
               page.replace_html 'datacenter_node_rack_assignments', :partial => 'datacenters/node_rack_assignments', :locals => { :datacenter => @datacenter_node_rack_assignment.datacenter }
-              page.hide 'create_node_rack_assignment'
-              page.show 'add_node_rack_assignment_link'
             elsif request.env["HTTP_REFERER"].include? "node_racks"
               page.replace_html 'datacenter_node_rack_assignments', :partial => 'node_racks/datacenter_assignment', :locals => { :node_rack => @datacenter_node_rack_assignment.node_rack }
-              page.hide 'create_datacenter_assignment'
             end
           }
         }
@@ -88,7 +84,11 @@ class DatacenterNodeRackAssignmentsController < ApplicationController
   # PUT /datacenter_node_rack_assignments/1
   # PUT /datacenter_node_rack_assignments/1.xml
   def update
-    @datacenter_node_rack_assignment = DatacenterNodeRackAssignment.find(params[:id])
+    @datacenter_node_rack_assignment = @object
+    datacenter = @datacenter_node_rack_assignment.datacenter
+    return unless filter_perms(@auth,datacenter,'updater')
+    node_rack = @datacenter_node_rack_assignment.node_rack
+    return unless filter_perms(@auth,node_rack,'updater')
 
     respond_to do |format|
       if @datacenter_node_rack_assignment.update_attributes(params[:datacenter_node_rack_assignment])
@@ -105,24 +105,24 @@ class DatacenterNodeRackAssignmentsController < ApplicationController
   # DELETE /datacenter_node_rack_assignments/1
   # DELETE /datacenter_node_rack_assignments/1.xml
   def destroy
-    @datacenter_node_rack_assignment = DatacenterNodeRackAssignment.find(params[:id])
+    @datacenter_node_rack_assignment = @object
     @datacenter = @datacenter_node_rack_assignment.datacenter
+    return unless filter_perms(@auth,@datacenter,'updater')
     @node_rack = @datacenter_node_rack_assignment.node_rack
+    return unless filter_perms(@auth,@node_rack,'updater')
     @datacenter_node_rack_assignment.destroy
 
     respond_to do |format|
       format.html { redirect_to datacenter_node_rack_assignments_url }
       format.js {
-          render(:update) { |page|
-            if request.env["HTTP_REFERER"].include? "datacenters"
-              page.replace_html 'datacenter_node_rack_assignments', :partial => 'datacenters/node_rack_assignments', :locals => { :datacenter => @datacenter_node_rack_assignment.datacenter }
-              page.hide 'create_node_rack_assignment'
-              page.show 'add_node_rack_assignment_link'
-            elsif request.env["HTTP_REFERER"].include? "node_racks"
-              page.replace_html 'datacenter_node_rack_assignments', :partial => 'node_racks/datacenter_assignment', :locals => { :node_rack => @datacenter_node_rack_assignment.node_rack }
-              page.hide 'create_datacenter_assignment'
-            end
-          }
+#          render(:update) { |page|
+#            if request.env["HTTP_REFERER"].include? "datacenters"
+#              page.replace_html 'datacenter_node_rack_assignments', :partial => 'datacenters/node_rack_assignments', :locals => { :datacenter => @datacenter_node_rack_assignment.datacenter }
+#            elsif request.env["HTTP_REFERER"].include? "node_racks"
+#              page.replace_html 'datacenter_node_rack_assignments', :partial => 'node_racks/datacenter_assignment', :locals => { :node_rack => @datacenter_node_rack_assignment.node_rack }
+#            end
+#          }
+        render :text => 'jdsajfldjlfdsjlfdjslal'
       }
       format.xml  { head :ok }
     end

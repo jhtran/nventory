@@ -1,15 +1,28 @@
 # Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  name: MyString
-  login: MyString
-  password_hash: MyString
-  password_salt: MyString
-  email_address: MyString
-two:
-  id: 2
-  name: MyString
-  login: MyString
-  password_hash: MyString
-  password_salt: MyString
-  email_address: MyString
+autoreg:
+  name: autoreg
+  login: autoreg
+  password_hash: '796c5e87741cec8dcd876397e4a39d1806083e6a'
+  password_salt: '-6116625180.527991438812497'
+  admin: 1
+jsmith:
+  name: John Smith
+  login: jsmith
+  password_hash: '*'
+  email_address: 'jsmith@blah.com'
+  admin: 1
+jdoe:
+  name: Jane Doe
+  login: jdoe
+  password_hash: '*'
+  email_address: 'jdoe@blah.com'
+jblow:
+  name: Joe Blow
+  login: jblow
+  password_hash: '*'
+  email_address: 'jblow@blah.com'
+testuser:
+  name: Test User
+  password_hash: '*'
+  email_address: 'testuser@blah.com'
+  login: testuser

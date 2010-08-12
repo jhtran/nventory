@@ -1,0 +1,5 @@
+dnra1:
+  datacenter: ac1
+  node_rack: ac1_rack1
+  created_at: <%= 5.days.ago.to_s :db %>
+  assigned_at: <%= 5.days.ago.to_s :db %>

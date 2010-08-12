@@ -1,0 +1,4 @@
+backup_volume:
+  name: backup_volume
+shared_space_volume:
+  name: shared_space_volume

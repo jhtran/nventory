@@ -1,32 +1,26 @@
 class VipsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /vips
   # GET /vips.xml
   $protocols = %w[ tcp udp both ]
   def index
-    includes = process_includes(Vip, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "vips.name"
-           when "name_reverse" then "vips.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = Vip.default_search_attribute
-      sort = 'vips.' + Vip.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = Vip.find(:all,
-                          :include => includes,
-                          :order => sort)
-    else
-      @objects = Vip.paginate(:all,
-                              :include => includes,
-                              :order => sort,
-                              :page => params[:page])
-    end
+    special_joins = {}
+
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = Vip
+    allparams[:webparams] = params
+    allparams[:special_joins] = special_joins
+
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -38,10 +32,7 @@ class VipsController < ApplicationController
   # GET /vips/1
   # GET /vips/1.xml
   def show
-    includes = process_includes(Vip, params[:include])
-    
-    @vip = Vip.find(params[:id],
-                    :include => includes)
+    @vip = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -52,12 +43,13 @@ class VipsController < ApplicationController
 
   # GET /vips/new
   def new
-    @vip = Vip.new
+    @vip = @object
+    @vip.build_ip_address
   end
 
   # GET /vips/1/edit
   def edit
-    @vip = Vip.find(params[:id])
+    @vip = @object
   end
 
   # POST /vips
@@ -80,7 +72,7 @@ class VipsController < ApplicationController
   # PUT /vips/1
   # PUT /vips/1.xml
   def update
-    @vip = Vip.find(params[:id])
+    @vip = @object
 
     respond_to do |format|
       if @vip.update_attributes(params[:vip])
@@ -97,7 +89,7 @@ class VipsController < ApplicationController
   # DELETE /vips/1
   # DELETE /vips/1.xml
   def destroy
-    @vip = Vip.find(params[:id])
+    @vip = @object
     @vip.destroy
 
     respond_to do |format|

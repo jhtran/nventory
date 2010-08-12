@@ -5,13 +5,9 @@
 
 <h1><%= tooltip(Account,:login,'Account')%>: <%=h @account.login %></h1>
 
-<%- if @account.admin? -%>
-<p><em>This is an admin account.</em></p>
-<%- end -%>
-
 <p><strong><%= tooltip(Account,:name)%>:</strong> <%=h @account.name %><br />
 <strong><%= tooltip(Account,:email_address)%>:</strong> <%=h @account.email_address %><br />
-<%= link_to "User Audits", audits_path(:user_id => @account.id) %>
+<%= link_to "User Audits", audits_path(:exact_user_id => @account.id) %>
 </p>
 
 <p class="metadata"><strong><%= tooltip(Account,:created_at)%>:</strong> <%= h(@account.created_at) %><br />
@@ -19,8 +15,13 @@
 
 </div>
 
-<p><%= link_to 'Edit', edit_account_path(@account) %> | 
-<%= link_to 'Delete', account_path(@account), :confirm => 'Are you sure?', :method => :delete %></p>
+<!-- table list of all accounts and permissions attr to this obj --%>
+<div id='roles'>
+  <%= render :partial => 'shared/roles', :locals => {:obj => @account.authz} %>
+</div>
 
-<%= render :partial => 'shared/version_information', :locals => { :object => @account} %>
+<div class=relationship>
+  <%= render :partial => 'account_groups', :locals => {:obj => @account.authz} %>
+</div>
+
 <%= @tooltips %>

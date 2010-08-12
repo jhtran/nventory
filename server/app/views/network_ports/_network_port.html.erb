@@ -1,0 +1,5 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(NetworkPort,:number) %></strong> <em>*</em> <br /> <%= f.text_field :number%></p>
+<p><strong><%= tooltip(NetworkPort,:protocol) %></strong> <br /> <%= f.text_field :protocol%></p>
+
+<%= @tooltips if ttflag %>

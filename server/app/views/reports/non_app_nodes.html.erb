@@ -1,0 +1,30 @@
+<% @tooltips = [] %>
+<div class="record_view">
+  <h1>Application to Node Assignments Report:</h1>
+</div>
+
+<div class=relationship>
+  <div id="assigned_keywords"><h3>Assigned Nodes</h3></div>
+  <p id="assigned_keywords_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+  <p id='show_assigned_keywords'>
+    <%= button_to_remote 'Show', :url => {:controller => 'reports', :action => :assigned_keywords}, 
+           :loading => "Element.hide('show_assigned_keywords');Element.show('assigned_keywords_spinner')", 
+           :loaded => "Element.hide('assigned_keywords_spinner')" %>
+  </p>
+</div>
+
+<div class=relationship>
+  <div id="unassigned_nodes"><h3>Nodes Not Assigned</h3></div>
+  <p id="unassigned_nodes_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+  <p id='show_unassigned_nodes'>
+    <%= button_to_remote 'Show', :url => {:controller => 'reports', :action => :unassigned_nodes}, 
+           :loading => "Element.hide('show_unassigned_nodes');Element.show('unassigned_nodes_spinner')", 
+           :loaded => "Element.hide('unassigned_nodes_spinner')" %>
+    <%= button_to_remote 'Show Not In Service', :url => {:controller => 'reports', :action => :unassigned_nodes, :mode => 'notin'}, 
+           :loading => "Element.hide('show_unassigned_nodes');Element.show('unassigned_nodes_spinner')", 
+           :loaded => "Element.hide('unassigned_nodes_spinner')" %>
+  </p>
+</div> 
+
+<%= javascript_tag("Element.hide('assigned_keywords_spinner')") %>
+<%= javascript_tag("Element.hide('unassigned_nodes_spinner')") %>

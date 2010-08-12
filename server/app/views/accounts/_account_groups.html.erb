@@ -1,0 +1,30 @@
+<h2>Account Groups</h2>
+<p id="show_account_groups">
+  <%= button_to_remote "Show", 
+      :url => {:action => :get_deps, :id => @account.id, :partial => 'account_group_assignments' }, 
+      :update => 'account_groups', :after => "Element.hide('show_account_groups')", 
+      :loading => "Element.show('show_account_groups_spinner')", 
+      :loaded => "Element.show('hide_account_groups');Element.hide('show_account_groups_spinner')" %></p>
+
+<p id="hide_account_groups">
+  <%= button_to_remote "Hide", :url => {:action => :get_deps}, :update => 'account_groups', 
+      :after => "Element.hide('hide_account_groups');Element.show('show_account_groups')" %></p>
+
+<p id="show_account_groups_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+<div id="account_groups"> </div>
+
+<div id="create_account_group">
+  <%= render :partial => 'create_account_group' %>
+</div>
+
+<p id="add_account_groups_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+<p id="add_account_group_link">
+  <%= link_to_function 'Add AccountGroup', "Element.show('create_account_group');Element.hide('add_account_group_link')" if allow_perm(@account,'updater') %>
+</p>
+
+<%= javascript_tag "Element.hide('create_account_group')" %>
+<%= javascript_tag "Element.hide('hide_account_groups')" %>
+<%= javascript_tag "Element.hide('show_account_groups_spinner')" %>
+<%= javascript_tag "Element.hide('add_account_groups_spinner')" %>

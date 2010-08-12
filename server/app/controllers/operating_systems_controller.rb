@@ -1,31 +1,25 @@
 class OperatingSystemsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /operating_systems
   # GET /operating_systems.xml
   def index
-    includes = process_includes(OperatingSystem, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "operating_systems.name"
-           when "name_reverse" then "operating_systems.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = OperatingSystem.default_search_attribute
-      sort = 'operating_systems.' + OperatingSystem.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = OperatingSystem.find(:all,
-                                      :include => includes,
-                                      :order => sort)
-    else
-      @objects = OperatingSystem.paginate(:all,
-                                          :include => includes,
-                                          :order => sort,
-                                          :page => params[:page])
-    end
+    special_joins = {}
+
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = OperatingSystem
+    allparams[:webparams] = params
+    allparams[:special_joins] = special_joins
+
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -37,10 +31,7 @@ class OperatingSystemsController < ApplicationController
   # GET /operating_systems/1
   # GET /operating_systems/1.xml
   def show
-    includes = process_includes(OperatingSystem, params[:include])
-    
-    @operating_system = OperatingSystem.find(params[:id],
-                                             :include => includes)
+    @operating_system = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -51,12 +42,12 @@ class OperatingSystemsController < ApplicationController
 
   # GET /operating_systems/new
   def new
-    @operating_system = OperatingSystem.new
+    @operating_system = @object
   end
 
   # GET /operating_systems/1/edit
   def edit
-    @operating_system = OperatingSystem.find(params[:id])
+    @operating_system = @object
   end
 
   # POST /operating_systems
@@ -79,7 +70,7 @@ class OperatingSystemsController < ApplicationController
   # PUT /operating_systems/1
   # PUT /operating_systems/1.xml
   def update
-    @operating_system = OperatingSystem.find(params[:id])
+    @operating_system = @object
 
     respond_to do |format|
       if @operating_system.update_attributes(params[:operating_system])
@@ -96,7 +87,7 @@ class OperatingSystemsController < ApplicationController
   # DELETE /operating_systems/1
   # DELETE /operating_systems/1.xml
   def destroy
-    @operating_system = OperatingSystem.find(params[:id])
+    @operating_system = @object
     @operating_system.destroy
 
     respond_to do |format|

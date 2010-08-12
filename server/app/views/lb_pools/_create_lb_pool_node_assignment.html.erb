@@ -1,0 +1,13 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :lb_pool_node_assignment, :url => {:controller => 'lb_pool_node_assignments', :action => :create, :div=> 'node_assignments' }) do |f| %>
+  <p>Node:
+  
+  <%- to_array = Node.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+  
+  <%= f.select( :node_id, to_array, { :include_blank => true } ) %>
+  <%= f.hidden_field( :node_group_id, { :value => @lb_pool.id } ) %>
+  
+  <%= submit_tag "Assign" %> | <%= link_to_function 'Cancel', "Element.show('add_node_assignment_link');Element.hide('create_node_assignment')"%></p>
+<% end %>
+
+<%= @tooltips if ttflag %>

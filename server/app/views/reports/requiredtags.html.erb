@@ -1,0 +1,41 @@
+<h1>Required Tag Membership</h1>
+<font color=green size=1>Required Tags: <%= links_to_requiredtags %> </font></p>
+
+<script type="text/javascript" src="/javascripts/swfobject.js"></script>
+
+<div class="record_view" id="summary">
+  <p><strong>Met Requirements:</strong><font color=blue> <%= @goodnodes.size %></font>
+    <a id="show_met_button"><%= button_to_remote 'Show', :url => {:controller => 'reports', :action => :required_tag_membership, :mode => :met},
+            :loading => "Element.show('show_met_spinner');Element.hide('show_met_button')", :loaded => "Element.hide('show_met_spinner')" %></a>
+  <a id="toggle_met"><%= button_to_function 'Hide', "Element.hide('met_block');Element.hide('toggle_met');Element.show('show_met_button')" %></a><br />
+  <strong>Duplicate Membership:</strong><font color=green> <%= @dupnodes.size %></font>
+  <a id="show_dup_button"><%= button_to_remote 'Show', :url => {:controller => 'reports', :action => :required_tag_membership, :mode => :dup},
+          :loading => "Element.show('show_dup_spinner');Element.hide('show_dup_button')", :loaded => "Element.hide('show_dup_spinner')" %></a>
+  <a id="toggle_dup"><%= button_to_function 'Hide', "Element.hide('dup_block');Element.hide('toggle_dup');Element.show('show_dup_button')" %></a><br />
+  <strong>Have Not Met Requirements:</strong><font color=red> <%= @badnodes.size %></font>
+  <a id="show_notmet_button"><%= button_to_remote 'Show', :url => {:controller => 'reports', :action => :required_tag_membership, :mode => :notmet},
+          :loading => "Element.show('show_notmet_spinner');Element.hide('show_notmet_button')", :loaded => "Element.hide('show_notmet_spinner')" %></a>
+  <a id="toggle_notmet"><%= button_to_function 'Hide', "Element.hide('notmet_block');Element.hide('toggle_notmet');Element.show('show_notmet_button')" %></a><br />
+</div>
+
+<p id="show_met_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+<div class="relationship" id="met_block">
+  <h4>Nodes that have met the node_group tag requirements</h4>
+  <div id="met"></div>
+</div>
+
+<p id="show_dup_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+<div class="relationship" id="dup_block">
+  <h4>Nodes with <font color="red">more than 1 membership</font> to any node_group tag</h4>
+  <div id="dup"></div>
+</div>
+
+<p id="show_notmet_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+<div class="relationship" id="notmet_block">
+  <h4>Nodes that did <font color=red>not</font> meet the node_group tag requirements</h4>
+  <div id="notmet"></div>
+</div>
+  
+<%= javascript_tag "Element.hide('show_met_spinner');Element.hide('toggle_met');Element.hide('met_block')" %>
+<%= javascript_tag "Element.hide('show_dup_spinner');Element.hide('toggle_dup');Element.hide('dup_block')" %>
+<%= javascript_tag "Element.hide('show_notmet_spinner');Element.hide('toggle_notmet');Element.hide('notmet_block')" %>

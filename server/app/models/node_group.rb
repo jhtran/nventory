@@ -1,4 +1,7 @@
 class NodeGroup < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  acts_as_taggable 
   named_scope :def_scope
   
   acts_as_commentable
@@ -21,6 +24,20 @@ class NodeGroup < ActiveRecord::Base
   has_many :parent_groups, :through => :assignments_as_child
   has_many :child_groups,  :through => :assignments_as_parent
 
+  # for when node_group is tagged as 'service'
+  has_many :service_assignments_as_parent,
+           :foreign_key => 'parent_id',
+           :class_name => 'ServiceServiceAssignment',
+           :dependent => :destroy
+  has_many :service_assignments_as_child,
+           :foreign_key => 'child_id',
+           :class_name => 'ServiceServiceAssignment',
+           :dependent => :destroy
+  has_many :parent_services, :through => :service_assignments_as_child, :class_name => 'Service'
+  has_many :child_services,  :through => :service_assignments_as_parent, :class_name => 'Service'
+  has_one  :service_profile, :dependent => :destroy, :foreign_key => 'service_id'
+  accepts_nested_attributes_for :service_profile, :allow_destroy => true
+
   # This is used by the edit page in the view
   # http://lists.rubyonrails.org/pipermail/rails/2006-August/059801.html
   def child_group_ids
@@ -32,6 +49,8 @@ class NodeGroup < ActiveRecord::Base
 
   has_many :node_group_node_assignments, :dependent => :destroy
   has_many :nodes, :through => :node_group_node_assignments
+  has_many :node_group_vip_assignments, :dependent => :destroy
+  has_many :vips, :through => :node_group_vip_assignments
 
   belongs_to :lb_profile
 
@@ -49,22 +68,27 @@ class NodeGroup < ActiveRecord::Base
       :message => 'must be a valid email address',
       :allow_nil => true,
       :allow_blank => true
+
+  def self.default_includes
+    # The default display index_row columns
+    return [:nodes]
+  end
       
   def self.default_search_attribute
     'name'
   end
   
   def real_node_group_node_assignments
-    node_group_node_assignments.reject { |ngna| ngna.virtual_assignment? }
+    node_group_node_assignments.find(:all,:include => {:node =>{}}, :conditions => "node_group_node_assignments.virtual_assignment is null or node_group_node_assignments.virtual_assignment != 1")
   end
   def real_nodes
-    real_node_group_node_assignments.collect { |ngna| ngna.node }
+    real_node_group_node_assignments.collect { |ngna| ngna.node unless ngna.node.nil? }.compact
   end
   def real_nodes_names
-    real_node_group_node_assignments.collect { |ngna| ngna.node.name }.join(",")
+    real_node_group_node_assignments.collect { |ngna| ngna.node.name unless ngna.node.nil? }.compact.join(",")
   end
   def virtual_node_group_node_assignments
-    node_group_node_assignments.select { |ngna| ngna.virtual_assignment? }
+    node_group_node_assignments.find(:all,:include => {:node_group =>{},:node =>{}}, :conditions => "node_group_node_assignments.virtual_assignment = 1")
   end
   def virtual_nodes
     virtual_node_group_node_assignments.collect { |ngna| ngna.node }
@@ -73,6 +97,25 @@ class NodeGroup < ActiveRecord::Base
     virtual_node_group_node_assignments.collect { |ngna| ngna.node.name }.join(",")
   end
   
+  def real_node_group_vip_assignments
+    node_group_vip_assignments.reject { |ngna| ngna.virtual_assignment? }
+  end
+  def real_vips
+    real_node_group_vip_assignments.collect { |ngna| ngna.vip}
+  end
+  def real_vips_names
+    real_node_group_vip_assignments.collect { |ngna| ngna.vip.name }.join(",")
+  end
+  def virtual_node_group_vip_assignments
+    node_group_vip_assignments.select { |ngna| ngna.virtual_assignment? }
+  end
+  def virtual_vips
+    virtual_node_group_vip_assignments.collect { |ngna| ngna.vip}
+  end
+  def virtual_vips_names
+    virtual_node_group_vip_assignments.collect { |ngna| ngna.vip.name }.join(",")
+  end
+
   # This method ensures that the child groups of this node group are the
   # groups represented by the group ids passed to the method
   def set_child_groups(groupids)
@@ -261,7 +304,7 @@ class NodeGroup < ActiveRecord::Base
   end
 
   def is_service?
-    Service.find(self.id).service_profile.nil? ? (return false) : (return true)
+    self.tag_list.include?('services')
   end
 
   def to_service
@@ -270,6 +313,68 @@ class NodeGroup < ActiveRecord::Base
       return nil
     end
     return svc
+  end
+
+  def inherited_users
+    account_groups = accepted_roles.collect {|ar| ar.roles_users.collect {|ru| ru.account_group unless ru.account_group.name =~ /\.self$/ }}.flatten.uniq.reject(&:nil?)
+    account_groups.collect(&:all_self_groups).flatten.uniq
+  end
+
+  def self.preferred_includes
+    incls = {}
+    incls[:tag] = { :assoc => Tagging.reflect_on_association(:tag),
+                             :include => {:taggings=>{:tag=>{}}}}
+    incls[:tags] = { :assoc => Tagging.reflect_on_association(:tag),
+                             :include => {:taggings=>{:tag=>{}}}}
+    return incls
+  end
+
+  def recursive_contacts
+    data = {}
+    owners = []
+    contacts = []
+    self.owner.split(',').each{|a| owners << a} if self.owner
+    self.service_profile.contact.split(',').each{|a| contacts << a} if self.service_profile.contact
+    recursive_child_services.each do |child|
+      child.owner.split(',').each {|a| owners << a} if child.owner
+      child.service_profile.contact.split(',').each {|a| contacts << a} if child.service_profile.contact
+    end
+    data[:owners] = owners.collect {|a| lookup_email(a)}.uniq.compact
+    data[:contacts] = contacts.collect {|a| lookup_email(a)}.uniq.compact
+    data[:all] = data[:owners] + data[:contacts]
+  end
+
+  def lookup_email(contact)
+    return contact if contact =~ /@/
+    if SSO_AUTH_SERVER && SSO_PROXY_SERVER
+      uri = URI.parse("https://#{SSO_AUTH_SERVER}/users.xml?login=#{contact}")
+      http = Net::HTTP::Proxy(SSO_PROXY_SERVER,8080).new(uri.host,uri.port)
+      http.use_ssl = true
+      sso_xmldata = http.get(uri.request_uri).body
+      sso_xmldoc = Hpricot::XML(sso_xmldata)
+      email = (sso_xmldoc/:email).first.innerHTML if (sso_xmldoc/:email).first
+      email ? (return email) : (return nil)
+    else
+      return nil
+    end
+  end
+
+  def recursive_child_services
+    recurse_child_services(self)
+  end
+
+  def recurse_child_services(ng)
+    children = []
+    if ng.child_services.size > 0
+      ng.child_services.each do |child|
+        children << child
+        results = recurse_child_services(child)
+        results.each{|a| children << a}
+      end
+    else
+      return []
+    end
+    return children
   end
 
 end

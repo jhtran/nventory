@@ -5,26 +5,38 @@
 
 <h1>Address: <%=h @ip_address.address %></h1>
 
-<p><strong><%= tooltip(IpAddress,:network_interface) %>:</strong> <%= link_to h(@ip_address.network_interface.name), network_interface_url(@ip_address.network_interface_id) if !@ip_address.network_interface_id.nil? %></p>
+<p><strong><%= tooltip(IpAddress,:network_interface) %>:</strong>
+<%- unless @ip_address.network_interface.nil? %>
+  <%= link_to h(@ip_address.network_interface.name), network_interface_url(@ip_address.network_interface_id) %> : 
+  <%= link_to h(@ip_address.network_interface.node.name), @ip_address.network_interface.node %>
+<%- end -%></p>
 
 <p><strong><%= tooltip(IpAddress,:address_type) %>:</strong> <%= h(@ip_address.address_type) %></p>
 <p><strong><%= tooltip(IpAddress,:netmask) %>:</strong> <%= h(@ip_address.netmask) %></p>
 <p><strong><%= tooltip(IpAddress,:broadcast) %>:</strong> <%= h(@ip_address.broadcast) %></p>
+<p><strong><%= tooltip(IpAddress,:network_ports) %>:</strong>
+  <%- unless @ip_address.network_ports.empty? %>
+    <ul>
+    <%- @ip_address.ip_address_network_port_assignments.each do |ipa| %>
+      <li>
+      <%= link_to "#{ipa.network_port.number}/#{ipa.network_port.protocol}",ipa.network_port %>
+        <%- if ipa.nmap_last_seen_at || ipa.nmap_first_seen_at %>
+          <ul>
+            <li><%= tooltip(ipa.class,:nmap_first_seen_at) %>: <%=ipa.nmap_first_seen_at%></li>
+            <li><%= tooltip(ipa.class,:nmap_last_seen_at) %>: <%=ipa.nmap_last_seen_at%></li>
+          </ul>
+        <%- end -%>
+      </li>
+    <%- end -%>
+    </ul>
+  <%- else -%>
+    <br/>
+  <%- end %></p>
 
 <p class="metadata"><strong><%= tooltip(IpAddress,:created_at) %>:</strong> <%= h(@ip_address.created_at) %><br />
-<strong><%= tooltip(IpAddress,:updated_at) %>:</strong> <%= h(@ip_address.updated_at) %></p>
+<strong><%= tooltip(IpAddress,:updated_at) %>:</strong> <%= h(@ip_address.updated_at) %><br/>
+<strong><%= tooltip(IpAddress,:nmap_last_scanned_at) %>:</strong> <%= h(@ip_address.nmap_last_scanned_at) %></p>
 
 </div>
-
-<div class="relationship">
-
-<%= render :partial => 'shared/comments', :locals => { :object => @ip_address} %>
-
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_ip_address_path(@ip_address) %> | 
-<%= link_to 'Delete', ip_address_path(@ip_address), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @ip_address} %>
 
 <%= @tooltips %>

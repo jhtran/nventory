@@ -1,0 +1,15 @@
+jsmithauthz:
+  authz: jsmith
+  account_group: jsmith_self
+jdoeauthz:
+  authz: jdoe
+  account_group: jdoe_self
+jblowauthz:
+  authz: jblow
+  account_group: jblow_self
+testuserauthz:
+  authz: testuser
+  account_group: testuser_self
+autoregauthz:
+  authz: autoreg
+  account_group: autoreg_self

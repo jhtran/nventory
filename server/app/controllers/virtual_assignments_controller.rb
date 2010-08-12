@@ -1,20 +1,22 @@
 class VirtualAssignmentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /virtual_assignments
   # GET /virtual_assignments.xml
   def index
-    # The default display index_row columns (node_groups model only displays local table name)
-    default_includes = []
     special_joins = {}
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = VirtualAssignment
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     
     respond_to do |format|
@@ -26,7 +28,7 @@ class VirtualAssignmentsController < ApplicationController
   # GET /virtual_assignments/1
   # GET /virtual_assignments/1.xml
   def show
-    @virtual_assignment = VirtualAssignment.find(params[:id])
+    @virtual_assignment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -36,18 +38,22 @@ class VirtualAssignmentsController < ApplicationController
 
   # GET /virtual_assignments/new
   def new
-    @virtual_assignment = VirtualAssignment.new
+    @virtual_assignment = @object
   end
 
   # GET /virtual_assignments/1/edit
   def edit
-    @virtual_assignment = VirtualAssignment.find(params[:id])
+    @virtual_assignment = @object
   end
 
   # POST /virtual_assignments
   # POST /virtual_assignments.xml
   def create
     @virtual_assignment = VirtualAssignment.new(params[:virtual_assignment])
+    vmhost = Node.find(params[:virtual_assignment][:parent_id])
+    return unless filter_perms(@auth,vmhost,['updater'])
+    vmguest = Node.find(params[:virtual_assignment][:child_id])
+    return unless filter_perms(@auth,vmguest,['updater'])
 
     respond_to do |format|
       if @virtual_assignment.save
@@ -76,7 +82,11 @@ class VirtualAssignmentsController < ApplicationController
   # PUT /virtual_assignments/1
   # PUT /virtual_assignments/1.xml
   def update
-    @virtual_assignment = VirtualAssignment.find(params[:id])
+    @virtual_assignment = @object
+    vmhost = @virtual_assignment.parent
+    return unless filter_perms(@auth,vmhost,['updater'])
+    vmguest = @virtual_assignment.child
+    return unless filter_perms(@auth,vmguest,['updater'])
 
     respond_to do |format|
       if @virtual_assignment.update_attributes(params[:virtual_assignment])
@@ -93,9 +103,11 @@ class VirtualAssignmentsController < ApplicationController
   # DELETE /virtual_assignments/1
   # DELETE /virtual_assignments/1.xml
   def destroy
-    @virtual_assignment = VirtualAssignment.find(params[:id])
+    @virtual_assignment = @object
     @virtual_host = @virtual_assignment.virtual_host
+    return unless filter_perms(@auth,@virtual_host,['updater'])
     @virtual_guest = @virtual_assignment.virtual_guest
+    return unless filter_perms(@auth,@virtual_guest,['updater'])
     
     begin
       @virtual_assignment.destroy
@@ -117,7 +129,7 @@ class VirtualAssignmentsController < ApplicationController
       format.js {
         render(:update) { |page|
           
-          page.replace_html 'virtual_assignments', {:partial => 'nodes/virtual_assignments', :locals => { :node => @node} }
+          page.replace_html 'virtual_assignments', {:partial => 'nodes/virtual_assignments', :locals => { :node => @virtual_host} }
         }
       }
       format.xml  { head :ok }

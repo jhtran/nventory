@@ -1,10 +1,13 @@
 class ServiceServiceAssignment < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   named_scope :def_scope
   
   acts_as_reportable
   
-  belongs_to :parent_service, :foreign_key => 'parent_id', :class_name => 'Service'
-  belongs_to :child_service,  :foreign_key => 'child_id',  :class_name => 'Service'
+  belongs_to :parent_service, :foreign_key => 'parent_id', :class_name => 'NodeGroup'
+  belongs_to :child_service,  :foreign_key => 'child_id',  :class_name => 'NodeGroup'
   
   validates_presence_of :parent_id, :child_id
   validates_uniqueness_of :parent_id, :scope => [:parent_id,:child_id]

@@ -5,7 +5,6 @@ require 'vips_controller'
 class VipsController; def rescue_action(e) raise e end; end
 
 class VipsControllerTest < Test::Unit::TestCase
-  fixtures :vips
 
   def setup
     @controller = VipController.new

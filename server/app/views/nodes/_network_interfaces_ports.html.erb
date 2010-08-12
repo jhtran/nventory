@@ -1,0 +1,38 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p>
+<%- if node.network_interfaces.length > 0 -%>
+  <ul>
+  <%- node.network_interfaces.each do |nic| -%>
+    <li>
+      <%= link_to nic.name, network_interface_url(nic) %>
+      <%- if nic.interface_type.to_s == "Ethernet" && nic.switch_port %>
+        <%= "=>" %>
+        <%= link_to "port: #{nic.switch_port.name} (#{nic.switch_port.producer.name})" , nic.switch_port %>
+      <% end %>
+    </li>
+    <ul>
+    <%- nic.ip_addresses.each do |ip| -%>
+      <li>
+        <%= link_to ip.address, ip_address_url(ip) %>
+      </li>
+      <ul>
+        <%- ip.ip_address_network_port_assignments.each do |ipa| -%>
+          <li>
+          <%= link_to "#{ipa.network_port.number}/#{ipa.network_port.protocol}", ipa.network_port -%>
+          <%= (" (#{ipa.apps})" unless ipa.apps.empty?) if ipa.apps -%>
+          </li>
+        <%- end -%>
+      </ul>
+    <%- end -%>
+    </ul>
+  <%- end -%>
+  </ul>
+<%- else -%>
+  <p>This node does not have any network interfaces defined.</p>
+<%- end -%>
+</p>
+<p id="show_nic_nmap">
+  <%= button_to_remote "Show Nmap Info", :url => {:action => :get_nics, :id => node.id,
+      :partial => 'network_interfaces_nmap' }, :update => 'network_interfaces', :loading => "Element.show('show_nics_spinner')",
+      :after => "Element.hide('show_nic_nmap')", :loaded => "Element.show('hide_nics');Element.hide('show_nics_spinner')" %></p>
+<%= @tooltips if ttflag %>

@@ -1,0 +1,6 @@
+jsmith_global_admin:
+  role: global_admin
+  account_group: jsmith_self
+jdoe_global_updater:
+  role: global_updater
+  account_group: jdoe_self

@@ -1,0 +1,12 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(Drive,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+<p><strong><%= tooltip(Drive,:product) %></strong> <br /> <%= f.text_field :product%></p>
+<p><strong><%= tooltip(Drive,:vendor) %></strong> <br /> <%= f.text_field :vendor%></p>
+<p><strong><%= tooltip(Drive,:handle) %></strong> <br /> <%= f.text_field :handle%></p>
+<p><strong><%= tooltip(Drive,:description) %></strong> <br /> <%= f.text_field :description%></p>
+<p><strong><%= tooltip(Drive,:businfo) %></strong> <br /> <%= f.text_field :businfo%></p>
+<p><strong><%= tooltip(Drive,:physid) %></strong> <br /> <%= f.text_field :physid%></p>
+<p><strong><%= tooltip(Drive,:size) %></strong> <br /> <%= f.text_field :size%></p>
+<p><strong><%= tooltip(Drive,:dev) %></strong> <br /> <%= f.text_field :dev%></p>
+
+<%= @tooltips if ttflag %>

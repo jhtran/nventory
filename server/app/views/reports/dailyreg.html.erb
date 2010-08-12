@@ -1,0 +1,19 @@
+<h1>Daily Nodes Updates</h1>
+<p><font color=green size=1>** only reflects updates by user autoreg</font></p>
+<script type="text/javascript" src="/javascripts/swfobject.js"></script>
+
+<div id="dailyreg_chart"> </div>
+
+<p id="hide_chart"><%= button_to_function('Hide Chart',"Element.hide('hide_chart');Element.hide('dailyreg_chart');Element.show('show_chart')") %> </p>
+
+<p id="show_chart">
+  <%- after = "Element.show('hide_chart');Element.hide('show_chart');Element.show('dailyreg_chart')" %>
+  <%= button_to_remote 'Hourly Chart', :url => {:controller => 'reports', :action => 'dailyreg', :mode => 'hourly'}, :after => after %>
+  <%= button_to_remote '30 Day Chart', :url => {:controller => 'reports', :action => 'dailyreg', :mode => '30days'}, :after => after %>
+  <%= button_to_remote '3 Month Chart', :url => {:controller => 'reports', :action => 'dailyreg', :mode => '3months'}, :after => after %>
+  <%= button_to_remote '6 Month Chart', :url => {:controller => 'reports', :action => 'dailyreg', :mode => '6months'}, :after => after %>
+  <%= button_to_remote '1 Year Chart', :url => {:controller => 'reports', :action => 'dailyreg', :mode => '1year'}, :after => after %>
+</p>
+
+<%= javascript_tag("Element.hide('dailyreg_chart')") %>
+<%= javascript_tag("Element.hide('hide_chart')") %>

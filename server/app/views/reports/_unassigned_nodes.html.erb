@@ -1,0 +1,32 @@
+<h3>Nodes Not Assigned: <%= "<font color=green>" + unassigned.size.to_s + "</font>" %></h3>
+<p><font size=1 color=green>** Conditions: status is 'inservice', hardware_profile is like '%proliant%' or '%unknown unknown%' or '%sun-fire%' or '%ultra%'</font></p>
+<p><%= button_to_remote 'Hide', :url => {:controller => 'reports', :action => :unassigned_nodes, :hide => 1},
+       :loading => "Element.show('unassigned_nodes_spinner')",
+       :loaded => "Element.hide('unassigned_nodes_spinner')" %></p>
+<table cellspacing="0" class="styled">
+  <thead>
+    <tr>
+      <th nowrap="nowrap" width="5%">&nbsp;</th>
+      <th>Node</th>
+      <th>Status</th>
+      <th>NodeGroups</th>
+    </tr>
+  </thead>
+  <tbody>
+    <%- unassigned.each do |node| %>
+      <tr class="<%= cycle('odd', 'even') -%>">
+        <td nowrap="nowrap" width="5%">
+        <td><%= link_to node.name,node%></td>
+        <td><%= node.status.name %></td>
+        <td><ul>
+          <%- node.node_groups.each do |ng| %>
+            <li><%= link_to ng.name,ng %></li>
+          <%- end -%>
+        </td></ul>
+      </tr>
+    <%- end -%>
+  </tbody>
+</table>
+<p><%= button_to_remote 'Hide', :url => {:controller => 'reports', :action => :unassigned_nodes, :hide => 1},
+       :loading => "Element.show('unassigned_nodes_spinner')",
+       :loaded => "Element.hide('unassigned_nodes_spinner')" %></p>

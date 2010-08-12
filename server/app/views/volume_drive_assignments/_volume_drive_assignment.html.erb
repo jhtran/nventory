@@ -1,0 +1,8 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(VolumeDriveAssignment,:volume) %>:</strong> <br /><%= f.select :volume_id, Volume.find(:all, :order => 'name').collect { |r| [ r.name, r.id ] }, { :include_blank => true } %></p>
+
+<p><strong><%= tooltip(VolumeDriveAssignment,:drive) %>:</strong> <br /><%= f.select :drive_id, Drive.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }, { :include_blank => true } %></p>
+
+<p><strong><%= tooltip(VolumeDriveAssignment,:assigned_at) %>:</strong> <br/><%= f.datetime_select :assigned_at %></p>
+
+<%= @tooltips if ttflag %>

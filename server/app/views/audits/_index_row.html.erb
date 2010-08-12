@@ -13,7 +13,7 @@
     <%- else -%>
       <%- if !index_row.changes.nil? && index_row.changes[def_attr.to_s] -%>
           <%- descript = " : #{index_row.changes[def_attr.to_s]}" -%>
-          <%= index_row.auditable_type + "#{descript} (no longer exists)" %>
+          <%= index_row.auditable_type + "#{descript} (ID: #{index_row.auditable_id} no longer exists)" %>
       <%- else -%>
         <%= index_row.auditable_type + " no longer exists" %>
       <%- end -%>
@@ -25,6 +25,7 @@
   <td><%= index_row.action %></td>
   <td>
     <table cellspacing="0" class="arattributes" summary="Changes in this version of the model.">
+      <%= "<tr><th>id</th><td>#{index_row.auditable_id}</td></tr>" if index_row.action == 'destroy' %>
       <%- unless index_row.changes.nil? -%>
         <%- index_row.changes.each do |attribute, oldnew| -%>
           <%- oldvalue = nil -%>
@@ -42,7 +43,12 @@
           <%- # Treat nil and '' as the same -%>
           <%- if oldvalue == '' then oldvalue = nil end -%>
           <%- if newvalue == '' then newvalue = nil end -%>
-          <%- if oldvalue != newvalue -%>
+          <%- if (index_row.action == 'destroy') && newvalue -%>
+            <tr>
+              <th><%= h(attribute) %></th>
+              <td><%=newvalue %> </td>
+            </tr>
+          <%- elsif oldvalue != newvalue -%>
             <tr>
               <th><%= h(attribute) %></th>
               <td>

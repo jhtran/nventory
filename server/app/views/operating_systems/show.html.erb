@@ -18,21 +18,6 @@
 
 </div>
 
-<div class="relationship">
-
-<%= render :partial => 'shared/comments', :locals => { :object => @operating_system} %>
-
-</div> <!-- end relationship -->
-
-<div class="relationship">
-
-<%= link_to 'Search', "#{nodes_path}?exact_operating_system=#{CGI.escape(@operating_system.name)}" %> for nodes with this operating system
-
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_operating_system_path(@operating_system) %> | 
-<%= link_to 'Delete', operating_system_path(@operating_system), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @operating_system} %>
+<div class="relationship"><p><%= link_to 'Search', "#{nodes_path}?exact_operating_system=#{CGI.escape(@operating_system.name)}" %> for nodes with this operating system</p></div>
 
 <%= @tooltips %>

@@ -1,0 +1,19 @@
+<%- @tooltips = [] %>
+<%- @page_title =  "IpAddress NetworkPort Assignment: " + h(@ip_address_network_port_assignment.ip_address.address) + '<->' + h(@ip_address_network_port_assignment.network_port.number) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(IpAddress,:ip_address_network_port_assignment) %></h1>
+
+<p><strong><%= tooltip(IpAddressNetworkPortAssignment,:ip_address) %>:</strong> <%= link_to @ip_address_network_port_assignment.ip_address.address, @ip_address_network_port_assignment.ip_address %><br />
+<strong><%= tooltip(IpAddressNetworkPortAssignment,:network_port) %>:</strong> <%= link_to "#{@ip_address_network_port_assignment.network_port.number}/#{@ip_address_network_port_assignment.network_port.protocol}", @ip_address_network_port_assignment.network_port %><br />
+<strong><%= tooltip(IpAddressNetworkPortAssignment,:assigned_at) %>:</strong> <%= h(@ip_address_network_port_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong><%= tooltip(IpAddressNetworkPortAssignment,:created_at) %>:</strong> <%= h(@ip_address_network_port_assignment.created_at) %><br />
+<strong><%= tooltip(IpAddressNetworkPortAssignment,:updated_at) %>:</strong> <%= h(@ip_address_network_port_assignment.updated_at) %></p>
+<p><strong><%= tooltip(IpAddressNetworkPortAssignment,:nmap_first_seen_at) %>:</strong> <%= h(@ip_address_network_port_assignment.nmap_first_seen_at) %><br/>
+<strong><%= tooltip(IpAddressNetworkPortAssignment,:nmap_last_seen_at) %>:</strong> <%= h(@ip_address_network_port_assignment.nmap_last_seen_at) %></p>
+
+</div>
+
+<%= @tooltips %>

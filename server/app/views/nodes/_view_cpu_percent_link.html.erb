@@ -1,0 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<font size=-2><%= button_to_function 'View CPU % Utilization Chart', "Element.show('cpu_percent_chart');Element.hide('view_cpu_percent_link')" %></font>
+
+<%= @tooltips if ttflag %>

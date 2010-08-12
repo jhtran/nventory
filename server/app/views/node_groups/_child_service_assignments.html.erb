@@ -1,0 +1,34 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if service.service_assignments_as_parent.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the child services assigned to this service.">
+  <caption><%= tooltip(NodeGroup,:child_services,'Service Clients') %></caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(NodeGroup,:name) %></th>
+	  <th><%= tooltip(NodeGroup,:nodes) %></th>
+      <th><%= tooltip(NodeGroup,:assigned_at) %></th>
+      <th><%= tooltip(NodeGroup,:owner) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in service.service_assignments_as_parent.sort{|a,b| a.child_service.name <=> b.child_service.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.child_service.name, node_group_path(assignment.child_service) %></td>
+	  <td><%= assignment.child_service.nodes.count %></th>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), service_service_assignment_path(assignment) %></td>
+      <td><%= mail_to assignment.child_service.owner %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => service_service_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete if allow_perm(service,'updater') && allow_perm(assignment.child_service,'updater') %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <strong><%= tooltip(NodeGroup,:child_services,'Service Clients') %></strong><br /><br />
+  <p>This service does not have any children.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

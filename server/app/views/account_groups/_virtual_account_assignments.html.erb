@@ -1,0 +1,43 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if account_group.assignments_as_self_group_parent.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the accounts assigned to this account_group.">
+  <h3><%= tooltip(AccountGroup,:virtual_accounts) %></h3>
+  <thead>
+  <tr>
+      <th><%= tooltip(Account,:name) %></th>
+      <th><%= tooltip(Account,:member_through) %></th>
+      <th><%= tooltip(Account,:assigned_at) %></th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in account_group.virtual_account_group_self_group_assignments.sort{|a,b| a.self_group.name <=> b.self_group.name} %>
+    <%- all_child_ag_ids = assignment.account_group.all_child_groups.collect{|cag| cag.id} -%>
+    <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+        <td><%= link_to assignment.self_group.name.sub(/\.self/,''), account_path(assignment.self_group.authz) %></td>
+        <td>
+          <%- unless assignment.self_group.real_account_groups.empty? %>
+            <%- virtual_membership = [] -%>
+            <%- assignment.self_group.recursive_real_account_groups.each do |ag| %>
+              <%- virtual_membership << ag if all_child_ag_ids.include?(ag.id) -%>
+            <%- end -%>
+            <%- if !virtual_membership.empty? -%>
+              <%- virtual_membership.uniq.each do |vag| -%>
+                <%= "<li>#{link_to vag.name, vag}</li>" %>
+              <%- end -%>
+            <%- else -%>
+              <%= "<b><font color='red'> *** DOESN'T BELONG TO ANY ACCOUNT GROUPS IN THE CHAIN.  DATABASE INCONSISTENCY! ***</font></b>" %>
+            <%- end -%>
+            <%- virtual_membership.clear -%>
+          <%- else -%>
+            <%= "<b><font color='red'>** DOESN'T BELONG TO ANY CHILD ACCOUNT GROUP OF THIS CHAIN!  BAD RECORD IN DATABASE! **</font></b>" %>
+          <%- end -%>
+        </td>
+        <td><%= assignment.assigned_at.to_formatted_s(:long) %></td>
+    </tr>
+  <%- end %>
+  </tbody>
+  </table>
+
+<%- end -%>
+
+<%= @tooltips if ttflag %>

@@ -1,6 +1,6 @@
 class VirtualAssignment < ActiveRecord::Base
   named_scope :def_scope
-  
+  acts_as_authorizable 
   acts_as_reportable
   
   belongs_to :virtual_host, :foreign_key => 'parent_id', :class_name => 'Node'

@@ -1,9 +1,11 @@
 class AuditsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /audits
   # GET /audits.xml
   def index
-
-    default_includes = []
     special_joins = {}
     # Custom sort parameter because we want to see the latest changes first
     params[:sort] = 'created_at_reverse'
@@ -12,12 +14,12 @@ class AuditsController < ApplicationController
     allparams = {}
     allparams[:mainmodel] = Audit
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
 
     respond_to do |format|
@@ -30,10 +32,7 @@ class AuditsController < ApplicationController
   # GET /audits/1
   # GET /audits/1.xml
   def show
-    includes = process_includes(Audit, params[:include])
-
-    @audit = Audit.find(params[:id],
-                            :include => includes)
+    @audit = @object
 
     respond_to do |format|
       format.html # show.html.erb

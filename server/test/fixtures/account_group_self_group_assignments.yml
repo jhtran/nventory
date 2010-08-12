@@ -1,0 +1,5 @@
+jsmith_admin:
+  account_group: administrators
+  self_group: jsmith_self
+  assigned_at: <%= 5.days.ago.to_s :db %>
+  created_at: <%= 5.days.ago.to_s :db %>

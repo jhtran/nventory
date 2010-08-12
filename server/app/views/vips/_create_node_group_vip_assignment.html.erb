@@ -1,0 +1,12 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :node_group_vip_assignment, :url => {:controller => 'node_group_vip_assignments', :action => :create, :div => 'node_group_assignments'} ) do |f| %>
+  <p><%= tooltip(Vip,:node_groups,'Node Group') %>:
+  
+  <%= f.select( :node_group_id, NodeGroup.find(:all, :select => 'id,name').collect{|a| [a.name,a.id]}, { :include_blank => true } ) %>
+  <%= f.hidden_field( :vip_id, { :value => @vip.id } ) %>
+
+  <%= submit_tag "Assign" %> | <%= link_to_function 'Cancel', "Element.show('add_node_group_assignment_link');Element.hide('create_node_group_assignment')"%></p>
+
+<% end %>
+
+<%= @tooltips if ttflag %>

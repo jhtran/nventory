@@ -1,0 +1,3 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(RolesUser,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+<%= @tooltips if ttflag %>

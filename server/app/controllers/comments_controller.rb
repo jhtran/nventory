@@ -1,21 +1,23 @@
 class CommentsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /comments
   # GET /comments.xml
   def index
-    # The default display index_row columns (node_groups model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = Comment
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     
     respond_to do |format|
@@ -28,10 +30,7 @@ class CommentsController < ApplicationController
   # GET /comments/1
   # GET /comments/1.xml
   def show
-    includes = process_includes(Comment, params[:include])
-    
-    @comment = Comment.find(params[:id],
-                            :include => includes)
+    @comment = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -42,12 +41,12 @@ class CommentsController < ApplicationController
 
   # GET /comments/new
   def new
-    @comment = Comment.new
+    @comment = @object
   end
 
   # GET /comments/1/edit
   def edit
-    @comment = Comment.find(params[:id])
+    @comment = @object
   end
 
   # GET /comments/field_names
@@ -93,7 +92,7 @@ class CommentsController < ApplicationController
   # PUT /comments/1
   # PUT /comments/1.xml
   def update
-    @comment = Comment.find(params[:id])
+    @comment = @object
 
     respond_to do |format|
       if @comment.update_attributes(params[:comment])

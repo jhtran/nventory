@@ -19,7 +19,7 @@
       <td><%= link_to_remote 'Delete',
                               :url => volume,
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(node,['updater']) %></td>
   </tr>
   <%- end %>
   </tbody>

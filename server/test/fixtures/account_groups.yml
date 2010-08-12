@@ -1,0 +1,14 @@
+jsmith_self:
+  name: jsmith.self
+jdoe_self:
+  name: jdoe.self
+jblow_self:
+  name: jblow.self
+testuser_self:
+  name: testuser.self
+autoreg_self:
+  name: autoreg.self
+administrators:
+  name: administrators
+unix_administrators:
+  name: unix_administrators

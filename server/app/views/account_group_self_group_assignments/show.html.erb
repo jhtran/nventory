@@ -1,0 +1,18 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Account Group Self Group Assignment: " + h(@account_group_self_group_assignment.account_group.name) + '<->' + h(@account_group_self_group_assignment.self_group.name) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(AccountGroup,:account_group_self_group_assignments,'Account Group Account Assignment') %></h1>
+
+<p><strong><%= tooltip(AccountGroupSelfGroupAssignment,:account_group) %>:</strong> <%= link_to @account_group_self_group_assignment.account_group.name, account_group_path(@account_group_self_group_assignment.account_group) %><br />
+<strong><%= tooltip(AccountGroupSelfGroupAssignment,:account) %>:</strong> <%= link_to @account_group_self_group_assignment.self_group.name.sub(/\.self/,''), account_group_path(@account_group_self_group_assignment.self_group) %><br />
+<strong><%= tooltip(AccountGroupSelfGroupAssignment,:virtual_assignment) %>:</strong> <%= h(@account_group_self_group_assignment.virtual_assignment) %><br />
+<strong><%= tooltip(AccountGroupSelfGroupAssignment,:assigned_at) %>:</strong> <%= h(@account_group_self_group_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong><%= tooltip(AccountGroupSelfGroupAssignment,:created_at) %>:</strong> <%= h(@account_group_self_group_assignment.created_at) %><br />
+<strong><%= tooltip(AccountGroupSelfGroupAssignment,:updated_at) %>:</strong> <%= h(@account_group_self_group_assignment.updated_at) %></p>
+
+</div>
+
+<%= @tooltips %>

@@ -27,31 +27,7 @@
     <div id="vip_lb_profile_assignments">
       <%= render :partial => 'vip_assignments', :locals => { :lb_profile => @lb_profile} %>
     </div>
-    
-    <%- if false -%>
-      <div id="create_vip_assignments">
-      <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'vip', :to => 'lb_profile'} %>
-      </div>
-      
-      <p id="new_vip">
-      
-      </p>
-      
-      <p id="add_vip_assignment_link">
-      <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'vip', :to => 'lb_profile'} %>
-      </p>
-    <%- end -%>
   </div>
 <%- end -%>
-
-<div class="relationship">
-  <%= render :partial => 'shared/comments', :locals => { :object => @lb_profile} %>
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_lb_profile_path(@lb_profile) %> | 
-<%= link_to 'Delete', lb_profile_path(@lb_profile), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @lb_profile} %>
-
 
 <%= @tooltips %>

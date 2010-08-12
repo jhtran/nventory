@@ -1,7 +1,7 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if lb_pool.nodes.count > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of all vips this lb_pool belongs to">
-  <caption>Nodes</caption>
+  <caption><%= tooltip(nil,:nodes,'Nodes',nodes_tooltip) %></caption>
   <thead>
   <tr>
       <th><%= tooltip(Node,:name) %></th>
@@ -23,14 +23,14 @@
       <td><%= link_to_remote 'Delete',
                               :url => assignment,
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(lb_pool,'updater') && allow_perm(assignment.node,'updater') %></td>
   </tr>
   <%- end %>
   </tbody>
   </table>
 
 <%- else -%>
-  <p>There aren't any Nodes belonging to this LB Pool.</p>
+  <p>There aren't any <%= tooltip(nil,:nodes,'Nodes',nodes_tooltip) %> belonging to this Load Balance Pool.</p>
 <%- end -%>
 
 <%= @tooltips if ttflag %>

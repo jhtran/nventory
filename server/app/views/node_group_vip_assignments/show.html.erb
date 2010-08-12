@@ -1,0 +1,18 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Node Group Vip Assignment: " + h(@node_group_vip_assignment.vip.name) + '<->' + h(@node_group_vip_assignment.node_group.name) %>
+
+<div class="record_view">
+
+<h1>Node Group Vip Assignment</h1>
+
+<p><strong><%= tooltip(NodeGroupVipAssignment,:vip) %>:</strong> <%= link_to @node_group_vip_assignment.vip.name, vip_path(@node_group_vip_assignment.vip) %><br />
+<strong><%= tooltip(NodeGroupVipAssignment,:node_group) %>:</strong> <%= link_to @node_group_vip_assignment.node_group.name, node_group_path(@node_group_vip_assignment.node_group) %><br />
+<strong><%= tooltip(NodeGroupVipAssignment,:virtual_assignment) %>:</strong> <%= h(@node_group_vip_assignment.virtual_assignment) %><br />
+<strong>Assigned at:</strong> <%= h(@node_group_vip_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong><%= tooltip(NodeGroupVipAssignment,:created_at) %>:</strong> <%= h(@node_group_vip_assignment.created_at) %><br />
+<strong><%= tooltip(NodeGroupVipAssignment,:updated_at) %>:</strong> <%= h(@node_group_vip_assignment.updated_at) %></p>
+
+</div>
+
+<%= @tooltips %>

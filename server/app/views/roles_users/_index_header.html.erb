@@ -1,0 +1,9 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th>Account Group</th>
+  <th>Role</th>
+  <th>Authorizable</th>
+  <th>Created</th>
+</tr>
+<%= @tooltips if ttflag %>

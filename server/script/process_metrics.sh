@@ -1,7 +1,6 @@
 #!/bin/sh
 
 RAILS_HOME="/path/to/nventory"
-
 USAGE="Usage: $0 -start <#days.ago> -stop <#days.ago>  ** If not specified, start or stop will default to value of 1"
 
 while [ $# -gt 0 ]

@@ -1,21 +1,23 @@
 class StatusesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /statuses
   # GET /statuses.xml
   def index
-    # The default display index_row columns (node_groups model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = Status
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
 
     respond_to do |format|
@@ -28,10 +30,7 @@ class StatusesController < ApplicationController
   # GET /statuses/1
   # GET /statuses/1.xml
   def show
-    includes = process_includes(Status, params[:include])
-    
-    @status = Status.find(params[:id],
-                          :include => includes)
+    @status = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -42,12 +41,12 @@ class StatusesController < ApplicationController
 
   # GET /statuses/new
   def new
-    @status = Status.new
+    @status = @object
   end
 
   # GET /statuses/1/edit
   def edit
-    @status = Status.find(params[:id])
+    @status = @object
   end
 
   # POST /statuses
@@ -70,7 +69,7 @@ class StatusesController < ApplicationController
   # PUT /statuses/1
   # PUT /statuses/1.xml
   def update
-    @status = Status.find(params[:id])
+    @status = @object
 
     respond_to do |format|
       if @status.update_attributes(params[:status])
@@ -87,7 +86,7 @@ class StatusesController < ApplicationController
   # DELETE /statuses/1
   # DELETE /statuses/1.xml
   def destroy
-    @status = Status.find(params[:id])
+    @status = @object
     @status.destroy
     flash[:error] = @status.errors.on_base unless @status.errors.empty?
 

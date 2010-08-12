@@ -1,0 +1,3 @@
+ftp:
+  number: 21
+  protocol: tcp

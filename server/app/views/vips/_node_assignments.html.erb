@@ -1,7 +1,7 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <%- if vip.lb_pools.collect{|pool| pool.nodes }.size > 0 -%>
   <table cellspacing="0" class="styled" summary="A list of all vips this lb_pool belongs to">
-  <caption><%= tooltip(LbPool,:nodes) %></caption>
+  <caption><%= tooltip(nil,:nodes,'Nodes',nodes_tooltip) %> Belonging to Load Balancer Pools</caption>
   <thead>
   <tr>
       <th><%= tooltip(Node,:name) %></th>
@@ -30,7 +30,7 @@
   </table>
 
 <%- else -%>
-  <p>No Nodes belong to this <%= tooltip(VipLbPoolAssignment,:vip) %>.</p>
+  <p>No <%= tooltip(nil,:nodes,'Nodes',nodes_tooltip) %> belong to this <%= tooltip(VipLbPoolAssignment,:vip) %>.</p>
 <%- end -%>
 
 <%= @tooltips if ttflag %>

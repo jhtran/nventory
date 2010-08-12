@@ -1,21 +1,23 @@
 class ToolTipsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /tool_tips
   # GET /tool_tips.xml
   def index
-    # The default display index_row columns (node_groups model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = ToolTip
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     
     respond_to do |format|
@@ -28,10 +30,7 @@ class ToolTipsController < ApplicationController
   # GET /tool_tips/1
   # GET /tool_tips/1.xml
   def show
-    includes = process_includes(ToolTip, params[:include])
-    
-    @tool_tip = ToolTip.find(params[:id],
-                            :include => includes)
+    @tool_tip = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -42,14 +41,14 @@ class ToolTipsController < ApplicationController
 
   # GET /tool_tips/new
   def new
-    @models = list_models.keys.sort
-    @tool_tip = ToolTip.new
+    @models = list_models
+    @tool_tip = @object
   end
 
   # GET /tool_tips/1/edit
   def edit
-    @models = list_models.keys.sort
-    @tool_tip = ToolTip.find(params[:id])
+    @models = list_models
+    @tool_tip = @object
   end
 
   # GET /tool_tips/field_names
@@ -60,7 +59,7 @@ class ToolTipsController < ApplicationController
   # POST /tool_tips
   # POST /tool_tips.xml
   def create
-    @models = list_models.keys.sort
+    @models = list_models
     @tool_tip = ToolTip.new(params[:tool_tip])
     respond_to do |format|
       if @tool_tip.save
@@ -83,7 +82,7 @@ class ToolTipsController < ApplicationController
   # PUT /tool_tips/1
   # PUT /tool_tips/1.xml
   def update
-    @tool_tip = ToolTip.find(params[:id])
+    @tool_tip = @object
 
     respond_to do |format|
       if @tool_tip.update_attributes(params[:tool_tip])
@@ -100,21 +99,13 @@ class ToolTipsController < ApplicationController
   # DELETE /tool_tips/1
   # DELETE /tool_tips/1.xml
   def destroy
-    @tool_tip = ToolTip.find(params[:id])
+    @tool_tip = @object
     @tool_tip.destroy
 
     respond_to do |format|
       format.html { redirect_to tool_tips_url }
       format.xml  { head :ok }
     end
-  end
-
-  def list_models
-    found = {}
-    ObjectSpace.each_object(Class) do |klass|
-      found[klass.name] = 1 if klass.ancestors.include?(ActiveRecord::Base) unless klass.name =~ /^ActiveRecord/
-    end
-    return found
   end
 
   def get_all_model_attrs(model)
@@ -127,7 +118,7 @@ class ToolTipsController < ApplicationController
     custom_fields = {}
     custom_fields[Node] = [ 'logins', 'cpu_percent', 'virtualmode', 'network_volumes', 'service_tree', 'service_parents', 'service_clients',
                             'node_group_tree', 'virtual_node_groups', 'member_through' ]
-    custom_fields[NodeGroup] = [ 'virtual_nodes', 'cpu_percent' ]
+    custom_fields[NodeGroup] = [ 'virtual_nodes', 'cpu_percent', 'vips' ]
     custom_fields[NodeRack] = [ 'node_count', 'free_u_height', 'used_u_height' ]
 
     # add the custom fields for the model
@@ -136,7 +127,8 @@ class ToolTipsController < ApplicationController
   end
 
   def get_unused_model_attrs
-    @model = request.raw_post.constantize
+    # not sure why the post is adding the '_=' string but for now ugly hack:
+    @model = request.raw_post.gsub(/&_=*/,'').constantize
     @attrs = []
     all_attrs = get_all_model_attrs(@model)
     used_attrs = {}

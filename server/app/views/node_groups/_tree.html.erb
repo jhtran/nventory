@@ -1,0 +1,21 @@
+  <h3><%= tooltip(NodeGroup,:child_groups) %>:</h3>
+  <ul>
+  <div id="child_group_assignments">
+    <%- if node_group.assignments_as_parent.empty? %>
+      <%= '(empty)' %>
+    <%- else -%>
+      <%= render :partial => 'child_node_group_assignment', :collection => node_group.assignments_as_parent.sort{|a,b| a.child_group.name <=> b.child_group.name} %>
+    <%- end -%>
+  </div>
+  </ul>
+
+  <h3><%= tooltip(NodeGroup,:parent_groups) %>:</h3>
+  <ul>
+  <div id="parent_group_assignments">
+    <%- if node_group.assignments_as_child.empty? %>
+      <%=  '(empty)' %>
+    <%- else -%>
+      <%= render :partial => 'parent_node_group_assignment', :collection => node_group.assignments_as_child.sort{|a,b| a.parent_group.name <=> b.parent_group.name} %>
+    <%- end -%>
+  </div>
+  </ul>

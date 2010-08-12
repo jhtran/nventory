@@ -1,0 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= link_to_function 'Add Datacenter', "Element.show('create_datacenter_assignment');Element.hide('add_datacenter_assignment_link')" %>
+
+<%= @tooltips if ttflag %>

@@ -1,13 +1,13 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<% remote_form_for( :node_group_node_group_assignment, :url => self.send('node_group_node_group_assignments_path') ) do |f| %>
+<% remote_form_for( :node_group_node_group_assignment, :url => {:controller => 'node_group_node_group_assignments', :action => :create, :div => 'child_group_assgns'}, :loading => "Element.show('add_childngs_spinner')",:loaded => "Element.hide('add_childngs_spinner')" ) do |f| %>
   <p><%= tooltip(NodeGroup,:child_groups,'Child Group') %>:
   
-  <%- node_group_array = NodeGroup.def_scope.find(:all, :order => :name).collect { |r| [ r.name, r.id ] } -%>
+  <%- node_group_array = NodeGroup.find(:all, :order => :name).collect { |r| [ r.name, r.id ] } -%>
   
   <%= f.select( :child_id, node_group_array, { :include_blank => true } ) %>
   <%= f.hidden_field( :parent_id, { :value => @node_group.id } ) %>
 
-  <%= submit_tag "Assign", :onclick => "$('node_group_assignment_id').value = _child_id" %> | <%= link_to_function 'Cancel', "Element.show('add_child_link');Element.hide('create_child_assignment')"%></p>
+  <%= submit_tag "Assign", :onclick => "$('node_group_assignment_id').value = _child_id" %> | <%= link_to_function 'Cancel', "Element.show('add_child_service_link');Element.hide('create_child_service_assignment')"%></p>
 
 <% end %>
 

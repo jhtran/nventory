@@ -1,0 +1,30 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if volume.volume_server -%>
+  <table cellspacing="0" class="styled">
+  <caption><%= tooltip(Volume,:volume_server) %></caption>
+  <thead>
+  <tr>
+      <th><%= tooltip(Node,:name) %></th>
+      <th><%= tooltip(Node,:ip_addresses) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(volume.volume_server) %>">
+      <td><%= link_to volume.volume_server.name, volume.volume_server %></td>
+      <td><%= volume.volume_server.ips.join('; ') %></td>
+      <td><% form_for volume, :url => {:action => "update"} do |f| -%>
+            <%= f.hidden_field :volume_server_id, :value => "" %>
+            <%= submit_tag 'Delete' %>
+          <% end -%> </td>
+
+  </tr>
+  </tbody>
+  </table>
+
+<%- else -%>
+  <strong><%= tooltip(Volume,:volume_server) %></strong><br /><br />
+  <p>This volume hasn't been assigned to a server yet.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

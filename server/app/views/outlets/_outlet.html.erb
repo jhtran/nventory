@@ -1,7 +1,7 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p><strong><%= tooltip(Outlet,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
 <p><strong><%= tooltip(HardwareProfile,:outlet_type) %>:</strong> <br />
-  <%= select_tag "outlet_type", options_for_select([[" "]] + $outlet_types.sort) %>
+  <%= select_tag "outlet_type", options_for_select([[" "]] + Outlet.outlet_types.keys.sort) %>
 </p>
 
 <div id=indicator_div 

@@ -1,0 +1,62 @@
+<div class="relationship">
+
+  <h2>Dependencies</h2>
+  <p id="show_childngs">
+    <%= button_to_remote "Show Child Groups", 
+        :url => {:action => :get_deps, :id => account_group.id, :partial => 'child_group_assignments' }, 
+        :update => 'child_group_assgns', :after => "Element.hide('show_childngs')", 
+        :loading => "Element.show('show_childngs_spinner')", 
+        :loaded => "Element.show('hide_childngs');Element.hide('show_childngs_spinner')" %></p>
+
+  <p id="hide_childngs">
+    <%= button_to_remote "Hide Child Groups", :url => {:action => :get_deps}, :update => 'child_group_assgns', 
+        :after => "Element.hide('hide_childngs');Element.show('show_childngs')" %></p>
+
+  <p id="show_childngs_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <div id="child_group_assgns"> </div>
+
+  <div id="create_child_assignment">
+    <%= render :partial => 'create_child_assignment' %>
+  </div>
+
+  <p id="add_childngs_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="add_child_link">
+    <%= render :partial => 'add_child_link' if allow_perm(@account_group, ['updater']) %>
+  </p>
+
+  <p id="show_parentngs">
+    <%= button_to_remote "Show Parent Groups", 
+        :url => {:action => :get_deps, :id => account_group.id, :partial => 'parent_group_assignments' }, 
+        :update => 'parent_group_assgns', :loading => "Element.show('show_parentngs_spinner')", :after => "Element.hide('show_parentngs')", 
+        :loaded => "Element.show('hide_parentngs');Element.hide('show_parentngs_spinner')" %></p>
+
+  <p id="hide_parentngs">
+    <%= button_to_remote "Hide Parent Groups", :url => {:action => :get_deps}, :update => 'parent_group_assgns', 
+        :after => "Element.hide('hide_parentngs');Element.show('show_parentngs')" %></p>
+
+  <p id="show_parentngs_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <div id="parent_group_assgns"> </div>
+
+  <div id="create_parent_assignment">
+    <%= render :partial => 'create_parent_assignment' %>
+  </div>
+
+  <p id="add_parentngs_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="add_parent_link">
+    <%= render :partial => 'add_parent_link' if allow_perm(@account_group, ['updater']) %>
+  </p>
+
+</div>
+
+<%= javascript_tag "Element.hide('create_parent_assignment')" %>
+<%= javascript_tag "Element.hide('create_child_assignment')" %>
+<%= javascript_tag "Element.hide('hide_childngs')" %>
+<%= javascript_tag "Element.hide('hide_parentngs')" %>
+<%= javascript_tag "Element.hide('show_childngs_spinner')" %>
+<%= javascript_tag "Element.hide('add_parentngs_spinner')" %>
+<%= javascript_tag "Element.hide('show_parentngs_spinner')" %>
+<%= javascript_tag "Element.hide('add_childngs_spinner')" %>

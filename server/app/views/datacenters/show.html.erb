@@ -30,7 +30,7 @@
 </div> <!-- end datacenter_node_rack_assignments -->
 
 <div id="create_node_rack_assignment">
-  <%= render :partial => 'shared/create_node_rack_assignment', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
+  <%= render :partial => 'create_node_rack_assignment', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
 </div>
 
 <p id="new_node_rack">
@@ -38,51 +38,10 @@
 </p>
 
 <p id="add_node_rack_assignment_link">
-<%= render :partial => 'shared/add_datacenter_node_rack_inline_link', :locals => { :from => 'datacenter', :to => 'node_rack'} %>
+<%= render :partial => 'shared/add_datacenter_node_rack_inline_link', :locals => { :from => 'datacenter', :to => 'node_rack'} if allow_perm(@datacenter, ['updater']) %>
 </p>
 
 </div> <!-- end relationship -->
-
-
-<!-- vip no longer directly associated to datacenter.  VIP info can be received by looking at which load balancer, may implement into this view later -->
-<%- if false -%>
-  <div class="relationship">
-  
-  <div id="datacenter_vip_assignments">
-  <%= render :partial => 'vip_assignments', :locals => { :datacenter => @datacenter} %>
-  </div> <!-- end datacenter_vip_assignments -->
-  
-  <div id="create_vip_assignment">
-  <%= render :partial => 'shared/create_assignment', :locals => { :from => 'datacenter', :to => 'vip'} %>
-  </div>
-  
-  <p id="new_vip">
-  
-  </p>
-  
-  <p id="add_vip_assignment_link">
-  <%= render :partial => 'shared/add_inline_link', :locals => { :from => 'datacenter', :to => 'vip'} %>
-  </p>
-  
-  </div> <!-- end relationship -->
-<%- end -%>
-
-<div class="relationship">
-
-<%= render :partial => 'shared/comments', :locals => { :object => @datacenter} %>
-
-</div> <!-- end relationship -->
-
-<div class="relationship">
-
-<%= link_to 'Search', "#{nodes_path}?exact_datacenter=#{CGI.escape(@datacenter.name)}" %> for nodes located at this datacenter.
-
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_datacenter_path(@datacenter) %> | 
-<%= link_to 'Delete', datacenter_path(@datacenter), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @datacenter} %>
 
 <%= javascript_tag "Element.hide('create_node_rack_assignment')" %>
 <%= javascript_tag "Element.hide('create_vip_assignment')" %>

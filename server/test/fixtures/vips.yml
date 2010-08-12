@@ -1,5 +1,8 @@
-# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-two:
-  id: 2
+nventory_vip_80:
+  name: nventory_vip_80
+  port: 80
+  protocol: tcp
+nventory_vip_443:
+  name: nventory_vip_443
+  port: 443
+  protocol: tcp

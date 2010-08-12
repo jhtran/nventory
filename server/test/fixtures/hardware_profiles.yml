@@ -1,39 +1,13 @@
 # Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  name: MyString
-  manufacturer: MyString
-  model: MyString
-  rack_size: 1
-  memory: MyString
-  disk: MyString
-  nics: MyString
-  processor_manufacturer: MyString
-  processor_model: MyString
-  processor_speed: MyString
-  processor_socket_count: 1
-  processor_count: 1
-  power_supply_slot_count: 1
-  power_supply_count: 1
-  power_consumption: 1
-  cards: MyString
-  description: MyText
-two:
-  id: 2
-  name: MyString
-  manufacturer: MyString
-  model: MyString
-  rack_size: 1
-  memory: MyString
-  disk: MyString
-  nics: MyString
-  processor_manufacturer: MyString
-  processor_model: MyString
-  processor_speed: MyString
-  processor_socket_count: 1
-  processor_count: 1
-  power_supply_slot_count: 1
-  power_supply_count: 1
-  power_consumption: 1
-  cards: MyString
-  description: MyText
+hp_dl360:
+  name: HP DL360
+cat_6509:
+  name: Catalyst 6509
+  outlet_type: Network
+  outlet_count: 0
+macbook_pro:
+  name: Apple Macbook Pro
+  manufacturer: apple
+  model: macbook pro
+xenvm:
+  name: Xen Virtual Machine

@@ -1,0 +1,55 @@
+<div class="relationship">
+
+  <h2>Nodes</h2>
+
+  <p id="show_realnodes_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="show_realnodes">
+    <%= button_to_remote "Show Nodes", :url => {:action => :get_deps, :id => node_group.id, 
+        :partial => 'real_node_assignments' }, :update => 'real_nodes', :loading => "Element.show('show_realnodes_spinner')", 
+        :after => "Element.hide('show_realnodes')", :loaded => "Element.show('hide_realnodes');Element.hide('show_realnodes_spinner')#{add_nodes_tag}" %></p>
+
+  <p id="hide_realnodes">
+    <%= button_to_remote "Hide Nodes", :url => {:action => :get_deps}, :update => 'real_nodes', 
+        :after => "Element.hide('hide_realnodes');Element.show('show_realnodes');Element.hide('add_node_link')" %></p>
+
+  <div id="real_nodes"> </div>
+
+  <div id="create_node_assignment">
+    <%= render :partial => 'create_node_assignment' %>
+  </div>
+
+  <p id="add_node_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="add_node_link">
+    <%= render :partial => 'add_node_link' if allow_perm(@node_group, ['updater']) %>
+  </p>
+
+  <p id="show_virtnodes_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="show_virtnodes">
+    <%= button_to_remote "Show Virtual Nodes", :url => {:action => :get_deps, :id => node_group.id, :partial => 'virtual_node_assignments' }, 
+        :update => 'virtual_nodes', :loading => "Element.show('show_virtnodes_spinner')", :after => "Element.hide('show_virtnodes')", 
+        :loaded => "Element.show('hide_virtnodes');Element.show('show_virtnodes_through');Element.hide('show_virtnodes_spinner')" %></p>
+
+  <p id="hide_virtnodes">
+    <%= button_to_remote "Hide Virtual Nodes", :url => {:action => :get_deps}, :update => 'virtual_nodes', 
+        :after => "Element.hide('hide_virtnodes');Element.hide('show_virtnodes_through');Element.show('show_virtnodes')" %></p>
+
+  <div id="virtual_nodes"> </div>
+
+  <p id="show_virtnodes_through">
+    <%= button_to_remote "Through Membership", :url => {:action => :get_deps, :id => node_group.id, :partial => 'virtual_node_through_assignments' }, 
+        :update => 'virtual_nodes', :loading => "Element.show('show_virtnodes_spinner')", :after => "Element.hide('show_virtnodes_through')", 
+        :loaded => "Element.show('hide_virtnodes');Element.hide('show_virtnodes_spinner')" %></p>
+
+</div>
+
+<%= javascript_tag "Element.hide('add_node_link')" %>
+<%= javascript_tag "Element.hide('create_node_assignment')" %>
+<%= javascript_tag "Element.hide('hide_virtnodes')" %>
+<%= javascript_tag "Element.hide('show_virtnodes_through')" %>
+<%= javascript_tag "Element.hide('hide_realnodes')" %>
+<%= javascript_tag "Element.hide('show_realnodes_spinner')" %>
+<%= javascript_tag "Element.hide('show_virtnodes_spinner')" %>
+<%= javascript_tag "Element.hide('add_node_spinner')" %>

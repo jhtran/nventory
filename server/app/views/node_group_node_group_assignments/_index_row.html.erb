@@ -1,6 +1,9 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <tr class="<%= cycle('odd', 'even') -%>">
-  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+  <td nowrap="nowrap" width="5%"><%= link_to 'View', self.send(index_row.class.to_s.underscore + '_path', index_row) %> 
+<%- if allow_perm(index_row, ['updater']) %>
+ / <%= link_to 'Edit', self.send('edit_' + index_row.class.to_s.underscore + '_path', index_row) %>
+<%- end -%></td>
   <td><%= link_to index_row.parent_group.name, node_group_path(index_row.parent_group) %></td>
   <td><%= link_to index_row.child_group.name, node_group_path(index_row.child_group) %></td>
   <td><%= link_to index_row.assigned_at.to_formatted_s(:long), node_group_node_group_assignment_path(index_row) %></td>

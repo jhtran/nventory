@@ -15,7 +15,7 @@
   <%= render :partial => 'create_name_alias' %>
 </div>
 <p id="add_name_alias_link">
-  <%= render :partial => 'add_name_alias_link' %>
+  <%= render :partial => 'add_name_alias_link' if allow_perm(@node, ['updater'])  %>
 </p>
 
 <p><strong><%= tooltip(@node.class,:status)%>:</strong> <%= link_to h(@node.status.name), status_url(@node.status) %><br />
@@ -38,24 +38,30 @@
 <strong><%= tooltip(@node.class,:hardware_profile)%></strong> <%= link_to h(@node.hardware_profile.name), hardware_profile_url(@node.hardware_profile) %><br /></p>
 
 <p>
+<!-- VM? -->
 <%- if ( @node.virtual_guest? || @node.virtual_host? || (!@node.virtualarch.nil? && !@node.virtualarch.empty?) ) -%>
-<%- if @node.virtualarch.nil? -%>
-<%= "<strong><font color=purple>" + tooltip(@node.class,:virtualarch,'Virtual Architecture') +":</strong> Unknown</font><br />" %>
-<%- else -%>
-<%= "<strong><font color=purple>" + tooltip(@node.class,:virtualarch,'Virtual Architecture') + ":</strong> #{@node.virtualarch.capitalize}</font><br />" %>
+  <%- if @node.virtualarch.nil? -%>
+    <%= "<strong><font color=purple>" + tooltip(@node.class,:virtualarch,'Virtual Architecture') +":</strong> Unknown</font><br />" %>
+  <%- else -%>
+    <%= "<strong><font color=purple>" + tooltip(@node.class,:virtualarch,'Virtual Architecture') + ":</strong> #{@node.virtualarch.capitalize}</font><br />" %>
+  <%- end -%>
+  <%- unless (@node.virtual_guest? || @node.virtual_host?) -%>
+    <%= "<strong><font color=purple>" + tooltip(@node.class,:virtualmode, 'Virtual Mode') + ":</strong> Unknown</font><br />" %>
+  <%- else -%>
+    <%= "<strong><font color=purple>" + tooltip(@node.class,:virtualmode, 'Virtual Mode') + ":</strong> " %>
+    <%- if (@node.virtual_guest?) -%>
+      <%= "Guest<br /><strong>" + tooltip(@node.class,:virtual_host) + ":</strong> #{link_to @node.virtual_host.name,@node.virtual_host}</font><br />" %>
+      <%= "<strong><font color=purple>" + tooltip(@node.class,:vmimg_size,'VM Image Size') + ":</strong> #{@node.vmimg_size.to_i / 1024 } MB</font><br />" unless @node.vmimg_size.nil? %>
+      <%= "<strong><font color=purple>" + tooltip(@node.class,:vmspace_used,'VM Space Used') + ":</strong> #{@node.vmspace_used.to_i / 1024 } MB</font><br />" unless @node.vmspace_used.nil? %>
+    <%- elsif (@node.virtual_host?) -%>
+      <%= "Host</strong></font><br />" %>
+    <%- end -%>
+  <%- end -%>
 <%- end -%>
-<%- unless (@node.virtual_guest? || @node.virtual_host?) -%>
-<%= "<strong><font color=purple>" + tooltip(@node.class,:virtualmode, 'Virtual Mode') + ":</strong> Unknown</font><br />" %>
-<%- else -%>
-<%= "<strong><font color=purple>" + tooltip(@node.class,:virtualmode, 'Virtual Mode') + ":</strong> " %>
-<%- if (@node.virtual_guest?) -%>
-<%= "Guest<br /><strong>" + tooltip(@node.class,:virtual_host) + ":</strong> #{link_to @node.virtual_host.name,@node.virtual_host}</font><br />" %>
-<%= "<strong><font color=purple>" + tooltip(@node.class,:vmimg_size,'VM Image Size') + ":</strong> #{@node.vmimg_size.to_i / 1024 } MB</font><br />" unless @node.vmimg_size.nil? %>
-<%= "<strong><font color=purple>" + tooltip(@node.class,:vmspace_used,'VM Space Used') + ":</strong> #{@node.vmspace_used.to_i / 1024 } MB</font><br />" unless @node.vmspace_used.nil? %>
-<%- elsif (@node.virtual_host?) -%>
-<%= "Host</strong></font><br />" %>
-<%- end -%>
-<%- end -%>
+<!-- BLADE? -->
+<%- if blade_results = @node.consumed_blade -%>
+    <%= "<strong><font color=purple>" + tooltip(@node.class,:blade_enclosure) + ":</strong> #{blade_results[0].producer.name}</font><br />" %>
+    <%= "<strong><font color=purple>" + tooltip(@node.class,:blade_slot) + ":</strong> #{blade_results[0].name}</font><br />" %>
 <%- end -%>
 </p>
 
@@ -115,12 +121,18 @@
 
 </div>
 
-<script type="text/javascript" src="/javascripts/swfobject.js"></script>
-<p><%= @cpu_percent_chart %></p><br /><br />
+<p id="view_cpu_percent_link">
+  <%= render :partial => 'view_cpu_percent_link' %>
+</p>
+<div id="cpu_percent_chart">
+  <script type="text/javascript" src="/javascripts/swfobject.js"></script>
+  <p><%= @cpu_percent_chart %></p>
+  <p><br /><%= button_to_function 'Hide CPU Utilization % Chart', "Element.show('view_cpu_percent_link');Element.hide('cpu_percent_chart')"%></p>
+</div>
 
 <div class="relationship">
 <div id="no_volumes">
-<%= "<strong>" + tooltip(VolumeNodeAssignment,:volume,'Network Volumes') + "</strong>" if ( @node.volumes_served.empty? ) && (@node.volumes_mounted.empty?) %>
+<%= "<h2>" + tooltip(VolumeNodeAssignment,:volume,'Network Volumes') + "</h2>" if ( @node.volumes_served.empty? ) && (@node.volumes_mounted.empty?) %>
 </div>
 <div id="volume_served">
 <%= render :partial => 'volume_served', :locals => { :node => @node } %>
@@ -129,7 +141,7 @@
     <%= render :partial => 'create_volume_served' %>
   </div>
   <p id="add_volume_served_link">
-    <%= render :partial => 'add_volume_served_link' %>
+    <%= render :partial => 'add_volume_served_link' if allow_perm(@node, ['updater']) %>
   </p>
 
   <div id="volume_mounted">
@@ -139,7 +151,7 @@
     <%= render :partial => 'create_volume_mounted' %>
   </div>
   <p id="add_volume_mounted_link">
-    <%= render :partial => 'add_volume_mounted_link' %>
+    <%= render :partial => 'add_volume_mounted_link' if allow_perm(@node, ['updater']) %>
   </p>
 </div> <!-- end relationship -->
 
@@ -149,14 +161,14 @@
   </div>
   
   <div id="create_node_group_assignment">
-  <%= render :partial => 'shared/create_assignment_reverse', :locals => { :from => 'node_group', :to => 'node'} %>
+  <%= render :partial => 'create_node_group_assignment', :locals => { :node => @node } %>
   </div>
   <p id="new_node_group">
   
   </p>
   
   <p id="add_node_group_assignment_link">
-  <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'node_group', :to => 'node'} %>
+  <%= render :partial => 'add_node_group_link', :locals => { :node => @node }  if allow_perm(@node, ['updater'])%>
   </p>
 </div> <!-- end relationship -->
 
@@ -172,7 +184,7 @@
     </div>
 
     <p id="add_virtual_assignment_link">
-      <%= render :partial => 'shared/add_virtual_inline_link', :locals => { :node => @node } %>
+      <%= render :partial => 'shared/add_virtual_inline_link', :locals => { :node => @node } if allow_perm(@node, ['updater']) %>
     </p>
   </div> <!-- end relationship -->
 <%- end -%>
@@ -180,9 +192,9 @@
 <!-- BEGIN SERVICES RELATIONSHIPS -->
 <div class="relationship">
   <%- if @node.services? %>
-    <strong><%= tooltip(@node.class,:services,'Service Tree') %></strong><br /><br />
+    <h2><%= tooltip(@node.class,:services,'Service Tree') %></h2>
     <%= link_to 'View Diagram', :action => "graph_services", :id => @node, :title => 'GraphViz diagram of services hierarchy' %><br /><br />
-    <strong><%= tooltip(@node.class, :service_clients) %>:</strong>
+    <h3><%= tooltip(@node.class, :service_clients) %>:</h3>
     <%- if @child_services.size > 0 -%>
       <ul>
       <%- @node.services.each do |ng| -%>
@@ -190,7 +202,7 @@
           <%= link_to ng.name, service_path(ng) %>
           <ul>
           <div id="child_service_assignments">
-            <%= render :partial => 'shared/child_service_assignment', :collection => ng.service_assignments_as_parent %>
+            <%= render :partial => 'node_groups/child_service_assignment', :collection => ng.service_assignments_as_parent %>
           </div>
           </ul>
         <%- end -%>
@@ -199,7 +211,7 @@
     <%- else -%>
       <p>There are no child services for this node </p>
     <%- end -%>
-    <strong><%= tooltip(@node.class,:service_parents) %>:</strong>
+    <h3><%= tooltip(@node.class,:service_parents) %>:</h3>
     <%- if @parent_services.size > 0 -%>
       <ul>
       <%- @node.services.each do |ng| -%>
@@ -207,7 +219,7 @@
           <%= link_to ng.name, service_path(ng) %>
           <ul>
           <div id="parent_service_assignments">
-            <%= render :partial => 'shared/parent_service_assignment', :collection => ng.service_assignments_as_child %>
+            <%= render :partial => 'node_groups/parent_service_assignment', :collection => ng.service_assignments_as_child %>
           </div>
           </ul>
         <%- end -%>
@@ -217,46 +229,51 @@
       <p>There are no parent services for this node </p>
     <%- end -%>
   <%- else -%>
-    <strong><%= tooltip(@node.class,:services,'Service Tree') %></strong><br /><br />
+    <h2><%= tooltip(@node.class,:services,'Service Tree') %></h2><br /><br />
     <p>This node does not have any service dependencies.</p>
   <%- end -%>
 </div>
 <!-- END SERVICES RELATIONSHIPS -->
 
+<!-- START NETWORK INTERFACE relationship -->
+<%= render :partial => 'network_interfaces', :locals => {:node => @node} %>
+<!-- end NETWORK INTERFACE relationship -->
 
+<!-- START STORAGE RELATIONSHIP -->
 <div class="relationship">
-
-<%= render :partial => 'shared/comments', :locals => { :object => @node} %>
-
-</div> <!-- end relationship -->
-
-<div class="relationship">
-
-<p>
-<strong><%= tooltip(@node.class,:network_interfaces) %>:</strong>
-<%- if @node.network_interfaces.length > 0 -%>
-  <ul>
-  <%- @node.network_interfaces.each do |nic| -%>
-    <li>
-      <%= link_to nic.name, network_interface_url(nic) %>
-      <%- if nic.interface_type.to_s == "Ethernet" && nic.switch_port %>
-        <%= "=>" %>
-        <%= link_to "port: #{nic.switch_port.name} (#{nic.switch_port.producer.name})" , nic.switch_port %>
-      <% end %>
-    </li>
+  <p>
+  <h2><%= tooltip(@node.class,:storage_controllers) %>:</h2>
+  <%- if @node.storage_controllers.length > 0 -%>
     <ul>
-    <%- nic.ip_addresses.each do |ip| -%>
-      <li><%= link_to ip.address, ip_address_url(ip) %></li>
+    <%- @node.storage_controllers.each do |sc| -%>
+      <%= "<li>" + link_to(sc.name, sc) + "</li>" %>
+      <%- if sc.drives %>
+        <ul>
+        <%- sc.drives.each do |drive| -%>
+          <%= "<li>" + link_to(drive.name,drive) %>
+          <%= (drive.size > 1073741824 ? "[#{drive.size/1024/1024/1024} GB]" :"[#{drive.size/1024/1024} MB]") if drive.size %>
+          <%= "</li>" %>
+          <%- if drive.volumes -%>
+            <ul>
+            <%- drive.volumes.each do |vol| -%>
+              <%= "<li>" + link_to("#{vol.name}",vol) -%>
+              <%= "(#{vol.volume_type})" if vol.volume_type %>
+              <%= (vol.capacity> 1073741824 ? "[#{vol.capacity/1024/1024/1024} GB]" : "[#{vol.capacity/1024/1024} MB]") if vol.capacity%>
+              <%= "</li>" %>
+            <%- end -%>
+            </ul>
+          <%- end -%>
+        <%- end -%>
+        </ul>
+      <%- end -%>
     <%- end -%>
     </ul>
+  <%- else -%>
+    <p>This node does not have any storage controllers.</p>
   <%- end -%>
-  </ul>
-<%- else -%>
-  <p>This node does not have any network interfaces defined.</p>
-<%- end -%>
-</p>
-
-</div> <!-- end relationship -->
+  </p>
+</div>
+<!-- END STORAGE RELATIONSHIP -->
 
 <%- unless @node.virtual_guest? -%>
   <div class="relationship">
@@ -273,7 +290,7 @@
     </p>
     
     <p id="add_node_rack_assignment_link">
-      <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'node_rack', :to => 'node'} %>
+      <%= render :partial => 'shared/add_inline_link_reverse', :locals => { :from => 'node_rack', :to => 'node'} if allow_perm(@node, ['updater']) %>
     </p>
   </div> <!-- end relationship -->
 <%- end -%>
@@ -286,31 +303,25 @@
       <%= render :partial => 'outlets', :locals => { :node => @node } %>
     </div>
 
+<%- if false -%>
     <div id="create_outlet">
       <%= render :partial => 'shared/create_outlet', :locals => { :node => @node } %>
     </div>
+<%- end -%>
     <p id="new_outlet">
 
     </p>
-    <p id="add_outlet_link">
-      <%= render :partial => 'shared/add_node_outlet_link' %>
-    </p>   
+    <p id="add_outlet_link"> <%= render :partial => 'shared/add_node_outlet_link', :locals => {:node => @node} if allow_perm(@node, ['updater'])  %> </p>   
 
   </div> <!-- end relationship -->
 <%- end -%>
 
 <div class="relationship">
-<h3><%= tooltip(@node.class,:produced_outlets,'Smart Relationships') %></h3>
+<h2><%= tooltip(@node.class,:produced_outlets,'Smart Relationships') %></h2>
   <div id="smart_relationships">
     <%= render :partial => 'smart_relationships', :locals => { :node => @node } %>
   </div>
 </div> <!-- end smartrelationship -->
-
-
-<p><%= link_to 'Edit', edit_node_path(@node) %> | 
-<%= link_to 'Delete', node_path(@node), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @node} %>
 
 <%= javascript_tag "Element.hide('create_node_group_assignment')" %>
 <%= javascript_tag "Element.hide('create_outlet')" %>
@@ -319,6 +330,10 @@
 <%= javascript_tag "Element.hide('create_volume_served')" %>
 <%= javascript_tag "Element.hide('create_volume_mounted')" %>
 <%= javascript_tag "Element.hide('create_name_alias')" %>
+<%= javascript_tag "Element.hide('hide_port_link')" %>
+<%= javascript_tag "Element.hide('show_nmap_link')" %>
+<%= javascript_tag "Element.hide('cpu_percent_chart')" %>
+<%= javascript_tag "Element.hide('add_outlet_link')" if @node.hardware_profile.outlet_count.nil? || (((@node.hardware_profile.outlet_count <= @node.produced_outlets.size) && !@node.produced_outlets.empty?) unless @node.hardware_profile.outlet_count == 0) %>
 <% if @node.node_rack %>
   <%= javascript_tag "Element.hide('add_node_rack_assignment_link')" %>
 <% end %>

@@ -1,5 +1,5 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<% remote_form_for( :volume, :url => volumes_path ) do |f| %>
+<% remote_form_for( :volume, :url => {:controller => 'volumes', :action => :create, :div => 'volume_served'}) do |f| %>
   <p>Volume Name: 
   <%= f.text_field :name %>&nbsp&nbsp&nbsp
   <%= tooltip(Volume,:volume_type) %>

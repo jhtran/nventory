@@ -1,20 +1,21 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
-<%- if node.hardware_profile.outlet_count.nil? || node.hardware_profile.outlet_count <= 0 %>
-  <p><strong><%= tooltip(@node.class,:outlets) %>:</strong></p>
+<%- node.hardware_profile.outlet_count == 0 ? maxoutlet = 'unlimited' : maxoutlet = node.hardware_profile.outlet_count %>
+<%- if node.hardware_profile.outlet_count.nil? %>
+  <p><h2><%= tooltip(node.class,node.hardware_profile.outlet_type.to_sym) %>:</h2></p>
   <p>
     <%= "Although this node is a <strong>#{node.hardware_profile.outlet_type.downcase}</strong> outlet type," %>
     <%= "its <strong>HardwareProfile</strong> (#{link_to node.hardware_profile.name, node.hardware_profile})" %>
-    <%= " 'outlet count' #{ node.hardware_profile.outlet_count.nil? ? "is not configured for any ports" : "is configured for 0 ports"}" %>
+    <%= " 'outlet count' " + "is not configured for any ports" if node.hardware_profile.outlet_count.nil? %>
   </p>
-<%- elsif (node.hardware_profile.outlet_count > 0 && (node.produced_outlets.empty? || node.produced_outlets.size <= 0)) -%>
-  <p><strong><%= tooltip(@node.class,:outlets) %>:</strong></p>
+<%- elsif node.produced_outlets.empty? -%>
+  <p><h2><%= tooltip(node.class,node.hardware_profile.outlet_type.pluralize.to_sym) %>:</h2></p>
   <p>
-    <%= "Although this node hosts <strong>#{node.hardware_profile.outlet_count} #{node.hardware_profile.outlet_type.downcase}" %>
-    <%= "</strong> outlets, there aren't any consumers assigned to it." %>
+    <%= "Although this node supports <strong>#{maxoutlet} #{node.hardware_profile.outlet_type.downcase}" %>
+    <%= "</strong> outlets, there aren't any outlets assigned to it.  Outlet need to be created before they can be assigned to a consumer" %>
   </p>
-<%- elsif !node.hardware_profile.outlet_count.nil? && node.produced_outlets.count > 0 -%> 
+<%- elsif node.hardware_profile.outlet_count && node.produced_outlets.count > 0 -%> 
   <table cellspacing="0" class="styled" summary="A list of the outlets supplied by this node.">
-  <caption><%= node.hardware_profile.outlet_type %> Outlets</caption>
+  <caption><%= Outlet.outlet_types[node.hardware_profile.outlet_type].pluralize + "<font size=2>  (max capacity: #{maxoutlet}) </font>"%></caption>
   <thead>
   <tr>
       <th><%= tooltip(Outlet,:name) %></th>
@@ -24,7 +25,7 @@
   </tr>
   </thead>
   <tbody>
-  <%- for outlet in node.produced_outlets %>
+  <%- for outlet in @node.produced_outlets.sort{|a,b| a.name <=> b.name} %>
   <tr class="<%= cycle('odd', 'even') -%>">
       <td><%= link_to outlet.name, outlet %></td>
       <td id="<%= dom_id(outlet) %>">
@@ -38,11 +39,11 @@
         <%- end -%>
       <%- end -%>
       </td>
-      <td><%= link_to_remote "Assign", :url => {:controller => "outlets", :action => :edit, :id => outlet.id, :consumer_type => "NetworkInterface"} , :method => :get, :update => dom_id(outlet)%></td>
+      <td><%= link_to_remote "Assign", :url => {:controller => "outlets", :action => :edit, :id => outlet.id, :consumer_type => outlet.consumer_type } , :method => :get, :update => dom_id(outlet)%></td>
       <td><%= link_to_remote 'Delete',
                               :url => "/outlets/#{outlet.id}",
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(node,'updater') && allow_perm(outlet,'updater') %></td>
   </tr>
   <%- end %>
   </tbody>

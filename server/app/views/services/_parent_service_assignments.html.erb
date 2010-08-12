@@ -19,7 +19,7 @@
       <td><%= link_to_remote 'Delete',
                               :url => service_service_assignment_path(assignment),
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(service,'updater') && allow_perm(assignment.parent_service,'updater') %></td>
   </tr>
   <%- end %>
   </tbody>

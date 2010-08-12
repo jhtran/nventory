@@ -17,7 +17,7 @@
       <td><%= link_to_remote 'Delete',
                               :url => datacenter_node_rack_assignment_path(assignment),
                               :confirm => 'Are you sure?',
-                              :method => :delete %></td>
+                              :method => :delete if allow_perm(datacenter,'updater') && allow_perm(assignment.node_rack,'updater') %></td>
   </tr>
   <%- end %>
   </tbody>

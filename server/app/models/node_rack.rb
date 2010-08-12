@@ -1,4 +1,7 @@
 class NodeRack < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   named_scope :def_scope
   
   acts_as_reportable
@@ -7,7 +10,7 @@ class NodeRack < ActiveRecord::Base
   has_one :datacenter_node_rack_assignment, :dependent => :destroy
   has_one :datacenter, :through => :datacenter_node_rack_assignment
   
-  has_many :node_rack_node_assignments, :order => "position"
+  has_many :node_rack_node_assignments, :order => "position", :dependent => :destroy
   has_many :nodes, :through => :node_rack_node_assignments
   
   validates_presence_of :name

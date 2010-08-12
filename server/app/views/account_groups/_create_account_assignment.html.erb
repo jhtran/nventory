@@ -1,0 +1,14 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :account_group_self_group_assignment, :url => {:controller => 'account_group_self_group_assignments', :action => :create, :div => 'real_accounts'}, :loading => "Element.show('add_account_spinner')", :loaded => "Element.hide('add_account_spinner')" ) do |f| %>
+  <p><%= tooltip(AccountGroup,:account) %>:
+  
+  <%- account_array = AccountGroup.self_scope.find(:all, :order => :name).collect { |r| [ r.name.sub(/\.self/,''), r.id ] } -%>
+  
+  <%= f.select( :self_group_id, account_array, { :include_blank => true } ) %>
+  <%= f.hidden_field( :account_group_id, { :value => @account_group.id } ) %>
+  
+  <%= submit_tag "Assign", :onclick => "$('account_group_assignment_id').value = _account_group_id" %> | <%= link_to_function 'Cancel', "Element.show('add_account_link');Element.hide('create_account_assignment')"%></p>
+
+<% end %>
+
+<%= @tooltips if ttflag %>

@@ -1,105 +1,107 @@
 <%- @tooltips = [] %>
 <%- @page_title = "Node Group: #{@node_group.name}" %>
 
+<!-- local attributes -->
 <div class="record_view">
-
   <h1><%= tooltip(Node,:node_groups,'Node Group') + ": #{@node_group.name}" %></h1>
-  <%= "<p><strong><font color='green'>(" + tooltip(Vip,:lb_pools,'Load Balancer Service Group') + ")</font></strong></p>" if @node_group.lb_profile -%>
-  <%- if @node_group.is_service? -%>
-    <%= button_to 'View as Application Service Group', @node_group.to_service, :method => 'get' -%>
-  <%- else -%>
-    <p><font size=-5><%= button_to 'Convert to Application Service Group', :controller => 'node_groups', :action => 'convert_to_appservice', :id => @node_group %></font></p>
-  <%- end -%>
-  <br />
+  <%= "<p><strong><font color='green'>This node group is a (" + tooltip(Vip,:lb_pools,'Load Balancer Service') + ")</font></strong></p>" if @node_group.lb_profile -%>
+  <%= "<p><strong><font color='green'>This node group is a Service (Application)</font></strong></p>" if @node_group.is_service? -%>
   <p><strong><%= tooltip(NodeGroup,:owner) %>:</strong><br />
   <%= @node_group.owner %></p>
+
+  <%- if @node_group.is_service? %>
+    <!-- SERVICE PROFILE CONTACTS -->
+    <%= node_group_contacts(@node_group) %>
+    <p><div id="view_all_contacts_link">
+      <%= render :partial => 'view_all_contacts_link' %><font size=small><i><font color=green size=1>* list all contacts of all dependent services</font></i></font>
+    </div>
+    <div id="list_all_contacts">
+      <%= render :partial => 'list_all_contacts', :locals => {:service => @node_group} %>
+    </div></p>
+    <!-- SERVICE PROFILE ENV URLS -->
+    <p>
+    <%- @app_locs.each_pair do |name, location| -%>
+       <%- if location =~ /^http.:\/\//i  -%>
+         <%= "<strong>" + tooltip(ServiceProfile,name) + "</strong>: #{link_to location}<br />" %>
+       <%- elsif location.kind_of?(Node) -%>
+         <%= "<strong>" + tooltip(ServiceProfile,name) + "</strong>: #{link_to location.name, location}<br />" %>
+       <%- elsif location.kind_of?(String) && !location.empty? -%>
+         <%= "<strong>" + tooltip(ServiceProfile,name) + "</strong>: #{location}<br />" %>
+       <%- end -%>
+    <%- end -%>
+    </p>
+    <!-- SERVICE PROFILE OTHER ATTRS -->
+    <p> <strong><%= tooltip(ServiceProfile,:codelang,'Code Language') %>:</strong><br />
+    <%= @node_group.service_profile.codelang%></p>
+    <p><strong><%= tooltip(ServiceProfile,:external) %>:</strong>
+    <%= @node_group.service_profile.external%><br />
+    <strong><%= tooltip(ServiceProfile,:pciscope) %>:</strong>
+    <%= @node_group.service_profile.pciscope%><br /> </p>
+  <%- end -%>
+
   <p>
     <strong><%= tooltip(NodeGroup,:cpu_percent) %>:</strong>&nbsp&nbsp<font color=green><%= @percent_cpu_today %></font> <small><br />
     (1 day ago <%= "based on sample data from <font color=green>#{@percent_cpu_node_count}</font> nodes" if @percent_cpu_node_count %>)</small><br />
   </p>
   <p><strong><%= tooltip(NodeGroup,:description) %>:</strong><br />
   <%= textilize_without_paragraph(h(@node_group.description)) %></p>
-  
   <p class="metadata"><strong><%= tooltip(NodeGroup,:created_at) %>:</strong> <%= h(@node_group.created_at) %><br />
-  <strong><%= tooltip(NodeGroup,:updated_at) %>:</strong> <%= h(@node_group.updated_at) %></p>
+  <%= render :partial => 'tags', :locals => {:node_group => @node_group} %>
+</div> 
+<!-- end local attributes-->
 
+<div id="cpuchart">
+  <script type="text/javascript" src="/javascripts/swfobject.js"></script>
+  <p><%= @cpu_percent_chart %><br /><br />
 </div>
+<p id="show_cpuchart"><%= button_to_function "Show CPU Chart", "Element.show('cpuchart');Element.hide('show_cpuchart');Element.show('hide_cpuchart')" %></p>
+<p id="hide_cpuchart"><%= button_to_function "Hide CPU Chart", "Element.hide('cpuchart');Element.show('show_cpuchart');Element.hide('hide_cpuchart')" %></p>
 
-<script type="text/javascript" src="/javascripts/swfobject.js"></script>
-<p><%= @cpu_percent_chart %><br /><br />
-
-<!-- BEGIN NG RELATIONSHIPS -->
 <div class="relationship">
-  <div id="child_group_assgns">
-    <%= render :partial => 'child_group_assignments', :locals => { :node_group => @node_group} %>
+  <h2>Dependencies</h2>
+  <!-- BEGIN NG RELATIONSHIPS -->
+  <p><font size=3 color=brown><strong>Node Group Depedencies</strong></font></p>
+  <div class=record_view>
+    <%= render :partial => 'node_groups', :locals => {:node_group => @node_group} %>
+    <p>
+      <span id="show_tree">
+        <%= link_to_remote "Show Tree", :url => {:action => :get_deps, :id => @node_group.id, :partial => 'tree' }, 
+            :update => 'tree_view', :after => "Element.hide('show_tree');Element.show('hide_tree')" %>
+      </span>
+      <span id="hide_tree">
+        <%= link_to_remote "Hide Tree", :url => {:action => :get_deps}, :update => 'tree_view', 
+            :after => "Element.hide('hide_tree');Element.show('show_tree')" %>
+      </span>
+      | <%= link_to 'View Diagram', :action => "graph_node_groups", :id => @node_group %>
+      <div id="tree_view"></div>
+    </p>
   </div>
-  <div id="create_child_assignment">
-    <%= render :partial => 'create_child_assignment' %>
-  </div>
-  <p id="add_child_link">
-    <%= render :partial => 'add_child_link' %>
-  </p>
+  <!-- END NG RELATIONSHIPS -->
 
-  <div id="parent_group_assgns">
-    <%= render :partial => 'parent_group_assignments', :locals => { :node_group => @node_group} %>
-  </div>
-  <div id="create_parent_assignment">
-    <%= render :partial => 'create_parent_assignment' %>
-  </div>
-  <p id="add_parent_link">
-    <%= render :partial => 'add_parent_link' %>
-  </p>
-</div>
-<!-- END NG RELATIONSHIPS -->
-
-<!-- BEGIN NG TREE -->
-<div class="relationship">
-  <%= link_to 'View Diagram', :action => "graph_node_groups", :id => @node_group %><br /><br />
-  <strong><%= tooltip(NodeGroup,:child_groups) %>:</strong>
-    <ul>
-    <div id="child_group_assignments">
-      <%= render :partial => 'shared/child_node_group_assignment', :collection => @node_group.assignments_as_parent %>
+  <!-- BEGIN SERVICE RELATIONSHIPS -->
+  <%- if @node_group.is_service? %>
+    <p><font size=3 color=brown><strong>Service (Application) Depedencies</strong></font></p>
+    <div class=record_view>
+      <%= render :partial => 'services', :locals => {:service => @node_group} %>
     </div>
-    </ul>
-
-  <strong><%= tooltip(NodeGroup,:parent_groups) %>:</strong>
-    <ul>
-    <div id="parent_group_assignments">
-    <%= render :partial => 'shared/parent_node_group_assignment', :collection => @node_group.assignments_as_child %>
-    </div>
-    </ul>
+  <%- end -%>
+  <!-- END SERVICE RELATIONSHIPS -->
 </div>
-<!-- END NG TREE -->
 
 <!-- BEGIN NODE RELATIONSHIPS -->
-<div class="relationship">
-  <div id="real_nodes">
-    <%= render :partial => 'real_node_assignments', :locals => { :node_group => @node_group} %>
-  </div>
-  <div id="create_node_assignment">
-    <%= render :partial => 'create_node_assignment' %>
-  </div>
-  <p id="add_node_link">
-    <%= render :partial => 'add_node_link' %>
-  </p>
-  <div id="virtual_nodes">
-    <%= render :partial => 'virtual_node_assignments', :locals => { :node_group => @node_group, :virtuals_through => @virtuals_through } %>
-  </div>
-</div>
+<%= render :partial => 'nodes', :locals => {:node_group => @node_group} %>
 <!-- END NODE RELATIONSHIPS -->
 
-<div class="relationship">
+<!-- BEGIN VIP RELATIONSHIPS -->
+<%= render :partial => 'vips', :locals => {:node_group => @node_group} %>
+<!-- END VIP RELATIONSHIPS -->
 
-<%= render :partial => 'shared/comments', :locals => { :object => @node_group} %>
-
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_node_group_path(@node_group) %> | 
-<%= link_to 'Delete', node_group_path(@node_group), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @node_group} %>
-<%= javascript_tag "Element.hide('create_parent_assignment')" %>
-<%= javascript_tag "Element.hide('create_child_assignment')" %>
-<%= javascript_tag "Element.hide('create_node_assignment')" %>
+<%= javascript_tag "Element.hide('hide_cpuchart')" %>
+<%= javascript_tag "Element.hide('hide_tree')" %>
+<%= javascript_tag "Element.hide('cpuchart')" %>
+<%= javascript_tag "Element.hide('tree')" %>
+<%= javascript_tag "Element.hide('add_tag')" %>
+<%= javascript_tag "Element.hide('new_tag')" %>
+<%= javascript_tag "Element.hide('list_all_contacts')" %>
 
 <%= @tooltips %>

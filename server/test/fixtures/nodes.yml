@@ -1,39 +1,25 @@
 # Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  name: NodeOne
-  serial_number: MyString
-  processor_manufacturer: MyString
-  processor_model: MyString
-  processor_speed: MyString
-  processor_socket_count: 1
-  processor_count: 1
-  physical_memory: 4
-  physical_memory_sizes: 1,1,1,1
-  os_memory: 1
-  swap: 1
-  power_supply_count: 1
-  console_type: Serial
-  uniqueid: 0xdeadbeef
-  kernel_version: 1
-  operating_system_id: 1
-  preferred_operating_system_id: 1
-two:
-  id: 2
-  name: NodeTwo
-  serial_number: MyString
-  processor_manufacturer: MyString
-  processor_model: MyString
-  processor_speed: MyString
-  processor_socket_count: 1
-  processor_count: 1
-  physical_memory: 4
-  physical_memory_sizes: 1,1,1,1
-  os_memory: 1
-  swap: 1
-  power_supply_count: 1
-  console_type: Serial
-  uniqueid: 0xf00f
-  kernel_version: 1
-  operating_system_id: 1
-  preferred_operating_system_id: 2
+irvnventory1:
+  name: irvnventory1
+  hardware_profile: hp_dl360
+  status: inservice
+irvnventory2:
+  name: irvnventory2
+  hardware_profile: hp_dl360
+  status: inservice
+vmguest1:
+  name: vmguest1
+  hardware_profile: xenvm
+  status: inservice
+vmguest2:
+  name: vmguest2
+  hardware_profile: xenvm
+  status: inservice
+vmhost1:
+  name: vmhost1
+  hardware_profile: xenvm
+  status: inservice
+switch1:
+  name: switch1 
+  hardware_profile: cat_6509
+  status: inservice

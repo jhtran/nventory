@@ -1,0 +1,56 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<h3>Permissions</h3> 
+
+<table cellspacing="0" class="arversions" summary="permissions table" id="perms_table">
+  <thead>
+    <tr>
+      <th>Account/Group</th>
+      <th>Role</th> 
+      <th>Allowed Attrs</th>
+      <th>Inheritance</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <%- perms.each do |permobj| -%>
+      <%- permobj.roles_users.each do |roles_user| -%>
+        <%- permhash = perms_classify(@object,permobj,roles_user) -%>
+        <tr class="<%= cycle('odd', 'even') -%>">
+          <td><%= permhash[:usertag]%></td> 
+          <td><%= permobj.name %></td> 
+          <td><%= permhash[:attrstag] %></td>
+          <td><%= permhash[:permtag] %></td>
+          <td><%= permhash[:deletetag] %></td>
+        </tr>
+      <%- end -%>
+    <%- end %>
+    <!-- inherit from parent node_groups -->
+    <%- if (@object.kind_of?(NodeGroup) || @object.kind_of?(Node)) && !parentperms.empty? -%>
+      <%- rolesusersdone = {} -%>
+      <%- parentperms.each_pair do |ng,roles| -%>
+        <%- roles.each do |role| %>
+          <%- role.roles_users.each do |roles_user| %>
+            <%- unless rolesusersdone[roles_user] && rolesusersdone[roles_user].kind_of?(Array) && rolesusersdone[roles_user].include?(role) %>
+              <%- rolesusersdone[roles_user] ||= [] %>
+              <%- rolesusersdone[roles_user] << role unless rolesusersdone[roles_user].include?(role) %>
+              <%- permhash = perms_classify(@object,role,roles_user) -%>
+              <tr class="<%= cycle('odd', 'even') -%>">
+                <td><%= permhash[:usertag]%></td> 
+                <td><%= role.name %></td> 
+                <td><%= permhash[:attrstag] %></td>
+                <td><%= permhash[:permtag] %></td>
+                <td><%= permhash[:deletetag] %></td>
+              </tr>
+            <%- end -%>  <!-- unless rolesusersdone.include? -->
+          <%- end -%> <!-- roles.roles_users.each -->
+        <%- end -%> <!-- roles.each do -->
+      <%- end -%> <!-- parentperms.each_pair -->
+    <%- end -%> <!-- if parentperms --> 
+  </tbody>
+</table>
+<p id="add_perm_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+<div id="add_perm">
+  <p><%= button_to_remote 'Grant Permission', { :url => {:action => :get_roles_accounts, :refcontroller => controller.controller_name, :refid => refid}, :loading => "Element.show('add_perm_spinner')", :loaded => "Element.hide('add_perm_spinner')" } %></p>
+</div>
+<%= javascript_tag "Element.hide('add_perm_spinner')" %>
+<%= @tooltips if ttflag %>

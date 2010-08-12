@@ -4,54 +4,52 @@ require 'node_groups_controller'
 # Re-raise errors caught by the controller.
 class NodeGroupsController; def rescue_action(e) raise e end; end
 
-class NodeGroupsControllerTest < Test::Unit::TestCase
-  fixtures :node_groups
+class NodeGroupsControllerTest < ActionController::TestCase
 
-  def setup
-    @controller = NodeGroupsController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
+  def test_get_index
+    assert_get_index
   end
 
-  def test_should_get_index
-    get :index
-    assert_response :success
-    assert assigns(:node_groups)
+  def test_get_new
+    assert_get_new
+  end
+  
+  def test_post_create
+    assert_post_create(:node_group,{:node_group => {:name => 'foo1'}})
   end
 
-  def test_should_get_new
-    get :new
-    assert_response :success
+  def test_post_create_xml
+    assert_post_create(:node_group,{:node_group => {:name => 'foo1'}}, 'xml')
   end
 
-  def test_should_create_node_group
-    old_count = NodeGroup.count
-    post :create, :node_group => { }
-    assert_equal old_count+1, NodeGroup.count
-
-    assert_redirected_to node_group_path(assigns(:node_group))
+  def test_get_show
+    assert_get_show(:node_group)
   end
 
-  def test_should_show_node_group
-    get :show, :id => 1
-    assert_response :success
+  def test_get_edit
+    assert_get_edit(:node_group)
   end
 
-  def test_should_get_edit
-    get :edit, :id => 1
-    assert_response :success
+  def test_put_update
+#    @update_data = {:id => node_groups(:web_servers).id, :node_group => {:name => 'foonewbar'}}
+#    assert_put_update(:node_group, @update_data)
+#    newnode = assigns(:node_group)
+    @update_data = {:id => node_groups(:web_servers).id, :node_group_node_assignments => {:nodes => [nodes(:irvnventory1).id]}}
+    assert_put_update(:node_group, @update_data)
+    @update_data = {:id => node_groups(:web_servers).id, :node_group_node_assignments => {:nodes => [nodes(:irvnventory2).id]}}
+    assert_put_update(:node_group, @update_data)
   end
 
-  def test_should_update_node_group
-    put :update, :id => 1, :node_group => { }
-    assert_redirected_to node_group_path(assigns(:node_group))
+  def test_put_update_xml
+    assert_put_update(:node_group,{:id => node_groups(:web_servers).id,:node_group => {:name => 'foonewbar'}}, 'xml')
+  end
+  
+  def test_delete_destroy
+    assert_delete_destroy(:node_group,node_groups(:web_servers))
   end
 
-  def test_should_destroy_node_group
-    old_count = NodeGroup.count
-    delete :destroy, :id => 1
-    assert_equal old_count-1, NodeGroup.count
-
-    assert_redirected_to node_group_path
+  def test_delete_destroy_xml
+    assert_delete_destroy(:node_group,node_groups(:web_servers), 'xml')
   end
+
 end

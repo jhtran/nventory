@@ -1,7 +1,6 @@
-# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  assigned_at: 2007-03-30 03:22:15
-two:
-  id: 2
-  assigned_at: 2007-03-30 03:22:15
+fastdb_to_jr:
+  from: database_instances(:fastdb)
+  to: database_instances(:fastdbjr)
+  name: fastdb_to_jr
+  created_at: <%= 5.days.ago.to_s :db %>
+  assigned_at: <%= 5.days.ago.to_s :db %>

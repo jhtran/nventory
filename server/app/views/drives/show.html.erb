@@ -1,0 +1,36 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Drive: " + h(@drive.name) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(Drive,:name) %>: <%=h @drive.name %></h1>
+
+<p><strong><%= tooltip(Drive,:node) %>:</strong> <%= link_to h(@drive.node.name), @drive.node %></p>
+<p><strong><%= tooltip(Drive,:storage_controller) %>:</strong> <%= link_to h(@drive.storage_controller.name), storage_controller_url(@drive.storage_controller_id) if !@drive.storage_controller_id.nil? %></p>
+<p><strong><%= tooltip(Drive,:volumes) %>:</strong> 
+<%- if @drive.volumes -%>
+  <ul>
+  <%- @drive.volumes.each do |vol| -%>
+    <%= "<li> " + link_to(vol.name, vol) -%>
+    <%= (vol.size > 1073741824 ? "[#{vol.size/1024/1024/1024} GB]" : "[#{vol.size/1024/1024} MB]") if vol.size %>
+    <%=  "</li>" -%>
+  <%- end -%>
+  </ul>
+<%- end -%></p>
+
+<p><strong><%= tooltip(Drive,:product) %>:</strong> <%= h(@drive.product) %></p>
+<p><strong><%= tooltip(Drive,:description) %>:</strong> <%= h(@drive.description) %></p>
+<p><strong><%= tooltip(Drive,:physid) %>:</strong> <%= h(@drive.physid) %></p>
+<p><strong><%= tooltip(Drive,:vendor) %>:</strong> <%= h(@drive.vendor) %></p>
+<p><strong><%= tooltip(Drive,:handle) %>:</strong> <%= h(@drive.handle) %></p>
+<p><strong><%= tooltip(Drive,:businfo) %>:</strong> <%= h(@drive.businfo) %></p>
+<p><strong><%= tooltip(Drive,:physid) %>:</strong> <%= h(@drive.physid) %></p>
+<p><strong><%= tooltip(Drive,:dev) %>:</strong> <%= h(@drive.dev) %></p>
+<p><strong><%= tooltip(Drive,:size) %>:</strong> <%= (@drive.size > 1073741824 ? "#{@drive.size/1024/1024/1024} GB" : "#{@drive.size/1024/1024} MB") if @drive.size %></p>
+
+<p class="metadata"><strong><%= tooltip(Drive,:created_at) %>:</strong> <%= h(@drive.created_at) %><br />
+<strong><%= tooltip(Drive,:updated_at) %>:</strong> <%= h(@drive.updated_at) %></p>
+
+</div>
+
+<%= @tooltips %>

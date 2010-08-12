@@ -1,0 +1,10 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<li>
+  <em><%= link_to 'depends on', service_service_assignment_path(parent_service_assignment) %></em>=>
+  <%= link_to parent_service_assignment.parent_service.name, :controller => 'services', :action => 'show', :id => parent_service_assignment.parent_service.id %>
+  <% if !parent_service_assignment.parent_service.parent_services.empty? %>
+    <ul><%= render :partial => 'parent_service_assignment', :collection => parent_service_assignment.parent_service.service_assignments_as_child %></ul>
+  <% end %>  
+</li> 
+
+<%= @tooltips if ttflag %>

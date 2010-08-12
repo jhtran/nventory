@@ -1,24 +1,26 @@
 class LbProfilesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /lb_profiles
   # GET /lb_profiles.xml
   $lbmethods = %w[ round_robin ratio_member dynamic_ratio fastest_member least_conn_member observed_member predictive_member ]
   $protocols = %w[ tcp udp both ]
 
   def index
-    # The default display index_row columns (lb_profiles model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = LbProfile
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
     
     respond_to do |format|
@@ -31,8 +33,7 @@ class LbProfilesController < ApplicationController
   # GET /lb_profiles/1
   # GET /lb_profiles/1.xml
   def show
-    includes = process_includes(LbProfile, params[:include])
-    @lb_profile = LbProfile.find(params[:id], :include => includes)
+    @lb_profile = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -43,7 +44,7 @@ class LbProfilesController < ApplicationController
 
   # GET /lb_profiles/new
   def new
-    @lb_profile = LbProfile.new
+    @lb_profile = @object
     respond_to do |format|
       format.html # show.html.erb
       format.js  { render :action => "inline_new", :layout => false }
@@ -52,7 +53,7 @@ class LbProfilesController < ApplicationController
 
   # GET /lb_profiles/1/edit
   def edit
-    @lb_profile = LbProfile.find(params[:id])
+    @lb_profile = @object
   end
 
   # POST /lb_profiles
@@ -75,7 +76,7 @@ class LbProfilesController < ApplicationController
   # PUT /lb_profiles/1
   # PUT /lb_profiles/1.xml
   def update
-    @lb_profile = LbProfile.find(params[:id])
+    @lb_profile = @object
 
     respond_to do |format|
       if @lb_profile.update_attributes(params[:lb_profile])
@@ -92,7 +93,7 @@ class LbProfilesController < ApplicationController
   # DELETE /lb_profiles/1
   # DELETE /lb_profiles/1.xml
   def destroy
-    @lb_profile = LbProfile.find(params[:id])
+    @lb_profile = @object
     @lb_profile.destroy
 
     respond_to do |format|

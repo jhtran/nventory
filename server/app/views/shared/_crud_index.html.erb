@@ -6,7 +6,7 @@
 <tr>
 
 <td>
-<%= link_to 'New ' + objects.first.class.to_s.titleize, self.send('new_' + objects.first.class.to_s.underscore + '_path') unless objects.first.class == Audit %><br/>
+<%= link_to('New ' + objects.first.class.to_s.titleize, self.send('new_' + objects.first.class.to_s.underscore + '_path')) if objects.first.class != Audit && allow_perm(objects.first.class, ['creator']) %><br/>
 <%= page_entries_info objects %>
 </td>
 
@@ -17,6 +17,7 @@
 <% if objects.first.class.respond_to?('default_search_attribute') && objects.first.class != Audit -%>
   Search by <%= objects.first.class.default_search_attribute %>: <% form_tag self.send(objects.first.class.to_s.underscore.pluralize + '_path'), :method => :get do -%>
     <%= text_field_tag objects.first.class.default_search_attribute -%><br />
+    <%= check_box_tag 'enable_aliases' %> include aliases<br/>
   <% end %>
 <% end -%>
 </td>

@@ -1,0 +1,41 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p>
+<%- if node.network_interfaces.length > 0 -%>
+  <ul>
+  <%- node.network_interfaces.each do |nic| -%>
+    <li>
+      <%= link_to nic.name, network_interface_url(nic) %>
+      <%- if nic.interface_type.to_s == "Ethernet" && nic.switch_port %>
+        <%= "=>" %>
+        <%= link_to "port: #{nic.switch_port.name} (#{nic.switch_port.producer.name})" , nic.switch_port %>
+      <% end %>
+    </li>
+    <ul>
+    <%- nic.ip_addresses.each do |ip| -%>
+      <li>
+        <%= link_to ip.address, ip_address_url(ip) %>
+        <%- if ip.nmap_last_scanned_at %>
+          <i><font size=1 color=green><%= tooltip(ip.class,:nmap_last_scanned_at)%></font><font size=1>: <%= ip.nmap_last_scanned_at %></font></i>
+        <%- end -%>
+      </li>
+      <ul>
+        <%- ip.ip_address_network_port_assignments.each do |ipa| -%>
+          <li>
+          <%= link_to "#{ipa.network_port.number}/#{ipa.network_port.protocol}", ipa.network_port -%>
+          <%= (" (#{ipa.apps})" unless ipa.apps.empty?) if ipa.apps -%>
+          <%- if ipa.nmap_last_seen_at || ipa.nmap_first_seen_at %>
+              <ul> <li><i><font size=1 color=brown>Nmap</font><font size=1> (</font><font color=brown size=1><%= tooltip(ipa.class,:nmap_first_seen_at,"first seen") %></font><font size=1>: <%=ipa.nmap_first_seen_at%></font>, 
+              <font size=1 color=brown><%= tooltip(ipa.class,:nmap_last_seen_at,"last seen") %></font><font size=1>: <%=ipa.nmap_last_seen_at%>)</font></i></li></ul>
+          <%- end -%>
+          </li>
+        <%- end -%>
+      </ul>
+    <%- end -%>
+    </ul>
+  <%- end -%>
+  </ul>
+<%- else -%>
+  <p>This node does not have any network interfaces defined.</p>
+<%- end -%>
+</p>
+<%= @tooltips if ttflag %>

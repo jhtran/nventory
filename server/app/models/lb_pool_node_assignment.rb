@@ -1,4 +1,7 @@
 class LbPoolNodeAssignment < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   named_scope :def_scope
   set_table_name 'node_group_node_assignments'
   

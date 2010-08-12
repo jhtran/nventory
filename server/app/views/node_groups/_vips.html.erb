@@ -1,0 +1,39 @@
+<div class="relationship">
+
+  <h2>Virtual IPs</h2>
+
+  <p id="show_realvips">
+    <%= button_to_remote "Show VIPs", :url => {:action => :get_deps, :id => node_group.id, 
+        :partial => 'real_vip_assignments' }, :update => 'real_vips', :after => "Element.hide('show_realvips')", 
+        :loaded => "Element.show('hide_realvips');#{add_vips_tag}" %></p>
+
+  <p id="hide_realvips">
+    <%= button_to_remote "Hide VIPs", :url => {:action => :get_deps}, :update => 'real_vips', 
+        :after => "Element.hide('hide_realvips');Element.show('show_realvips');Element.hide('add_vip_link')" %></p>
+
+  <div id="real_vips"> </div>
+
+  <div id="create_vip_assignment">
+    <%= render :partial => 'create_vip_assignment' %>
+  </div>
+
+  <p id="add_vip_link">
+    <%= render :partial => 'add_vip_link' if allow_perm(@node_group, ['updater']) %>
+  </p>
+
+  <p id="show_virtvips">
+    <%= button_to_remote "Show Virtual VIPs", :url => {:action => :get_deps, :id => node_group.id, :partial => 'virtual_vip_assignments' }, 
+        :update => 'virtual_vips', :after => "Element.hide('show_virtvips')", :loaded => "Element.show('hide_virtvips')" %></p>
+
+  <p id="hide_virtvips">
+    <%= button_to_remote "Hide Virtual VIPs", :url => {:action => :get_deps}, :update => 'virtual_vips', 
+        :after => "Element.hide('hide_virtvips');Element.show('show_virtvips')" %></p>
+
+  <div id="virtual_vips"> </div>
+
+</div>
+
+<%= javascript_tag "Element.hide('add_vip_link')" %>
+<%= javascript_tag "Element.hide('create_vip_assignment')" %>
+<%= javascript_tag "Element.hide('hide_realvips')" %>
+<%= javascript_tag "Element.hide('hide_virtvips')" %>

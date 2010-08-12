@@ -1,21 +1,23 @@
 class UtilizationMetricNamesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /utilization_metric_names
   # GET /utilization_metric_names.xml
   def index
-    # The default display index_row columns (node_groups model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = UtilizationMetricName
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
 
     respond_to do |format|
@@ -28,10 +30,7 @@ class UtilizationMetricNamesController < ApplicationController
   # GET /utilization_metric_names/1
   # GET /utilization_metric_names/1.xml
   def show
-    includes = process_includes(UtilizationMetricName, params[:include])
-    
-    @utilization_metric_name = UtilizationMetricName.find(params[:id],
-                          :include => includes)
+    @utilization_metric_name = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -42,12 +41,12 @@ class UtilizationMetricNamesController < ApplicationController
 
   # GET /utilization_metric_names/new
   def new
-    @utilization_metric_name = UtilizationMetricName.new
+    @utilization_metric_name = @object
   end
 
   # GET /utilization_metric_names/1/edit
   def edit
-    @utilization_metric_name = UtilizationMetricName.find(params[:id])
+    @utilization_metric_name = @object
   end
 
   # POST /utilization_metric_names
@@ -70,7 +69,7 @@ class UtilizationMetricNamesController < ApplicationController
   # PUT /utilization_metric_names/1
   # PUT /utilization_metric_names/1.xml
   def update
-    @utilization_metric_name = UtilizationMetricName.find(params[:id])
+    @utilization_metric_name = @object
 
     respond_to do |format|
       if @utilization_metric_name.update_attributes(params[:utilization_metric_name])
@@ -87,7 +86,7 @@ class UtilizationMetricNamesController < ApplicationController
   # DELETE /utilization_metric_names/1
   # DELETE /utilization_metric_names/1.xml
   def destroy
-    @utilization_metric_name = UtilizationMetricName.find(params[:id])
+    @utilization_metric_name = @object
     @utilization_metric_name.destroy
 
     respond_to do |format|

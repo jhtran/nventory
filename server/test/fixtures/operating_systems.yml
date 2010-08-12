@@ -1,15 +1,3 @@
 # Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
-one:
-  id: 1
-  name: MyString
-  vendor: MyString
-  variant: MyString
-  version_number: MyString
-  architecture: i386
-two:
-  id: 2
-  name: MyString
-  vendor: MyString
-  variant: MyString
-  version_number: MyString
-  architecture: x86_64
+cent_os:
+  name: cent os 5

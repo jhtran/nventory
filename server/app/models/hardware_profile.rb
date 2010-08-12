@@ -1,4 +1,7 @@
 class HardwareProfile < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   named_scope :def_scope
   
   acts_as_reportable
@@ -19,18 +22,13 @@ class HardwareProfile < ActiveRecord::Base
   validates_numericality_of :power_consumption,       :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
   validates_numericality_of :nics,                    :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
 
-  OUTLET_TYPES = ['','Power','Network','Console']
-  def self.allowed_outlet_types
-    return OUTLET_TYPES
-  end
-  
-  # If an outlet type has been specified make sure it is one of the
-  # allowed types
+  # If an outlet type has been specified make sure it is one of the allowed types
   validates_inclusion_of :outlet_type,
-                         :in => OUTLET_TYPES,
+                         :in => Outlet.outlet_types.keys,
                          :allow_nil => true,
+                         :allow_blank => true,
                          :message => "not one of the allowed outlet " +
-                            "types: #{OUTLET_TYPES.join(',')}"
+                            "types: #{Outlet.outlet_types.keys.join(',')}"
 
   def self.default_search_attribute
     'name'

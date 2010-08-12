@@ -1,0 +1,11 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p>
+  <strong><%= tooltip(AccountGroup,:name) %></strong> <em>*</em> <br />
+  <%= f.text_field :name %>
+</p>
+<p>
+  <strong><%= tooltip(AccountGroup,:description) %></strong> <br />
+  <%= f.text_area :description, {"cols" => 30, "rows" => 4}  %>
+</p>
+
+<%= @tooltips if ttflag %>

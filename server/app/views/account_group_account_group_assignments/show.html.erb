@@ -1,0 +1,17 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Account Group Account Group Assignment: " + h(@account_group_account_group_assignment.parent_group.name) + '<->' + h(@account_group_account_group_assignment.child_group.name) %>
+
+<div class="record_view">
+
+<h1><%= tooltip(AccountGroup,:account_group_account_group_assignments,'Account Group Account Group Assignment') %></h1>
+
+<p><strong><%= tooltip(AccountGroupAccountGroupAssignment,:parent_group) %>:</strong> <%= link_to @account_group_account_group_assignment.parent_group.name, account_group_path(@account_group_account_group_assignment.parent_group) %><br />
+<strong><%= tooltip(AccountGroupAccountGroupAssignment,:child_group) %>:</strong> <%= link_to @account_group_account_group_assignment.child_group.name, account_group_path(@account_group_account_group_assignment.child_group) %><br />
+<strong><%= tooltip(AccountGroupAccountGroupAssignment,:assigned_at) %>:</strong> <%= h(@account_group_account_group_assignment.assigned_at.to_formatted_s(:long)) %></p>
+
+<p class="metadata"><strong><%= tooltip(AccountGroupAccountGroupAssignment,:created_at) %>:</strong> <%= h(@account_group_account_group_assignment.created_at) %><br />
+<strong><%= tooltip(AccountGroupAccountGroupAssignment,:updated_at) %>:</strong> <%= h(@account_group_account_group_assignment.updated_at) %></p>
+
+</div>
+
+<%= @tooltips %>

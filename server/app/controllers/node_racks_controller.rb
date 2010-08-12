@@ -1,44 +1,21 @@
 class NodeRacksController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /node_racks
   # GET /node_racks.xml
   def index
-    includes = process_includes(NodeRack, params[:include])
-    
-    sort = case params['sort']
-           when "name" then "node_racks.name"
-           when "name_reverse" then "node_racks.name DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = NodeRack.default_search_attribute
-      sort = 'node_racks.' + NodeRack.default_search_attribute
-    end
-    
-    # The index page includes some data from associations.  If we don't
-    # include those associations then N SQL calls result as that data is
-    # looked up row by row.
-    if !params[:format] || params[:format] == 'html'
-      # FIXME: Including has_one, through is not supported, see note in
-      # process_includes for more details
-      #includes[:datacenter] = {}
-      # Need to include the node's hardware profile as that is used
-      # in calculating the free/used space columns
-      # FIXME: not sure why this stopped working
-      #includes[[:nodes => :hardware_profile]] = {}
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = NodeRack
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
 
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = NodeRack.find(:all,
-                           :include => includes,
-                           :order => sort)
-    else
-      @objects = NodeRack.paginate(:all,
-                               :include => includes,
-                               :order => sort,
-                               :page => params[:page])
-    end
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -50,10 +27,7 @@ class NodeRacksController < ApplicationController
   # GET /node_racks/1
   # GET /node_racks/1.xml
   def show
-    includes = process_includes(NodeRack, params[:include])
-    
-    @node_rack = NodeRack.find(params[:id],
-                      :include => includes)
+    @node_rack = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -64,7 +38,7 @@ class NodeRacksController < ApplicationController
 
   # GET /racks/new
   def new
-    @node_rack = NodeRack.new
+    @node_rack = @object
     respond_to do |format|
       format.html # show.html.erb
       format.js  { render :action => "inline_new", :layout => false }
@@ -73,7 +47,7 @@ class NodeRacksController < ApplicationController
 
   # GET /racks/1/edit
   def edit
-    @node_rack = NodeRack.find(params[:id])
+    @node_rack = @object
   end
 
   # POST /racks
@@ -109,7 +83,7 @@ class NodeRacksController < ApplicationController
   # PUT /node_racks/1
   # PUT /node_racks/1.xml
   def update
-    @node_rack = NodeRack.find(params[:id])
+    @node_rack = @object
 
     respond_to do |format|
       if @node_rack.update_attributes(params[:node_rack])
@@ -126,7 +100,7 @@ class NodeRacksController < ApplicationController
   # DELETE /node_racks/1
   # DELETE /node_racks/1.xml
   def destroy
-    @node_rack = NodeRack.find(params[:id])
+    @node_rack = @object
     begin
       @node_rack.destroy
     rescue Exception => destroy_error

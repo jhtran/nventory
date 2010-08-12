@@ -1,0 +1,34 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if account_group.assignments_as_parent.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the child account_groups assigned to this account_group.">
+  <h3><%= tooltip(AccountGroup,:child_groups) %></h3>
+  <thead>
+  <tr>
+      <th><%= tooltip(AccountGroup,:name) %></th>
+      <th><%= tooltip(AccountGroup,:assigned_at) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in account_group.assignments_as_parent.sort{|a,b| a.child_group.name <=> b.child_group.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.child_group.name, account_group_path(assignment.child_group) %></td>
+      <td><%= link_to h(assignment.assigned_at.to_formatted_s(:long)), account_group_account_group_assignment_path(assignment) %></td>
+      <td><%= link_to_remote('Delete',
+                              :url => {:controller => 'account_group_account_group_assignments',
+                                       :id => assignment.id, :refcontroller => 'account_groups',
+                                       :partial => 'child_group_assignments',
+                                       :div => 'child_group_assgns', :refid => account_group.id,
+                                       :action => 'destroy'},
+                              :confirm => 'Are you sure?',
+                              :method => :delete) if allow_perm(assignment, ['destroyer']) %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <strong><%= tooltip(AccountGroup,:child_groups) %></strong><br /><br />
+  <p>This account_group does not have any children.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

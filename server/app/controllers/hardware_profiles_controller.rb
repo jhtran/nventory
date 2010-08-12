@@ -1,21 +1,23 @@
 class HardwareProfilesController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /hardware_profiles
   # GET /hardware_profiles.xml
   def index
-    # The default display index_row columns (node_groups model only displays local table name)
-    default_includes = []
     special_joins = {}
 
     ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
     allparams = {}
     allparams[:mainmodel] = HardwareProfile
     allparams[:webparams] = params
-    allparams[:default_includes] = default_includes
     allparams[:special_joins] = special_joins
 
-    results = SearchController.new.search(allparams)
+    results = Search.new(allparams).search
     flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
     includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
     @objects = results[:search_results]
 
     respond_to do |format|
@@ -28,10 +30,7 @@ class HardwareProfilesController < ApplicationController
   # GET /hardware_profiles/1
   # GET /hardware_profiles/1.xml
   def show
-    includes = process_includes(HardwareProfile, params[:include])
-    
-    @hardware_profile = HardwareProfile.find(params[:id],
-                                             :include => includes)
+    @hardware_profile = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -42,12 +41,12 @@ class HardwareProfilesController < ApplicationController
 
   # GET /hardware_profiles/new
   def new
-    @hardware_profile = HardwareProfile.new
+    @hardware_profile = @object
   end
 
   # GET /hardware_profiles/1/edit
   def edit
-    @hardware_profile = HardwareProfile.find(params[:id])
+    @hardware_profile = @object
   end
 
   # POST /hardware_profiles
@@ -70,7 +69,7 @@ class HardwareProfilesController < ApplicationController
   # PUT /hardware_profiles/1
   # PUT /hardware_profiles/1.xml
   def update
-    @hardware_profile = HardwareProfile.find(params[:id])
+    @hardware_profile = @object
 
     respond_to do |format|
       if @hardware_profile.update_attributes(params[:hardware_profile])

@@ -1,0 +1,43 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if node_group.node_group_vip_assignments.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the vips assigned to this node_group.">
+  <h3><%= tooltip(NodeGroup,:virtual_vips,'Virtual VIPs') %></h3>
+  <thead>
+  <tr>
+      <th><%= tooltip(Vip,:name) %></th>
+      <th><%= tooltip(Vip,:member_through) %></th>
+      <th><%= tooltip(Vip,:assigned_at) %></th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in node_group.virtual_node_group_vip_assignments.sort{|a,b| a.vip.name <=> b.vip.name} %>
+    <%- all_child_ng_ids = assignment.node_group.all_child_groups.collect{|cng| cng.id} -%>
+    <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+        <td><%= link_to assignment.vip.name, vip_path(assignment.vip) %></td>
+        <td>
+          <%- if !assignment.vip.real_node_groups.empty? %>
+            <%- virtual_membership = [] -%>
+            <%- assignment.vip.recursive_real_node_groups.each do |ng| %>
+              <%- virtual_membership << ng if all_child_ng_ids.include?(ng.id) -%>
+            <%- end -%>
+            <%- if !virtual_membership.empty? -%>
+              <%- virtual_membership.uniq.each do |vng| -%>
+                <%= "<li>#{link_to vng.name, vng}</li>" %>
+              <%- end -%>
+            <%- else -%>
+              <%= "<b><font color='red'> *** DOESN'T BELONG TO ANY NODE GROUPS IN THE CHAIN.  DATABASE INCONSISTENCY! ***</font></b>" %>
+            <%- end -%>
+            <%- virtual_membership.clear -%>
+          <%- else -%>
+            <%= "<b><font color='red'>** DOESN'T BELONG TO ANY CHILD NODE GROUP OF THIS CHAIN!  BAD RECORD IN DATABASE! **</font></b>" %>
+          <%- end -%>
+        </td>
+        <td><%= assignment.assigned_at.to_formatted_s(:long) %></td>
+    </tr>
+  <%- end %>
+  </tbody>
+  </table>
+
+<%- end -%>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,7 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(Tag,:name) %></strong> <em>*</em> <br /> <%= f.select :tag_id, Tag.all.collect{|a| [a.name,a.id]} %></p>
+
+<p><strong><%= tooltip(Node,:node_group) %></strong> <br /> <%= f.select :taggable_id, NodeGroup.all.collect{|a| [a.name,a.id]} %></p>
+<%= f.hidden_field :taggable_type, :value => 'NodeGroup' %>
+
+<%= @tooltips if ttflag %>

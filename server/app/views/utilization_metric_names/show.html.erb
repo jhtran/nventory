@@ -10,15 +10,4 @@
 
 </div>
 
-<div class="relationship">
-
-<%= render :partial => 'shared/comments', :locals => { :object => @utilization_metric_name} %>
-
-</div> <!-- end relationship -->
-
-<p><%= link_to 'Edit', edit_utilization_metric_name_path(@utilization_metric_name) %> | 
-<%= link_to 'Delete', utilization_metric_name_path(@utilization_metric_name), :confirm => 'Are you sure?', :method => :delete %></p>
-
-<%= render :partial => 'shared/version_information', :locals => { :object => @utilization_metric_name} %>
-
 <%= @tooltips %>

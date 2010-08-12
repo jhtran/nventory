@@ -1,26 +1,21 @@
 class UtilizationMetricsController < ApplicationController
+  # sets the @auth object and @object
+  before_filter :get_obj_auth
+  before_filter :modelperms
+
   # GET /utilization_metrics
   # GET /utilization_metrics.xml
   def index
-    sort = case params['sort']
-           when "assigned_at" then "utilization_metrics.assigned_at"
-           when "assigned_at_reverse" then "utilization_metrics.assigned_at DESC"
-           end
-    
-    # if a sort was not defined we'll make one default
-    if sort.nil?
-      params['sort'] = UtilizationMetric.default_search_attribute
-      sort = 'utilization_metrics.' + UtilizationMetric.default_search_attribute
-    end
-    
-    # XML doesn't get pagination
-    if params[:format] && params[:format] == 'xml'
-      @objects = UtilizationMetric.find(:all, :order => sort)
-    else
-      @objects = UtilizationMetric.paginate(:all,
-                                             :order => sort,
-                                             :page => params[:page])
-    end
+    ## BUILD MASTER HASH WITH ALL SUB-PARAMS ##
+    allparams = {}
+    allparams[:mainmodel] = UtilizationMetric
+    allparams[:webparams] = params
+    results = Search.new(allparams).search
+
+    flash[:error] = results[:errors].join('<br />') unless results[:errors].empty?
+    includes = results[:includes]
+    results[:requested_includes].each_pair{|k,v| includes[k] = v}
+    @objects = results[:search_results]
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +26,7 @@ class UtilizationMetricsController < ApplicationController
   # GET /utilization_metrics/1
   # GET /utilization_metrics/1.xml
   def show
-    @utilization_metric = UtilizationMetric.find(params[:id])
+    @utilization_metric = @object
 
     respond_to do |format|
       format.html # show.html.erb
@@ -41,12 +36,12 @@ class UtilizationMetricsController < ApplicationController
 
   # GET /utilization_metrics/new
   def new
-    @utilization_metric = UtilizationMetric.new
+    @utilization_metric = @object
   end
 
   # GET /utilization_metrics/1/edit
   def edit
-    @utilization_metric = UtilizationMetric.find(params[:id])
+    @utilization_metric = @object
   end
 
   # POST /utilization_metrics
@@ -76,7 +71,7 @@ class UtilizationMetricsController < ApplicationController
   # PUT /utilization_metrics/1
   # PUT /utilization_metrics/1.xml
   def update
-    @utilization_metric = UtilizationMetric.find(params[:id])
+    @utilization_metric = @object
 
     respond_to do |format|
       if @utilization_metric.update_attributes(params[:utilization_metric])
@@ -93,7 +88,7 @@ class UtilizationMetricsController < ApplicationController
   # DELETE /utilization_metrics/1
   # DELETE /utilization_metrics/1.xml
   def destroy
-    @utilization_metric = UtilizationMetric.find(params[:id])
+    @utilization_metric = @object
     @utilization_metric.destroy
 
     respond_to do |format|

@@ -5,7 +5,6 @@ require 'node_database_instance_assignments_controller'
 class NodeDatabaseInstanceAssignmentsController; def rescue_action(e) raise e end; end
 
 class NodeDatabaseInstanceAssignmentsControllerTest < Test::Unit::TestCase
-  fixtures :node_database_instance_assignments
 
   def setup
     @controller = NodeDatabaseInstanceAssignmentsController.new

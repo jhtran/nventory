@@ -1,4 +1,7 @@
 class LbPool < ActiveRecord::Base
+  acts_as_authorizable
+  acts_as_audited
+  
   set_table_name 'node_groups'
 
   acts_as_commentable

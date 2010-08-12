@@ -1,61 +1,44 @@
+ENV["RAILS_ENV"] = "test"
 $:.unshift(File.dirname(__FILE__) + '/../lib')
-
-require 'test/unit'
 require 'rubygems'
 require 'multi_rails_init'
 require 'active_record'
+require 'active_record/version'
+require 'active_record/fixtures'
 require 'action_controller'
+require 'action_controller/test_process'
 require 'action_view'
+require 'test/unit'
+require 'shoulda'
+
+gem 'jnunemaker-matchy'
+require 'matchy'
 require File.dirname(__FILE__) + '/../init.rb'
 
-require 'active_record/fixtures'
-require 'action_controller/test_process'
-
-config = YAML::load(IO.read(File.dirname(__FILE__) + '/database.yml'))
+config = YAML::load(IO.read(File.dirname(__FILE__) + '/db/database.yml'))
 ActiveRecord::Base.logger = Logger.new(File.dirname(__FILE__) + "/debug.log")
 ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'sqlite3mem'])
-
 ActiveRecord::Migration.verbose = false
-load(File.dirname(__FILE__) + "/schema.rb")
+load(File.dirname(__FILE__) + "/db/schema.rb")
 
-Test::Unit::TestCase.fixture_path = File.dirname(__FILE__) + "/fixtures/"
-$LOAD_PATH.unshift(Test::Unit::TestCase.fixture_path)
-
-# load model
 class User < ActiveRecord::Base
   acts_as_audited :except => :password
+  
+  attr_protected :logins
+  
+  def name=(val)
+    write_attribute(:name, CGI.escapeHTML(val))
+  end
 end
 class Company < ActiveRecord::Base
+  acts_as_audited
 end
 
-class Test::Unit::TestCase #:nodoc:
-  def create_fixtures(*table_names)
-    if block_given?
-      Fixtures.create_fixtures(Test::Unit::TestCase.fixture_path, table_names) { yield }
-    else
-      Fixtures.create_fixtures(Test::Unit::TestCase.fixture_path, table_names)
-    end
-  end
+class Test::Unit::TestCase
+  # def change(receiver=nil, message=nil, &block)
+  #   ChangeExpectation.new(self, receiver, message, &block)
+  # end
   
-  # Turn off transactional fixtures if you're working with MyISAM tables in MySQL
-  self.use_transactional_fixtures = true
-  
-  # Instantiated fixtures are slow, but give you @david where you otherwise would need people(:david)
-  self.use_instantiated_fixtures  = false
-
-  # Add more helper methods to be used by all tests here...
-  
-  # http://project.ioni.st/post/217#post-217
-  def assert_difference(object, method = nil, difference = 1)
-    initial_value = object.send(method)
-    yield
-    assert_equal initial_value + difference, object.send(method), "#{object}##{method}"
-  end
-  
-  def assert_no_difference(object, method, &block)
-    assert_difference object, method, 0, &block
-  end
-
   def create_user(attrs = {})
     User.create({:name => 'Brandon', :username => 'brandon', :password => 'password'}.merge(attrs))
   end
@@ -67,7 +50,5 @@ class Test::Unit::TestCase #:nodoc:
       end
       u.reload
     end
-    
   end
-
 end

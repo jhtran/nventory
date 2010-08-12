@@ -1,0 +1,26 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p>
+<%- if node.network_interfaces.length > 0 -%>
+  <ul>
+  <%- node.network_interfaces.each do |nic| -%>
+    <li>
+      <%= link_to nic.name, network_interface_url(nic) %>
+    </li>
+    <ul>
+    <%- nic.ip_addresses.each do |ip| -%>
+      <li>
+        <%= link_to ip.address, ip_address_url(ip) %>
+      </li>
+    <%- end -%>
+    </ul>
+  <%- end -%>
+  </ul>
+<%- else -%>
+  <p>This node does not have any network interfaces defined.</p>
+<%- end -%>
+</p>
+<p id="show_nic_ports">
+  <%= button_to_remote "Show Network Ports", :url => {:action => :get_nics, :id => node.id,
+      :partial => 'network_interfaces_ports' }, :update => 'network_interfaces', :loading => "Element.show('show_nics_spinner')",
+      :after => "Element.hide('show_nic_ports')", :loaded => "Element.show('hide_nics');Element.hide('show_nics_spinner')" %></p>
+<%= @tooltips if ttflag %>
