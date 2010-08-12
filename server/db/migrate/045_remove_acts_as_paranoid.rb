@@ -1,7 +1,7 @@
 class RemoveActsAsParanoid < ActiveRecord::Migration
   require 'rexml/document'
   require 'ftools'
-  @models = [ Account, DatabaseInstance, DatabaseInstanceRelationship, Datacenter, HardwareProfile, IpAddress, NetworkInterface, NodeGroup, Node, OperatingSystem, Outlet, Status, Subnet, Vip, DatacenterRackAssignment, DatacenterVipAssignment, ServiceServiceAssignment, VirtualAssignment, NodeGroupNodeAssignment, NodeGroupNodeGroupAssignment, NodeDatabaseInstanceAssignment, RackNodeAssignment ]
+  @models = [ DatabaseInstance, DatabaseInstanceRelationship, Datacenter, HardwareProfile, IpAddress, NetworkInterface, NodeGroup, Node, OperatingSystem, Outlet, Status, Subnet, Vip, DatacenterRackAssignment, DatacenterVipAssignment, ServiceServiceAssignment, VirtualAssignment, NodeGroupNodeAssignment, NodeGroupNodeGroupAssignment, NodeDatabaseInstanceAssignment, RackNodeAssignment ]
 
   def self.up
     @models.each do |model|
