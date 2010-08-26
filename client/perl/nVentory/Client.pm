@@ -2,6 +2,7 @@ package nVentory::Client;
 
 use strict;
 use warnings;
+use POSIX qw/strftime/;
 use nVentory::HardwareInfo;
 use nVentory::OSInfo;
 use LWP::UserAgent;
@@ -712,6 +713,7 @@ sub register
 	$data{"network_interfaces[authoritative]"} = 1;
 
 	$data{name} = nVentory::OSInfo::getfqdn();
+        $data{updated_at} = strftime("%Y-%m-%d %H:%M:%S",localtime);
 	$data{'name_aliases[name]'} = join(',', nVentory::OSInfo::getaliases());
 	$data{'operating_system[variant]'} = nVentory::OSInfo::getos();
 	$data{'operating_system[version_number]'} = nVentory::OSInfo::getosversion();
