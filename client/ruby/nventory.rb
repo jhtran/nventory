@@ -509,6 +509,7 @@ class NVentory::Client
     #
     # Gather software-related information
     #
+    data['updated_at'] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
     data['name'] = Facter['fqdn'].value
     if Facter['kernel'] && Facter['kernel'].value == 'Linux'
       # Strip release version and code name from lsbdistdescription
