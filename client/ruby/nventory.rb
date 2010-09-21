@@ -58,6 +58,7 @@ class NVentory::Client
       parms[:debug] ? (@debug = parms[:debug]) : @debug = (nil)
       parms[:dryrun] ? (@dryrun = parms[:dryrun]) : @dryrun = (nil)
       parms[:server] ? (@server = parms[:server]) : @server = (nil)
+      parms[:cookiefile] ? @cookiefile = parms[:cookiefile] : @cookiefile = "#{ENV['HOME']}/.nventory_cookie"
       if parms[:proxy_server] == false
         @proxy_server = 'nil'
       elsif parms[:proxy_server]
@@ -104,6 +105,9 @@ class NVentory::Client
           elsif key == 'dhparams'
             @dhparams = value
             warn "Using dhparams #{@dhparams} from #{configfile}" if (@debug)
+          elsif key == 'cookiefile'
+            @cookiefile = value
+            warn "Using cookiefile #{@cookiefile} from #{configfile}" if (@debug)
           end
         end
       end
@@ -509,8 +513,8 @@ class NVentory::Client
     #
     # Gather software-related information
     #
-    data['updated_at'] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
     data['name'] = Facter['fqdn'].value
+    data['updated_at'] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
     if Facter['kernel'] && Facter['kernel'].value == 'Linux'
       # Strip release version and code name from lsbdistdescription
       lsbdistdesc = Facter['lsbdistdescription'].value
@@ -553,6 +557,18 @@ class NVentory::Client
     # Need custom facts for these
     #data['timezone'] = 
     #data['virtual_client_ids'] = 
+
+    cpu_percent = getcpupercent
+    login_count = getlogincount
+    disk_usage = getdiskusage
+    # have to round it up because server code only takes integer 
+    data['utilization_metric[percent_cpu][value]'] = cpu_percent.round if cpu_percent
+    data['utilization_metric[login_count][value]'] = login_count if login_count
+    data['used_space'] = disk_usage[:used_space] if disk_usage
+    data['avail_space'] = disk_usage[:avail_space] if disk_usage
+    getvolumes.each do |key, value|
+      data[key] = value
+    end
 
     #
     # Gather hardware-related information
@@ -642,13 +658,22 @@ class NVentory::Client
     # updates its records (removing any NICs and IPs we don't specify)
     data['network_interfaces[authoritative]'] = true
 
-    if Facter['uniqueid'] && Facter['uniqueid'].value
-      # This sucks, it's just using hostid, which is generally tied to an
-      # IP address, not the physical hardware
-      data['uniqueid'] = Facter['uniqueid'].value
-    elsif Facter['sp_serial_number'] && Facter['sp_serial_number'].value
-      # I imagine Mac serial numbers are unique
-      data['uniqueid'] = Facter['sp_serial_number'].value
+    data['uniqueid'] = get_uniqueid
+
+    # TODO: figure out list of guests if it's a host
+    vmstatus = getvmstatus
+    if vmstatus == 'xenu'
+      data['virtualmode'] = 'guest'
+      data['virtualarch'] = 'xen'
+    elsif vmstatus == 'xen0'
+      data['virtualmode'] = 'host'
+      data['virtualarch'] = 'xen'
+    elsif vmstatus == 'vmware_server'
+      data['virtualmode'] = 'host'
+      data['virtualarch'] = 'vmware'
+    elsif vmstatus == 'vmware'
+      data['virtualmode'] = 'guest'
+      data['virtualarch'] = 'vmware'
     end
 
     if data['hardware_profile[model]'] == 'VMware Virtual Platform'
@@ -870,33 +895,31 @@ class NVentory::Client
     http
   end
   
-  # Returns the path to the cookiefile to be used for the specified user, or
-  # based on $HOME if a user is not specified.
+  # Returns the path to the cookiefile to be used. 
+  # Create the file and correct permissions on
+  # the cookiefile if needed
   def get_cookiefile(login=nil)
-    cookiefile = nil
     # autoreg has a special file
     if login == 'autoreg'
-      cookiefile = '/root/.nventory_cookie_autoreg'
+      @cookiefile = '/root/.nventory_cookie_autoreg'
       if ! File.directory?('/root')
         Dir.mkdir('/root')
       end
-    else
-      cookiefile = "#{ENV['HOME']}/.nventory_cookie"
     end
     # Create the cookie file if it doesn't already exist
-    if !File.exist?(cookiefile)
-      warn "Creating #{cookiefile}"
-      File.open(cookiefile, 'w') { |file| }
+    if !File.exist?(@cookiefile)
+      warn "Creating #{@cookiefile}"
+      File.open(@cookiefile, 'w') { |file| }
     end
     # Ensure the permissions on the cookie file are appropriate,
     # as it will contain a session key that could be used by others
     # to impersonate this user to the server.
-    st = File.stat(cookiefile)
+    st = File.stat(@cookiefile)
     if st.mode & 07177 != 0
-      warn "Correcting permissions on #{cookiefile}"
-      File.chmod(st.mode & 0600, cookiefile)
+      warn "Correcting permissions on #{@cookiefile}"
+      File.chmod(st.mode & 0600, @cookiefile)
     end
-    cookiefile
+    @cookiefile
   end
   
   # Sigh, Ruby doesn't have a library for handling a persistent
@@ -1093,6 +1116,13 @@ class NVentory::Client
        URI.parse(response['Location']).path == URI.join(@server, 'login/login').path
       puts "Server responsed with redirect to nVentory login: #{response['Location']}" if (@debug)
       loginuri = URI.parse(response['Location'])
+      ####################### Fix by darrendao - force it to use https ##########################
+      # This is needed because if you're not usign https, then you will get 
+      # redirected to https login page, rather than being logged in. So the check down there will
+      # will.
+      loginuri.scheme = 'https'
+      loginuri = URI.parse(loginuri.to_s)
+      ############################################################################################
       loginreq = Net::HTTP::Post.new(loginuri.request_uri)
       if password_callback.kind_of?(Module)
         password = password_callback.get_password if (!password)
@@ -1243,4 +1273,242 @@ class NVentory::Client
     singular
   end
 
+  def find_sar
+    path_env = (ENV['PATH'] || "").split(':')
+    other_paths = ["/usr/bin", "/data/svc/sysstat/bin"]
+    sarname = 'sar'
+    (path_env | other_paths).each do |path|
+      if File.executable?(File.join(path, sarname))
+        return File.join(path, sarname)
+      end
+    end
+  end
+  
+  def get_sar_data(sar_dir=nil, day = nil)
+    sar = find_sar
+    result = []
+    cmd  = nil
+    ENV['LC_TIME']='POSIX'
+    if day
+      day = "0#{day}" if day < 10
+      cmd = "#{sar} -u -f #{sar_dir}/sa#{day}"
+    else
+      cmd = "#{sar} -u"
+    end
+    output = `#{cmd}`
+    output.split("\n").each do |line|
+      result << line unless line =~ /(average|cpu|%|linux)/i
+    end
+    result
+  end
+
+  # I'm sure there's a better way to do all of these. However,
+  # I'm just following the way the code was written in Perl. 
+  def getcpupercent
+    return if !Facter['kernel'] or Facter['kernel'].value != 'Linux'
+    sar_dir = "/var/log/sa"
+    end_time = Time.now
+    start_time = end_time - 60*60*3
+    end_date = end_time.strftime("%d")
+    start_date = start_time.strftime("%d")
+
+    data_points = []
+    # all hours in same day so just make list of all hours to look for
+    if end_date == start_date
+      today_sar = get_sar_data
+      return false if today_sar.empty? 
+
+      # We only take avg of last 3 hours
+      (start_time.hour..end_time.hour).each do | hour |
+         hour = "0#{hour}" if hour < 10
+         today_sar.each do |line|
+           data_points << $1.to_f if line =~ /^#{hour}:.*\s(\S+)$/
+         end
+      end
+    else
+      today_sar = get_sar_data
+      yesterday_sar = get_sar_data(sar_dir, start_date)
+      return false if today_sar.empty? or yesterday_sar.empty?
+      # Parse today sar data
+      (0..end_time.hour).each do | hour |
+         hour = "0#{hour}" if hour < 10
+         today_sar.each do |line|
+           data_points << $1.to_f if line =~ /^#{hour}:.*\s(\S+)$/
+         end
+      end
+    
+      # Parse yesterday sar data
+      (start_time.hour..23).each do | hour |
+         hour = "0#{hour}" if hour < 10
+         yesterday_sar.each do |line|
+           data_points << $1.to_f if line =~ /^#{hour}:.*\s(\S+)$/
+         end
+      end
+    end
+
+    avg = data_points.inject(0.0) { |sum, el| sum + el } / data_points.size
+    # sar reports % idle, so need the opposite
+    result = 100 - avg
+    return result
+  end
+
+  # This is based on the perl version in OSInfo.pm
+  def getlogincount
+
+    # darrendao: Looks like this number has to match up with how often
+    # nventory-client is run in the crontab, otherwise, nventory server ends up
+    # miscalculating the sum... bad...
+    # How many hours of data we need to sample, not to exceed 24h
+    minus_hours = 3
+
+    # get unix cmd 'last' content
+    begin
+      content = `last`
+    rescue
+      warn "Failed to run 'last' command"
+      return nil
+    end
+    
+
+    counter = 0
+
+    (0..minus_hours).each do | minus_hour |
+      target_time = Time.now - 60*60*minus_hour
+      time_str = target_time.strftime("%b %d %H")
+      content.split("\n").each do |line|
+        counter += 1 if line =~ /#{time_str}/
+      end 
+    end
+    return counter 
+  end
+
+  # This is based on the perl version in OSInfo.pm
+  def getdiskusage
+    content = ""
+    begin
+      content = `df -k`
+    rescue
+      warn "Failed to run df command"
+      return nil
+    end
+    used_space = 0
+    avail_space = 0
+    content.split("\n").each do |line|
+      if line =~ /\s+\d+\s+(\d+)\s+(\d+)\s+\d+%\s+\/($|home$)/
+        used_space += $1.to_i
+        avail_space += $2.to_i
+      end
+    end
+    return {:avail_space => avail_space, :used_space => used_space}
+  end
+
+  def getvolumes
+    return getmountedvolumes.merge(getservedvolumes)
+  end
+
+  # This is based on the perl version in OSInfo.pm
+  def getservedvolumes
+    # only support Linux for now
+    return {} unless Facter['kernel'] && Facter['kernel'].value == 'Linux'
+
+    # Don't do anything if exports file is not there
+    return {} if !File.exists?("/etc/exports")
+
+    served = {}
+
+    IO.foreach("/etc/exports") do |line|
+      if line =~ /(\S+)\s+/
+        vol = $1
+        served["volumes[served][#{vol}][config]"] = "/etc/exports"
+        served["volumes[served][#{vol}][type]"] = 'nfs'
+      end
+    end
+    return served
+  end
+
+  # This is based on the perl version in OSInfo.pm
+  def getmountedvolumes
+    # only support Linux for now
+    return {} unless Facter['kernel'] && Facter['kernel'].value == 'Linux'
+   
+    dir = "/etc"
+    mounted = {}
+    
+    # AUTOFS - gather only files named auto[._]*
+    Dir.glob(File.join(dir, "*")).each do |file|
+      next if file !~ /^auto[._].*/ 
+      
+      # AUTOFS - match only lines that look like nfs syntax such as host:/path
+      IO.foreach(file) do |line|
+        if  line =~ /\w:\S/  && line !~ /^\s*#/
+          # Parse it, Example : " nventory_backup    -noatime,intr   irvnetappbk:/vol/nventory_backup "
+          if line =~ /^(\w[\w\S]+)\s+\S+\s+(\w[\w\S]+):(\S+)/
+            mnt = $1
+            host = $2
+            vol =  $3
+            mounted["volumes[mounted][/mnt/#{mnt}][config]"] = file
+            mounted["volumes[mounted][/mnt/#{mnt}][volume_server]"] = host
+            mounted["volumes[mounted][/mnt/#{mnt}][volume]"] = vol
+            mounted["volumes[mounted][/mnt/#{mnt}][type]"] = 'nfs'
+          end
+        end
+      end  # IO.foreach
+    end # Dir.glob
+
+    # FSTAB - has diff syntax than AUTOFS.  Example: "server:/usr/local/pub    /pub   nfs    rsize=8192,wsize=8192,timeo=14,intr"   
+    IO.foreach("/etc/fstab") do |line|
+      if line =~ /^(\w[\w\S]+):(\S+)\s+(\S+)\s+nfs/ 
+        host = $1
+        vol = $2
+        mnt = $3
+        mounted["volumes[mounted][#{mnt}][config]"] = "/etc/fstab"
+        mounted["volumes[mounted][#{mnt}][volume_server]"] = host
+        mounted["volumes[mounted][#{mnt}][volume]"] = vol
+        mounted["volumes[mounted][#{mnt}][type]"] = 'nfs'
+      end
+    end # IO.foreach
+    return mounted  
+  end
+
+  def getvmstatus
+    # facter virtual makes calls to commands that are under /sbin
+    ENV['PATH'] = "#{ENV['PATH']}:/sbin"
+    vmstatus = `facter virtual`
+    vmstatus.chomp!
+  end
+
+  def get_uniqueid
+    os = Facter['kernel'].value 
+    if os == 'Linux' or os == 'FreeBSD'
+      # best to use UUID from dmidecode
+      uuid = getuuid
+      if uuid
+        uniqueid = uuid
+      # next best thing to use is macaddress
+      else
+        uniqueid = Facter['macaddress'].value
+      end 
+    elsif Facter['uniqueid'] && Facter['uniqueid'].value
+      # This sucks, it's just using hostid, which is generally tied to an
+      # IP address, not the physical hardware
+      uniqueid = Facter['uniqueid'].value
+    elsif Facter['sp_serial_number'] && Facter['sp_serial_number'].value
+      # I imagine Mac serial numbers are unique
+      uniqueid = Facter['sp_serial_number'].value
+    end
+    return uniqueid
+  end
+  
+  def getuuid
+    uuid = nil
+    # dmidecode will fail if not run as root
+    if Process.euid != 0 
+      raise "This must be run as root"
+    end
+    uuid_entry = `/usr/sbin/dmidecode  | grep UUID`
+    if uuid_entry
+      uuid = uuid_entry.split(":")[1]
+    end
+    return uuid.strip
+  end
 end
