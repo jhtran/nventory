@@ -11,17 +11,6 @@
 
 ActiveRecord::Schema.define(:version => 20100422011244) do
 
-  create_table "account_group_account_assignments", :force => true do |t|
-    t.integer  "account_id",       :null => false
-    t.integer  "account_group_id", :null => false
-    t.datetime "created_at"
-    t.datetime "updated_at"
-    t.datetime "assigned_at"
-  end
-
-  add_index "account_group_account_assignments", ["account_group_id"], :name => "index_account_group_account_assignments_on_account_group_id"
-  add_index "account_group_account_assignments", ["account_id"], :name => "index_account_group_account_assignments_on_account_id"
-
   create_table "account_group_account_group_assignments", :force => true do |t|
     t.integer  "parent_id",   :null => false
     t.integer  "child_id",    :null => false
@@ -285,6 +274,7 @@ ActiveRecord::Schema.define(:version => 20100422011244) do
   add_index "name_aliases", ["created_at"], :name => "index_name_aliases_on_created_at"
   add_index "name_aliases", ["id"], :name => "index_name_aliases_on_id"
   add_index "name_aliases", ["name"], :name => "index_name_aliases_on_name"
+  add_index "name_aliases", ["source_id", "name"], :name => "source_id_name"
   add_index "name_aliases", ["source_id"], :name => "index_name_aliases_on_source_id"
   add_index "name_aliases", ["source_type"], :name => "index_name_aliases_on_source_type"
   add_index "name_aliases", ["updated_at"], :name => "index_name_aliases_on_updated_at"
@@ -413,8 +403,10 @@ ActiveRecord::Schema.define(:version => 20100422011244) do
     t.text     "description"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.datetime "deleted_at"
   end
 
+  add_index "node_racks", ["deleted_at"], :name => "index_racks_on_deleted_at"
   add_index "node_racks", ["id"], :name => "index_racks_on_id"
   add_index "node_racks", ["name"], :name => "index_racks_on_name"
 
@@ -522,17 +514,6 @@ ActiveRecord::Schema.define(:version => 20100422011244) do
 
   add_index "roles_users", ["account_group_id"], :name => "index_roles_users_on_account_group_id"
 
-  create_table "rude_queues", :force => true do |t|
-    t.string   "queue_name"
-    t.text     "data"
-    t.boolean  "processed",  :default => false, :null => false
-    t.datetime "created_at"
-    t.datetime "updated_at"
-  end
-
-  add_index "rude_queues", ["processed"], :name => "index_rude_queues_on_processed"
-  add_index "rude_queues", ["queue_name", "processed"], :name => "index_rude_queues_on_queue_name_and_processed"
-
   create_table "service_profiles", :force => true do |t|
     t.integer  "service_id"
     t.string   "dev_url"
@@ -631,10 +612,11 @@ ActiveRecord::Schema.define(:version => 20100422011244) do
   add_index "storage_controllers", ["vendor"], :name => "index_storage_controllers_on_vendor"
 
   create_table "subnets", :force => true do |t|
-    t.string   "network",                       :null => false
-    t.string   "netmask",                       :null => false
-    t.string   "gateway",       :default => ""
-    t.string   "broadcast",                     :null => false
+    t.string   "network",       :null => false
+    t.string   "netmask",       :null => false
+    t.string   "gateway",       :null => false
+    t.string   "broadcast",     :null => false
+    t.string   "resolvers"
     t.integer  "node_group_id"
     t.text     "description"
     t.datetime "created_at"
