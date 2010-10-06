@@ -47,11 +47,15 @@ class OutletsController < ApplicationController
   def edit
     @outlet = @object
     if params[:consumer_type] == "NetworkInterface"
-      results = params[:consumer_type].constantize.find(:all, :joins => {:node => {}}, :conditions => ["nodes.name is not ? and interface_type = ? and network_interfaces.name not like ?",nil,"Ethernet",'lo%'],:order => 'nodes.name' )
+      results = params[:consumer_type].constantize.find(:all, :select => 'id,name',
+                                                        :joins => {:node => {}}, 
+                                                        :conditions => ["nodes.name is not ? and interface_type = ? and network_interfaces.name not like ?",nil,"Ethernet",'lo%'],
+                                                        :order => 'nodes.name' )
       @consumer_type = params[:consumer_type]
       @consumers = results.collect { |consumer| [ "#{consumer.node.name}:#{consumer.name}", consumer.id ] }
     else
-      @consumers = Node.find(:all, :order => 'name').collect { |n| [ n.name, n.id ] }
+      except=params[:refobj].constantize.find(params[:refid]) if (params[:refobj] && params[:refid])
+      @consumers = Node.find(:all, :select => 'name,id', :order => 'name', :conditions => ['id != ?',except]).collect { |n| [ n.name, n.id ] }
     end
     respond_to do |format|
       format.html # show.html.erb

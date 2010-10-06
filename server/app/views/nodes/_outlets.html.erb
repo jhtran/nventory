@@ -39,7 +39,11 @@
         <%- end -%>
       <%- end -%>
       </td>
-      <td><%= link_to_remote "Assign", :url => {:controller => "outlets", :action => :edit, :id => outlet.id, :consumer_type => outlet.consumer_type } , :method => :get, :update => dom_id(outlet)%></td>
+      <td><%= link_to_remote "Assign", :url => {:controller => "outlets", :action => :edit, 
+                                                :refid => @node.id, :refobj => 'Node',
+                                                :id => outlet.id, :consumer_type => outlet.consumer_type }, 
+                                       :method => :get, :update => dom_id(outlet)%>
+      </td>
       <td><%= link_to_remote 'Delete',
                               :url => "/outlets/#{outlet.id}",
                               :confirm => 'Are you sure?',

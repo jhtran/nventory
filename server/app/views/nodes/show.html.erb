@@ -59,9 +59,9 @@
   <%- end -%>
 <%- end -%>
 <!-- BLADE? -->
-<%- if blade_results = @node.consumed_blade -%>
-    <%= "<strong><font color=purple>" + tooltip(@node.class,:blade_enclosure) + ":</strong> #{blade_results[0].producer.name}</font><br />" %>
-    <%= "<strong><font color=purple>" + tooltip(@node.class,:blade_slot) + ":</strong> #{blade_results[0].name}</font><br />" %>
+<%- if bladeslot = @node.consumed_blade -%>
+    <%= "<strong><font color=purple>" + tooltip(@node.class,:blade_enclosure) + ":</strong> #{blade_slot.producer.name}</font><br />" %>
+    <%= "<strong><font color=purple>" + tooltip(@node.class,:blade_slot) + ":</strong> #{blade_slot.name}</font><br />" %>
 <%- end -%>
 </p>
 

@@ -384,7 +384,8 @@ class Node < ActiveRecord::Base
   end
 
   def consumed_blade
-    results = self.consumed_outlets.find(:first,:include => {:producer => {:hardware_profile =>{}} } , :conditions => "hardware_profiles.outlet_type = 'Blade'")
+    return nil if hardware_profile.outlet_type && hardware_profile.outlet_type == 'Blade'
+    result = self.consumed_outlets.find(:first,:include => {:producer => {:hardware_profile =>{}} } , :conditions => "hardware_profiles.outlet_type = 'Blade'")
   end
   
 end
