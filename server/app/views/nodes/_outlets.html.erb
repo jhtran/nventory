@@ -25,7 +25,7 @@
   </tr>
   </thead>
   <tbody>
-  <%- for outlet in @node.produced_outlets.sort{|a,b| a.name <=> b.name} %>
+  <%- for outlet in node.produced_outlets.sort{|a,b| a.name <=> b.name} %>
   <tr class="<%= cycle('odd', 'even') -%>">
       <td><%= link_to outlet.name, outlet %></td>
       <td id="<%= dom_id(outlet) %>">
@@ -40,7 +40,7 @@
       <%- end -%>
       </td>
       <td><%= link_to_remote "Assign", :url => {:controller => "outlets", :action => :edit, 
-                                                :refid => @node.id, :refobj => 'Node',
+                                                :refid => node.id, :refobj => 'Node',
                                                 :id => outlet.id, :consumer_type => outlet.consumer_type }, 
                                        :method => :get, :update => dom_id(outlet)%>
       </td>

@@ -21,7 +21,9 @@
       <%- to_array = NetworkInterface.find(:all, :joins=> {:node => {}}, :conditions => "network_interfaces.name not like 'lo%'", :order => 'nodes.name').collect { |r| [ "#{r.node.name} [ #{r.name} ]", r.id ] } -%>
       <%= f.hidden_field( :consumer_type, { :value => 'NetworkInterface' } ) %>
     <%- else -%>
-      <%- to_array = Node.find(:all, :select => "nodes.id, nodes.name", :order => 'name').collect { |r| [ r.name, r.id ] } -%>
+      <%- to_array = Node.find(:all, :select => "nodes.id, nodes.name", 
+                               :conditions => ['id != ?', node.id],
+                               :order => 'name').collect { |r| [ r.name, r.id ] } -%>
       <%= f.hidden_field( :consumer_type, { :value => 'Node' } ) %>
     <%- end -%>
     

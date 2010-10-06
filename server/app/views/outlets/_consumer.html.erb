@@ -2,7 +2,11 @@
 <%- if @outlet.consumer.nil? -%>
   n/a
 <%- else -%>
-  <%= link_to "#{outlet.consumer.node.name}:#{outlet.consumer.name}", outlet.consumer %>
+  <%- if outlet.consumer_type == 'Node' -%>
+    <%= link_to "#{outlet.consumer.name}", outlet.consumer %>
+  <%- else -%>
+    <%= link_to "#{outlet.consumer.node.name}:#{outlet.consumer.name}", outlet.consumer %>
+  <%- end -%>
 <%- end -%>
 
 <%= @tooltips if ttflag %>
