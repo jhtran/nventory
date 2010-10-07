@@ -36,7 +36,7 @@
 <ul>
   <li><%= link_to "Audits", audits_url, :title => mtitle(Audit) %></li>
   <form action="" method="get">
-    &nbsp;&nbsp;&nbsp;<select style="width:10em;" id="report" name="" onchange="if (this.value != '') { window.location = '/reports/' + $('report').value; }">
+    &nbsp;&nbsp;&nbsp;<select style="width:20em;" id="report" name="" onchange="if (this.value != '') { window.location = '<%= url_for :controller => 'reports' %>/' + $('report').value; }">
       <option value="">View Report:</option>
       <%= options_for_select(list_reports) %>
     </select>
