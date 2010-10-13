@@ -330,6 +330,9 @@ class NVentory::Client
         next if elem.node_type != :element
         data = xml_to_ruby(elem)
         name = data['name'] || data['id']
+        if !results[name].nil?
+          warn "Duplicate entries for #{name}. Only one will be shown."
+        end
         results[name] = data
       end
     end
@@ -515,7 +518,8 @@ class NVentory::Client
     #
     data['name'] = Facter['fqdn'].value
     data['updated_at'] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
-    if Facter['kernel'] && Facter['kernel'].value == 'Linux'
+    if Facter['kernel'] && Facter['kernel'].value == 'Linux' &&
+       Facter['lsbdistdescription'] && Facter['lsbdistdescription'].value
       # Strip release version and code name from lsbdistdescription
       lsbdistdesc = Facter['lsbdistdescription'].value
       lsbdistdesc.gsub!(/ release \S+/, '')
@@ -554,8 +558,9 @@ class NVentory::Client
     elsif Facter['sp_number_processors'] && Facter['sp_number_processors'].value
       data['os_processor_count'] = Facter['sp_number_processors'].value
     end
+    data['timezone'] = Facter['timezone'].value if Facter['timezone']
+
     # Need custom facts for these
-    #data['timezone'] = 
     #data['virtual_client_ids'] = 
 
     cpu_percent = getcpupercent
@@ -629,8 +634,13 @@ class NVentory::Client
       data['processor_count'] = Facter['sp_number_processors'].value
     end
       
-    #data['processor_count'] = 
-    #data['processor_core_count'] = 
+    if Facter['physicalprocessorcount'] 
+      data['processor_count'] = Facter['physicalprocessorcount'].value 
+    else 
+      # need to get from dmidecode
+    end
+    
+    data['processor_core_count'] = get_cpu_core_count
     #data['processor_socket_count'] = 
     #data['power_supply_count'] = 
     #data['physical_memory'] = 
@@ -676,18 +686,42 @@ class NVentory::Client
       data['virtualarch'] = 'vmware'
     end
 
-    if data['hardware_profile[model]'] == 'VMware Virtual Platform'
-      getdata = {} 
-      getdata[:objecttype] = 'nodes'
-      getdata[:exactget] = {'virtual_client_ids' => [data['uniqueid']]}
-      getdata[:login] = 'autoreg'
-      results = get_objects(getdata)
-      if results.length == 1
-        data['virtual_parent_node_id'] = results.values.first['id']
-      elsif results.length > 1
-        warn "Multiple hosts claim this virtual client: #{results.keys.sort.join(',')}"
+    # Looks like this no longer works. virtual_client_ids is not valid
+    # field and causes ALL nodes to return....
+#    if data['hardware_profile[model]'] == 'VMware Virtual Platform'
+#      getdata = {} 
+#      getdata[:objecttype] = 'nodes'
+#      getdata[:exactget] = {'virtual_client_ids' => [data['uniqueid']]}
+#      getdata[:login] = 'autoreg'
+#      results = get_objects(getdata)
+#      if results.length == 1
+#        data['virtual_parent_node_id'] = results.values.first['id']
+#      elsif results.length > 1
+#        warn "Multiple hosts claim this virtual client: #{results.keys.sort.join(',')}"
+#      end
+#    end
+
+    # Get console info
+    console_type = get_console_type
+    if console_type == "Dell DRAC"
+      data['console_type'] = "Dell DRAC"
+      
+      drac_info = get_drac_info
+  
+      # Create a NIC for the DRAC and associate it this node
+      unless drac_info.empty?
+        drac_name = (drac_info[:name] && !drac_info[:name].empty?)? drac_info[:name] : "DRAC"
+        data["network_interfaces[#{drac_name}][name]"] = drac_name 
+        data["network_interfaces[#{drac_name}][hardware_address]"] = drac_info[:mac_address]
+        data["network_interfaces[#{drac_name}][ip_addresses][0][address]"] = drac_info[:ip_address]
+        data["network_interfaces[#{drac_name}][ip_addresses][0][address_type]"] = "ipv4"
       end
     end
+
+    # See what chassis/blade enclosure the node is in
+    chassis = get_chassis_info
+    data["chassis[service_tag]"] = chassis[:service_tag] if !chassis.empty?
+    data["chassis[slot_num]"] = chassis[:slot_num] if !chassis.empty?
 
     #
     # Report data to server
@@ -1290,7 +1324,6 @@ class NVentory::Client
     cmd  = nil
     ENV['LC_TIME']='POSIX'
     if day
-      day = "0#{day}" if day < 10
       cmd = "#{sar} -u -f #{sar_dir}/sa#{day}"
     else
       cmd = "#{sar} -u"
@@ -1305,7 +1338,7 @@ class NVentory::Client
   # I'm sure there's a better way to do all of these. However,
   # I'm just following the way the code was written in Perl. 
   def getcpupercent
-    return if !Facter['kernel'] or Facter['kernel'].value != 'Linux'
+    return nil if !Facter['kernel'] or Facter['kernel'].value != 'Linux'
     sar_dir = "/var/log/sa"
     end_time = Time.now
     start_time = end_time - 60*60*3
@@ -1345,6 +1378,9 @@ class NVentory::Client
          end
       end
     end
+
+    # no data points
+    return nil if data_points.empty?
 
     avg = data_points.inject(0.0) { |sum, el| sum + el } / data_points.size
     # sar reports % idle, so need the opposite
@@ -1482,7 +1518,9 @@ class NVentory::Client
     if os == 'Linux' or os == 'FreeBSD'
       # best to use UUID from dmidecode
       uuid = getuuid
-      if uuid
+      # Stupid SeaMicro boxes all have the same UUID below. So we won't
+      # want to use it, use mac address instead
+      if uuid and uuid != "78563412-3412-7856-90AB-CDDEEFAABBCC"
         uniqueid = uuid
       # next best thing to use is macaddress
       else
@@ -1510,5 +1548,103 @@ class NVentory::Client
       uuid = uuid_entry.split(":")[1]
     end
     return uuid.strip
+  end
+
+  # This is based on the perl version in HardwareInfo.pm
+  def get_cpu_core_count
+    # only support Linux for now
+    os = Facter['kernel'].value
+    physicalid = nil
+    coreid = nil
+    corecount = nil
+    cores = {}
+    if os == 'Linux' 
+      IO.foreach("/proc/cpuinfo") do |line|
+        if line =~ /^processor\s*: (\d+)/
+          physicalid = nil
+          coreid = nil
+        elsif line =~ /^physical id\s*: (\d+)/
+          physicalid = $1
+        elsif line =~ /^core id\s*: (\d+)/
+          coreid = $1;
+        end
+        if physicalid && coreid
+          cores["#{physicalid}:#{coreid}"] = 1;
+        end 
+      end  # IO.foreach
+      corecount = cores.size
+    end # if statement
+    return corecount
+  end
+
+  def get_console_type
+    console_type = nil
+    # only support Linux for now
+    os = Facter['kernel'].value
+    if os == 'Linux' 
+      if File.exists?('/usr/sbin/racadm')
+        console_type = "Dell DRAC"
+      end
+    end 
+    return console_type
+  end
+
+  def get_drac_info
+    info = {}
+    begin
+      result = `/usr/sbin/racadm getsysinfo` || ""
+      result.split("\n").each do |line|
+        if line =~ /IP Address/i
+          info[:ip_address] = line.split("=")[1].strip
+        elsif line =~ /MAC Address/i
+          info[:mac_address] = line.split("=")[1].strip
+        elsif line =~ /DNS RAC Name/i
+          info[:name] = line.split("=")[1].strip
+        end
+      end
+    rescue
+      warn "Failed to get DRAC IP"
+    end
+    return info
+  end
+
+  def get_chassis_info
+    chassis_info = {}
+    manufacturer = nil
+    # Only support Dell hardware for now
+    if  Facter['manufacturer'] &&  Facter['manufacturer'].value
+      manufacturer = Facter['manufacturer'].value
+      if manufacturer =~ /Dell/
+        chassis_info = get_dell_chassis_info
+      end
+    end
+    return chassis_info
+  end
+
+  def get_dell_chassis_info
+    chassis = {}
+    begin
+      #result = `omreport modularenclosure -fmt ssv` 
+      #result.split("\n").each do |line|
+      #  if line =~ /Service Tag/
+      #    chassis[:service_tag] = line.split(";")[1].strip
+      #    break
+      #  end
+      #end 
+      result = `omreport chassis info -fmt ssv`
+      result.split("\n").each do |line|
+        if line =~ /Server Module Location;Slot (\d+)/
+           chassis[:slot_num] = $1.to_i
+        elsif line =~ /Chassis Service Tag/
+           chassis[:service_tag] = line.split(";")[1].strip
+        end
+      end
+      # if no slot_number then the blade isn't really in a chassis/blade enclosure
+      # such as the case with Dell PowerEdge 1950
+      return {} if chassis[:slot_num].nil?
+    rescue
+      warn "Failed to run/parse Dell's omreport command"
+    end
+    return chassis
   end
 end
