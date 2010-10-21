@@ -277,7 +277,10 @@ class NodeGroupsController < ApplicationController
         @graph.add_edge( @graphobjs[parent],@graphobjs[child] )
       end
     end
-    @graph.output( :output => 'gif',:file => "public/images/#{@node_group.name}_node_grouptree.gif" )
+    image_type = MyConfig.visualization.images.mtype
+    image_dir = File.join("public", MyConfig.visualization.images.dir)
+    @graph.output( :output => image_type,
+                   :file => "#{image_dir}/#{@node_group.name}_node_grouptree.#{image_type}" )
     respond_to do |format|
       format.html # graph_node_groups.html.erb
     end

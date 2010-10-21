@@ -9,7 +9,19 @@
 
 <ul class="v_rack_node">
 <%- node_rack.node_rack_node_assignments.each do |assignment| -%>
+<% if assignment.node.hardware_profile.outlet_type == 'Blade' %>
+  <li class="v_chassis" style="background-color:<%=h(assignment.node.hardware_profile.visualization_color)%>"><%= link_to h(assignment.node.visualization_summary), node_path(assignment.node) %>
+  <ul class="v_chassis_container">
+    <% assignment.node.produced_outlets.each do |outlet| %>
+      <li class="v_chassis_node"><%= link_to h("Slot " + outlet.name + ": " + outlet.consumer.visualization_summary), node_path(outlet.consumer),  { :style => 'background-color:' + h(outlet.consumer.hardware_profile.visualization_color) + ';height:' + ((outlet.consumer.hardware_profile.rack_size || 0)*pixel_height_of_node).to_s + 'px;line-height:'+  ((outlet.consumer.hardware_profile.rack_size || 0)*pixel_height_of_node).to_s + 'px;' } %></li>
+    <% end %>
+  </ul>
+    </li>
+<% else %>
   <li><%= link_to h(assignment.node.visualization_summary), node_path(assignment.node), { :style => 'background-color:' + h(assignment.node.hardware_profile.visualization_color) + ';height:' + ((assignment.node.hardware_profile.rack_size || 0)*pixel_height_of_node).to_s + 'px;line-height:'+  ((assignment.node.hardware_profile.rack_size || 0)*pixel_height_of_node).to_s + 'px;' } %></li>
+
+  <% end %>
+
 <%- end -%>
 </ul>
 

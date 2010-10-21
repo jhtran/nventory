@@ -108,6 +108,13 @@ require 'graphviz'
 require 'redcloth'
 # Needed for offline background jobs (starling/workling)
 
+######### TO BE DEPRECATED #########
+# darrendao - I've started using wonsys configuration_manager plugin for config management.
+# It is much more flexible and cleaner to use. For new config settings, I've started
+# using this new plugin. Howevever, for existing config below, they're still in nventory.conf.
+# I don't want to break anyone's setup. In the future, we should migrate away from 
+# managing our config via nventory.conf and move them all under config/configuration_manager.yml.
+#
 ## Pull the environment specific config settings
 confighash = {}
 if File.exist?(CONFIGFILE)
@@ -161,5 +168,9 @@ end # if File.exist?(CONFIGFILE)
 
 # Email receipients for the exception_notification plugin
 ExceptionNotifier.exception_recipients = $admin_email
+ExceptionNotifier.sender_address = $admin_email
 require 'model_extensions'
 ActiveRecord::Base.send(:extend, ModelExtensions)
+
+# Using wonsys configuration_manager plugin for config management
+MyConfig = ConfigurationManager.new_manager

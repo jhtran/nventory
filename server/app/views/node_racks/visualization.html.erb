@@ -1,5 +1,5 @@
 <%- @tooltips = [] %>
-<%- @page_title = "Visualization of " + tooltip(Node,:node_rack,'Rack: ') + h(@node_rack.name) %>
+<%- @page_title = "Visualization of " + 'Rack: ' + h(@node_rack.name) %>
 
 <%= render :partial => 'rack_visualization', :locals => {:node_rack => @node_rack} %>
 

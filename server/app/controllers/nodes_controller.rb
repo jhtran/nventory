@@ -310,6 +310,7 @@ class NodesController < ApplicationController
     end
 
     process_blades(params[:blades]) if params[:blades]
+    process_chassis(params[:chassis]) if params[:chassis]
     
     # If the user specified some network interface info then handle that
     if  params[:format] == 'xml'
@@ -374,6 +375,61 @@ class NodesController < ApplicationController
     end
   end
 
+  def process_chassis(chassishash)
+    # figure out if this node is currently assigned to a chassis
+    # by looking to see if  there's an existing outlet that has this node
+    # as the consumer, and the produce is a node whose hardware_profile
+    # has outlet_type "Blade"
+    chassis_outlet = nil
+    outlets = Outlet.find_all_by_consumer_id_and_consumer_type(@node.id, 'Node')
+    outlets.each do |outlet|
+      chassis_outlet = outlet if outlet.producer.hardware_profile.outlet_type == "Blade"
+    end if outlets
+
+    # no changes. we're done
+    # we're using the chassis' serial tag as the unqueid field of the chassis node
+    if chassis_outlet && chassis_outlet.producer.uniqueid == chassishash['service_tag']
+      return
+    elsif chassis_outlet && chassis_outlet.producer.uniqueid != chassishash['service_tag']
+       # Looks like the box is now in a different chassis. Delete the old outlet
+      chassis_outlet.destroy
+    end
+
+    # Need to create new outlet
+    # First find/create the chassis node
+    chassis = Node.find_by_uniqueid(chassishash['service_tag'])
+    unless chassis
+      # outlet_count = 0 means it's not static
+      chassis_hdwr_profile = HardwareProfile.find_or_create_by_name_and_outlet_type_and_outlet_count('Generic Chassis', 'Blade', 0)
+      status = Status.find_or_create_by_name('available')
+      chassis = Node.new(:name => "Chassis-#{chassishash['service_tag']}",
+                         :uniqueid => chassishash['service_tag'],
+                         :hardware_profile_id => chassis_hdwr_profile.id,
+                         :status_id => status.id)
+      chassis.save!
+    end
+
+    # By default, nventory create slots (outlets) for chassis automatically (named 1 to n)
+    chassis_outlets = Outlet.find_all_by_producer_id(chassis.id)
+    outlet_exist = false
+    # pad with 0 so the outlet shows up in correct order
+    slot_num = "%02d" % chassishash['slot_num']
+    if chassis_outlets
+      chassis_outlets.each do |chassis_outlet|
+        if chassis_outlet.name.to_i == chassishash['slot_num'].to_i
+          chassis_outlet.update_attributes({:name => slot_num, :consumer_id => @node.id})
+          outlet_exist = true
+          break
+        end
+      end 
+    end
+    unless outlet_exist
+      chassis_outlet = Outlet.new(:name => slot_num,
+                                  :consumer_id => @node.id, :producer_id => chassis.id)
+      chassis_outlet.save! 
+    end
+  end
+  
   def process_blades(bladeshash)
     authoritative = false
     if bladeshash[:authoritative] 

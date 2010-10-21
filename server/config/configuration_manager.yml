@@ -1,0 +1,19 @@
+common: &every_env
+  visualization:
+    images:
+      mtype: png
+      dir: /images
+  allow_duplicate_hostname: true
+  report:
+    email:
+      from: unix-sa@example.com
+      to: unix-sa@example.com
+    
+development: &non_production_env
+  <<: *every_env
+  
+test:
+  <<: *non_production_env
+
+production:
+  <<: *every_env

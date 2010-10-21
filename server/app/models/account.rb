@@ -92,7 +92,7 @@ class Account < ActiveRecord::Base
       end
     end
     if LDAP_SERVER
-      ldapsrv = LDAP_SERvER
+      ldapsrv = LDAP_SERVER
     end
 
     return nil if ldapsrv.nil?

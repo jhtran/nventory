@@ -299,11 +299,40 @@ ul.v_rack_node li a
 	border-width: 1px;
 	border-style: solid;
 	margin-top: 3px;
-	padding: 4px 5px;
+        padding: 8px 5px 2px 5px;
 	display: block;
 	text-decoration: none;
 	color: black;
 	overflow: hidden;
+}
+
+.v_chassis 
+{
+        border-color: #000;
+        border-width: 2px;
+        border-style: solid;
+        margin-top: 3px;
+        padding: 4px 5px;
+        display: block;
+        text-decoration: none;
+        color: black;
+        overflow: hidden;
+}
+
+ul.v_chassis_container
+{
+        list-style: none;
+        padding: 0px 3px 0px 3px;
+        margin-left: 0px;
+        overflow: hidden;
+}
+
+li.v_chassis_node 
+{
+        list-style: none;
+        padding: 0;
+        margin-left: 0;
+        overflow: hidden;
 }
 
 table.network_summary

@@ -10,7 +10,7 @@
   <p class="metadata"><strong><%= tooltip(AccountGroup,:created_at) %>:</strong> <%= h(@account_group.created_at) %><br />
 </div>
 
-<!-- table list of all accounts and permissions attr to this obj --%>
+<!-- table list of all accounts and permissions attr to this obj -->
 <div id='roles'>
   <%= render :partial => 'shared/roles', :locals => {:obj => @account_group} if allow_perm(@account_group, ['updater']) %>
 </div>

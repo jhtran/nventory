@@ -1,4 +1,4 @@
 <%- @tooltips = [] %>
-<%= image_tag "/images/#{@node_group.name}_node_grouptree.gif" %>
+<%= image_tag "#{MyConfig.visualization.images.dir}/#{@node_group.name}_node_grouptree.#{MyConfig.visualization.images.mtype}" %>
 
 <%= @tooltips %>

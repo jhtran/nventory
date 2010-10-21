@@ -15,13 +15,14 @@ class NodeRack < ActiveRecord::Base
   
   validates_presence_of :name
   validates_uniqueness_of :name
+  validates_numericality_of :u_height, :only_integer => true, :greater_than => 0
   
   def self.default_search_attribute
     'name'
   end
  
-  def u_height
-    42
+  def get_u_height
+    u_height || 42
   end
   
   def used_u_height
@@ -33,7 +34,7 @@ class NodeRack < ActiveRecord::Base
   end
   
   def free_u_height
-    self.u_height - self.used_u_height
+    self.get_u_height - self.used_u_height
   end
   
   def before_destroy

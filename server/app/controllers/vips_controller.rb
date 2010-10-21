@@ -56,7 +56,9 @@ class VipsController < ApplicationController
   # POST /vips.xml
   def create
     @vip = Vip.new(params[:vip])
-
+    # resuse ip_address record if one already exists with same address and type
+    ip = IpAddress.find_or_create_by_address_and_address_type(params[:vip][:ip_address_attributes])
+    @vip.ip_address = ip
     respond_to do |format|
       if @vip.save
         flash[:notice] = 'vip was successfully created.'
@@ -73,7 +75,9 @@ class VipsController < ApplicationController
   # PUT /vips/1.xml
   def update
     @vip = @object
-
+    # resuse ip_address record if one already exists with same address and type
+    ip = IpAddress.find_or_create_by_address_and_address_type(params[:vip][:ip_address_attributes])
+    params[:vip][:ip_address_attributes][:id] = ip.id
     respond_to do |format|
       if @vip.update_attributes(params[:vip])
         flash[:notice] = 'vip was successfully updated.'

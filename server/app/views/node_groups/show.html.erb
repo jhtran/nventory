@@ -46,6 +46,7 @@
   <p><strong><%= tooltip(NodeGroup,:description) %>:</strong><br />
   <%= textilize_without_paragraph(h(@node_group.description)) %></p>
   <p class="metadata"><strong><%= tooltip(NodeGroup,:created_at) %>:</strong> <%= h(@node_group.created_at) %><br />
+  <p><strong>Num of Nodes:</strong> <%= @node_group.nodes.size %></p>
   <%= render :partial => 'tags', :locals => {:node_group => @node_group} %>
 </div> 
 <!-- end local attributes-->

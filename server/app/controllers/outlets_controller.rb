@@ -167,7 +167,8 @@ class OutletsController < ApplicationController
   end
 
   def get_producer_consumer
-    outlet_type = request.raw_post
+    # outlet_type = request.raw_post
+    outlet_type = request.raw_post.gsub(/&_=/,'')
     # param for :producer_id
     @producers = Node.find( :all, :joins => {:hardware_profile => {}}, :order => 'nodes.name',
                             :conditions => ["hardware_profiles.outlet_type = ?", outlet_type]).collect { |node| [node.name, node.id] }
