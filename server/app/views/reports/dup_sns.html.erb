@@ -11,9 +11,9 @@
 </table>
 
 <div id="results_table">
+<%= will_paginate @objects %>
 <table cellspacing="0" class="styled">
 <thead>
-<%= will_paginate @objects %>
 <tr>
   <th nowrap="nowrap" width="5%">&nbsp;</th>
   <th <%= sort_td_class_helper "name" %> > <%= sort_link_helper "Name", "name" %></th>
