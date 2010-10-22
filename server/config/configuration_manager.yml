@@ -3,7 +3,7 @@ common: &every_env
     images:
       mtype: png
       dir: /images
-  allow_duplicate_hostname: true
+  allow_duplicate_hostname: false
   report:
     email:
       from: unix-sa@example.com
