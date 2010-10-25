@@ -59,10 +59,7 @@ class Node < ActiveRecord::Base
 
   validates_presence_of :name, :hardware_profile_id, :status_id
 
-  # FIXME: figure out why MyConfig variable declared in environment.rb is not visible here
-  # That is why we're creating the config object here rather than referring to the variable 
-  # MyConfig  
-  unless ConfigurationManager.new_manager.allow_duplicate_hostname 
+  unless MyConfig.allow_duplicate_hostname 
     validates_uniqueness_of :name
   end
   validates_uniqueness_of :uniqueid, :allow_nil => true, :allow_blank => true
