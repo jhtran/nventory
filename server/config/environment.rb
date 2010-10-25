@@ -65,6 +65,9 @@ Rails::Initializer.run do |config|
   config.after_initialize do
     require 'ruport'
     Workling::Remote.dispatcher = Workling::Remote::Runners::StarlingRunner.new
+
+    # Using wonsys configuration_manager plugin for config management
+    MyConfig = ConfigurationManager.new_manager
   end
   #require 'ruport/acts_as_reportable'
 end
@@ -172,5 +175,3 @@ ExceptionNotifier.sender_address = $admin_email
 require 'model_extensions'
 ActiveRecord::Base.send(:extend, ModelExtensions)
 
-# Using wonsys configuration_manager plugin for config management
-MyConfig = ConfigurationManager.new_manager
