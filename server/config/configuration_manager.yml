@@ -11,9 +11,11 @@ common: &every_env
     
 development: &non_production_env
   <<: *every_env
+  redirect_login_to_ssl: false
   
 test:
   <<: *non_production_env
 
 production:
   <<: *every_env
+  redirect_login_to_ssl: true

@@ -16,7 +16,9 @@ class ApplicationController < ActionController::Base
   # The login controller uses it to ensure that authentication occurs
   # over SSL.  All other activity that comes in on the SSL side (https)
   # will be redirected to the non-SSL (http) side.
-  include SslRequirement
+  if MyConfig.redirect_login_to_ssl
+    include SslRequirement
+  end
 
   # Pick a unique cookie name to distinguish our session data from others'
   #session :key => '_nventory_session_id'
