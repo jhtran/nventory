@@ -22,7 +22,7 @@ class Vip < ActiveRecord::Base
   # layer.
   validates_presence_of :name, :protocol, :port
   validates_uniqueness_of :name
-  validates_uniqueness_of :load_balancer_id , :scope => :ip_address_id
+#  validates_uniqueness_of :load_balancer_id , :scope => :ip_address_id
   validates_numericality_of :port
   validates_format_of :protocol, :with => /\b(tcp|udp|both)\b/
 

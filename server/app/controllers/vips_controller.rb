@@ -77,6 +77,7 @@ class VipsController < ApplicationController
     @vip = @object
     # resuse ip_address record if one already exists with same address and type
     ip = IpAddress.find_or_create_by_address_and_address_type(params[:vip][:ip_address_attributes])
+    @vip.ip_address = ip
     params[:vip][:ip_address_attributes][:id] = ip.id
     respond_to do |format|
       if @vip.update_attributes(params[:vip])
