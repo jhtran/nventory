@@ -21,7 +21,11 @@ class Vip < ActiveRecord::Base
   # message back to the user than if the error is caught at the database
   # layer.
   validates_presence_of :name, :protocol, :port
-  validates_uniqueness_of :name
+  # darrendao: We need to allow multiple vip entries with same name. This is for
+  # scenarios where we set up multiple load balancers for the same vip (for 
+  # backup purposes). The only constraint we want to enforce is that the vips'
+  # names need to be unique within the scope of the load balancer
+  validates_uniqueness_of :name, :scope => :load_balancer_id
 #  validates_uniqueness_of :load_balancer_id , :scope => :ip_address_id
   validates_numericality_of :port
   validates_format_of :protocol, :with => /\b(tcp|udp|both)\b/
