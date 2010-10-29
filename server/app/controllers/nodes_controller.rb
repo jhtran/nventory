@@ -1022,6 +1022,7 @@ class NodesController < ApplicationController
   private :process_storage_controllers
 
   def graph_node_groups
+    image_type = MyConfig.visualization.images.mtype
     @node = Node.find(params[:id])
     @graphobjs = {}
     @graph = GraphViz::new( "G", "output" => "png" )
@@ -1042,7 +1043,7 @@ class NodesController < ApplicationController
         @graph.add_edge( @graphobjs[parent],@graphobjs[child] )
       end
     end
-    @graph.output( :output => 'gif',:file => "public/images/#{@node.name}_nodegroups.gif" )
+    @graph.output( :output => image_type,:file => "public/#{MyConfig.visualization.images.dir}/#{@node.name}_nodegroups.#{image_type}" )
     respond_to do |format|
       format.html # graph_node_groups.html.erb
     end
