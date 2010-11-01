@@ -376,6 +376,8 @@ class NodesController < ApplicationController
   end
 
   def process_chassis(chassishash)
+    return if chassishash['service_tag'].nil? or chassishash['service_tag'].empty?
+
     # figure out if this node is currently assigned to a chassis
     # by looking to see if  there's an existing outlet that has this node
     # as the consumer, and the produce is a node whose hardware_profile
