@@ -1621,6 +1621,10 @@ class NVentory::Client
     return chassis_info
   end
 
+  # call Dell's omreport command to get service tag
+  # of the chassis, and the slot value of where the
+  # given node resides in. Result is stored in hash with
+  # service_tag and slot_num as the keys
   def get_dell_chassis_info
     chassis = {}
     begin
