@@ -738,6 +738,26 @@ class NVentory::Client
       getdata[:exactget] = {'uniqueid' => [data['uniqueid']]}
       getdata[:login] = 'autoreg'
       results = get_objects(getdata)
+      #
+      # Check for a match of the reverse uniqueid.
+      # Background:
+      # Dmidecode versions earlier than 2.10 display
+      # the first three fields of the UUID in reverse order 
+      # due to the use of Big-endian rather than Little-endian
+      # byte encoding.
+      # Starting with version 2.10, dmidecode uses Little-endian 
+      # when it finds an SMBIOS >= 2.6. UUID's reported from SMBIOS' 
+      # earlier than 2.6 are considered "incorrect".
+      #
+      # After a rebuild/upgrade, rather than creating a new node 
+      # entry for an existing asset, we'll check for the flipped
+      # version of the uniqueid.
+      #
+      if results.empty? && data['uniqueid'].include?('-')
+        reverse_uniqueid = [data['uniqueid'].split('-')[0..2].map { |n| n.split(/(\w\w)/).reverse.join }.join('-'), data['uniqueid'].split('-',4)[3]].join('-')
+        getdata[:exactget] = {'uniqueid' => [reverse_uniqueid]}
+        results = get_objects(getdata)
+      end
     end
 
     # If we failed to find an existing entry based on the unique id
@@ -745,7 +765,7 @@ class NVentory::Client
     # if this is a new host, but that's OK as it will leave %results
     # as undef, which triggers set_nodes to create a new entry on the
     # server.
-    if !results && data['name']
+    if results.empty? && data['name']
       getdata = {} 
       getdata[:objecttype] = 'nodes'
       getdata[:exactget] = {'name' => [data['name']]}

@@ -975,6 +975,37 @@ sub register
                 $getdata{'exactget'} = {'uniqueid' => [$data{uniqueid}]};
                 $getdata{'login'} = 'autoreg';
                 %results = get_objects(\%getdata);
+                #
+                # Check for a match of the reverse uniqueid.
+                # Background:
+                # Dmidecode versions earlier than 2.10 display
+                # the first three fields of the UUID in reverse order 
+                # due to the use of Big-endian rather than Little-endian
+                # byte encoding.
+                # Starting with version 2.10, dmidecode uses Little-endian
+                # when it finds an SMBIOS >= 2.6. UUID's reported from SMBIOS' 
+                # earlier than 2.6 are considered "incorrect".
+                #
+                # After a rebuild/upgrade, rather than creating a new node
+                # entry for an existing asset, we'll check for the flipped
+                # version of the uniqueid.
+                #
+                if (!%results)
+                {
+                        if ( $data{uniqueid} =~ /(.*)\-(.*)\-(.*)\-(.*)\-(.*)/ )
+                        {
+                               my @reverse_uniqueid;
+                               foreach ($1, $2, $3)
+                               {
+                                       push (@reverse_uniqueid, (reverse (split((/(\w{2})/), $_))));
+                                       push (@reverse_uniqueid, "-");
+                               }
+                               push (@reverse_uniqueid, $4, "-", $5);
+                               @reverse_uniqueid = join("", @reverse_uniqueid);
+                               $getdata{'exactget'} = {'uniqueid' => [@reverse_uniqueid]};
+                               %results = get_objects(\%getdata);
+                        }
+                }
 	}
 
 	# If we failed to find an existing entry based on the unique id
