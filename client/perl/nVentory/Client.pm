@@ -161,32 +161,45 @@ sub _get_ua
 		{
 			# nventory nginx will redirect all NONfqdn (https://nventory) to FQDN.  This logic will handle that, as POST will
 			# not follow redirect.  LWP::UserAgent claims the requests_redirectable would work w/ POST but can't get to work
-			while (($response->is_redirect) && ($response->header('location') !~ /^https:\/\/sso.*\/login\?url/)) { 
+			while (($response->is_redirect) && ($response->header('location') !~ /^https:\/\/sso.*/)) { 
 				my $location = $response->header('location');
 				$response = $ua->request(POST $location, { 'foo' => 'bar' });
 			}
-			if (($response->is_redirect) && ($response->header('location') =~ /^https:\/\/(sso.*)\/login\?url/)) {
+			# encountered an sso request. this is specific to our sso implementation and our sso does a lot of redirecting on POSTs
+			if (($response->is_redirect) && ($response->header('location') =~ /^https:\/\/sso.*/)) {
 				warn "POST to $SERVER/accounts.xml was redirected, authenticating to SSO\n" if ($debug);
-				my $SSO_SERVER=$1;
-				warn "SSO_SERVER: $SSO_SERVER\n" if ($debug);
-	                        # Logins need to go to HTTPS
-	                        print "Login: $login\n";
-	                        my $url = URI->new("https://$SSO_SERVER/session");
-	                        $url->scheme('https');
-	                        $password = &$password_callback() if (!$password);
-				print "Authenticating to $url...\n";
-	                        $response = $ua->request(POST $url, {'login' => $login, 'password' => $password});
-	
-	                        if ($response->is_success == 1 )
-	                        {
-	                                if ($response->content =~ /Can't connect .* Invalid argument/)
-	                                {
-	                                        warn "Looks like you're missing Crypt::SSLeay"
-	                                }
-	                                die "Authentication failed:\n", $response->content, "\n";
-				} else {
-					print "Authentication Successful\n";
-	                        }
+		                print "Login: $login\n";
+		                $password = &$password_callback() if (!$password);
+				my $redirflag = 0;
+				my $redircount = 0;
+				while ($redirflag != 1 && $redircount < 7) 
+				{
+					$response->header('location') =~ /^https:\/\/(sso.*)/;
+					my $SSO_SERVER=$1;
+					warn "SSO_SERVER: $SSO_SERVER\n" if ($debug);
+		                        # Logins need to go to HTTPS
+		                        my $url = URI->new("https://$SSO_SERVER/sessions/new?noredirect=1");
+		                        $url->scheme('https');
+					print "Authenticating to $url...\n";
+		                        $response = $ua->request(POST $url, {'login' => $login, 'password' => $password});
+		
+		                        if (($response->is_success) || (($response->is_redirect) && ($response->header('location') =~ /^(http|https):\/\/(sso.*)\/session\/tokens/)))
+		                        {
+						print "Authentication Successful\n";
+						$redirflag = 1;
+					} elsif ($response->is_redirect) {
+						print "Redirected to " . $response->header('location') . "\n" if $debug;
+					} else {
+		                                if ($response->content =~ /Can't connect .* Invalid argument/)
+		                                {
+		                                        warn "Looks like you're missing Crypt::SSLeay"
+		                                }
+		                                die "Authentication failed:\n", $response->content, "\n";
+		                        }
+					print "REDIRECT COUNT: ${redircount}\n" if $debug;
+					$redircount++;
+				} # while ($redirflag != 1 && $redircount < 7) 
+				if ($redircount == 7) { die "SSO redirect loop"; }
 			}
                         if (($response->is_redirect) && ($response->header('location') =~ /^(http|https):\/\/(sso.*)\/session\/tokens/)) {
 				my $location = URI->new($response->header('location'));
@@ -194,6 +207,8 @@ sub _get_ua
 				$ua->max_redirect(2);
 				$ua->timeout(10);
 				$response = $ua->get($location);
+			} else {
+				die "Unable to get SSO session token.  Might be authentication failure or SSO problem\n";
 			}
 			$ua->max_redirect(7);
 		}
