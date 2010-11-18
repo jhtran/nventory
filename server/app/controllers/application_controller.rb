@@ -47,6 +47,8 @@ class ApplicationController < ActionController::Base
       else
         if ENV['RAILS_ENV'] == 'test'
           $loginuser ? (@sso = sso_auth(:test => $loginuser)) : (@sso = sso_auth(:test => true))
+        elsif ENV['RAILS_ENV'] == 'development'
+          @sso = sso_auth(:dev => true)
         else
           @sso = sso_auth
         end
@@ -238,6 +240,10 @@ class ApplicationController < ActionController::Base
         else
           $loginuser ? (@user ||= Account.find_by_login($loginuser)) : (@user ||= Account.find_by_login('testuser'))
         end
+      elsif ENV['RAILS_ENV'] == 'development'
+        if (@sso = sso_auth(:dev => true))
+          @user ||= Account.find_by_login(@sso.login)
+        end 
       elsif (@sso = sso_auth(:redirect => false))
         @user ||= Account.find_by_login(@sso.login)
       else
