@@ -90,7 +90,7 @@ class NVentory::Client
             # if they don't realize there's a config file lying
             # around
             warn "Using server #{@server} from #{configfile}" if (@debug)
-          elsif key == 'sso_server' && !@sso_server
+          elsif (key == 'sso_server' && !@sso_server) || (@sso_server == 'https://sso.example.com/')
             @sso_server = value
             warn "Using sso_server #{@sso_server} from #{configfile}" if (@debug)
           elsif key == 'proxy_server' && !@proxy_server
@@ -1212,9 +1212,7 @@ class NVentory::Client
     end
     
     # An SSO-enabled app will redirect to SSO if authentication is required
-    if response.kind_of?(Net::HTTPFound) &&
-       response['Location'] &&
-       URI.parse(response['Location']).host == URI.parse(@sso_server).host
+    if response.kind_of?(Net::HTTPFound) && response['Location'] && URI.parse(response['Location']).host == URI.parse(@sso_server).host
       puts "Server responsed with redirect to SSO login: #{response['Location']}" if (@debug)
       if login == 'autoreg'
         loginuri = URI.join(@server, 'login/login')
@@ -1226,6 +1224,9 @@ class NVentory::Client
       else
         loginuri = URI.parse(response['Location'])
       end
+      # update the loginuri to the non-redirect uri of sso
+      loginuri.path = '/login'
+      loginuri.query = 'noredirect=1'
       loginreq = Net::HTTP::Post.new(loginuri.request_uri)
       if password_callback.kind_of?(Module)
         password = password_callback.get_password if (!password)
@@ -1240,9 +1241,12 @@ class NVentory::Client
       # to parse.
       loginreq['Accept'] = 'application/xml'
       loginresponse = make_http(loginuri).request(loginreq)
-
       # if it's a redirect (such as due to NON-fqdn) loop so that it follows until no further redirect
-      while loginresponse.kind_of?(Net::HTTPMovedPermanently)
+      while [Net::HTTPMovedPermanently, Net::HTTPFound].include?(loginresponse.class)
+        if loginresponse.kind_of?(Net::HTTPFound) && loginresponse['Location'] =~ /sso.*\/session\/token.*/
+          puts "** Found session token" if @debug
+          break 
+        end
         puts "** Following redirect #{loginresponse.class.to_s} => #{loginresponse['Location'].to_s}" if @debug
         loginuri = URI.parse(loginresponse['Location'])
         loginreq = Net::HTTP::Post.new(loginuri.request_uri)
@@ -1260,15 +1264,7 @@ class NVentory::Client
       end
 
       # SSO does a number of redirects until you get to the right domain but should just follow once and get the cookie, will become Net::HTTPNotAcceptable (406). 
-      if loginresponse.kind_of?(Net::HTTPFound) && loginresponse['Location'] =~ /sso.*\/session\/token.*.xml/
-        puts "** Following redirect #{loginresponse.class.to_s} => #{loginresponse['Location'].to_s}" if @debug
-        loginuri = URI.parse(loginresponse['Location'])
-        loginreq = Net::HTTP::Get.new(loginuri.request_uri)
-        loginresponse = make_http(loginuri).request(loginreq)
-      end
-
-      # some bug, but once sso gives you a token non-SSL url redirect, and you follow it, you get redirected to yet another URL that is SSL for a token again
-      if loginresponse.kind_of?(Net::HTTPFound) && loginresponse['Location'] =~ /^https:\/\/sso.*\/session\/token.*.xml/
+      if loginresponse.kind_of?(Net::HTTPFound) && loginresponse['Location'] =~ /sso.*\/session\/token.*/
         puts "** Following redirect #{loginresponse.class.to_s} => #{loginresponse['Location'].to_s}" if @debug
         loginuri = URI.parse(loginresponse['Location'])
         loginreq = Net::HTTP::Get.new(loginuri.request_uri)
