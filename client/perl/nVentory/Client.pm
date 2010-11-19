@@ -178,7 +178,7 @@ sub _get_ua
 					my $SSO_SERVER=$1;
 					warn "SSO_SERVER: $SSO_SERVER\n" if ($debug);
 		                        # Logins need to go to HTTPS
-		                        my $url = URI->new("https://$SSO_SERVER/sessions/new?noredirect=1");
+		                        my $url = URI->new("https://$SSO_SERVER/login?noredirect=1");
 		                        $url->scheme('https');
 					print "Authenticating to $url...\n";
 		                        $response = $ua->request(POST $url, {'login' => $login, 'password' => $password});
