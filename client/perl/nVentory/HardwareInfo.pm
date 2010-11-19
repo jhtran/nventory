@@ -430,7 +430,8 @@ sub get_cpu_count
 			# physical CPUs.  We should continue to add exceptions for
 			# platforms where we can more directly query the hardware for
 			# a physical CPU count.
-			$cpu_count = nVentory::OSInfo::get_os_cpu_count();
+                        # this returns a hash
+			my %cpu_count = nVentory::OSInfo::get_os_cpu_count();
 		}
 		elsif ($os eq 'Mac OS X')
 		{
