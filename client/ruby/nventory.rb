@@ -1226,7 +1226,7 @@ class NVentory::Client
       end
       # update the loginuri to the non-redirect uri of sso
       loginuri.path = '/login'
-      loginuri.query = 'noredirect=1'
+      loginuri.query = 'noredirects=1'
       loginreq = Net::HTTP::Post.new(loginuri.request_uri)
       if password_callback.kind_of?(Module)
         password = password_callback.get_password if (!password)
