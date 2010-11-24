@@ -1608,7 +1608,9 @@ class NVentory::Client
   def get_drac_info
     info = {}
     begin
-      result = `/usr/sbin/racadm getsysinfo` || ""
+      timeout(5) do
+        result = `/usr/sbin/racadm getsysinfo` || ""
+      end
       result.split("\n").each do |line|
         if line =~ /IP Address/i
           info[:ip_address] = line.split("=")[1].strip
@@ -1618,6 +1620,8 @@ class NVentory::Client
           info[:name] = line.split("=")[1].strip
         end
       end
+    rescue Timeout::Error
+      warn "Timed out when trying to get drac info"
     rescue
       warn "Failed to get DRAC IP"
     end
@@ -1651,7 +1655,9 @@ class NVentory::Client
       #    break
       #  end
       #end 
-      result = `omreport chassis info -fmt ssv`
+      timeout(5) do
+        result = `omreport chassis info -fmt ssv`
+      end
       result.split("\n").each do |line|
         if line =~ /Server Module Location;Slot (\d+)/
            chassis[:slot_num] = $1.to_i
@@ -1662,6 +1668,8 @@ class NVentory::Client
       # if no slot_number then the blade isn't really in a chassis/blade enclosure
       # such as the case with Dell PowerEdge 1950
       return {} if chassis[:slot_num].nil?
+    rescue Timeout::Error
+      warn "Timed out when trying to run omreport"
     rescue
       warn "Failed to run/parse Dell's omreport command"
     end
