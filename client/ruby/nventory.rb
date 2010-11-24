@@ -668,7 +668,7 @@ class NVentory::Client
     # updates its records (removing any NICs and IPs we don't specify)
     data['network_interfaces[authoritative]'] = true
 
-    data['uniqueid'] = get_uniqueid
+    data['uniqueid'] =  NVentory::Client::get_uniqueid
 
     # TODO: figure out list of guests if it's a host
     vmstatus = getvmstatus
@@ -914,6 +914,47 @@ class NVentory::Client
     nodegroupdata['node_group_node_group_assignments[child_groups][]'] = child_ids
     set_objects('node_groups', parent_groups, nodegroupdata, login, password_callback)
   end
+
+  #
+  # Helper methods
+  #
+  def self.get_uniqueid
+    os = Facter['kernel'].value
+    if os == 'Linux' or os == 'FreeBSD'
+      # best to use UUID from dmidecode
+      uuid = getuuid
+      # Stupid SeaMicro boxes all have the same UUID below. So we won't
+      # want to use it, use mac address instead
+      if uuid and uuid != "78563412-3412-7856-90AB-CDDEEFAABBCC"
+        uniqueid = uuid
+      # next best thing to use is macaddress
+      else
+        uniqueid = Facter['macaddress'].value
+      end
+    elsif Facter['uniqueid'] && Facter['uniqueid'].value
+      # This sucks, it's just using hostid, which is generally tied to an
+      # IP address, not the physical hardware
+      uniqueid = Facter['uniqueid'].value
+    elsif Facter['sp_serial_number'] && Facter['sp_serial_number'].value
+      # I imagine Mac serial numbers are unique
+      uniqueid = Facter['sp_serial_number'].value
+    end
+    return uniqueid
+  end
+ 
+  def self.getuuid
+    uuid = nil
+    # dmidecode will fail if not run as root
+    if Process.euid != 0
+      raise "This must be run as root"
+    end
+    uuid_entry = `/usr/sbin/dmidecode  | grep UUID`
+    if uuid_entry
+      uuid = uuid_entry.split(":")[1]
+    end
+    return uuid.strip
+  end
+ 
   
   #
   # Private methods
@@ -1527,43 +1568,6 @@ class NVentory::Client
     ENV['PATH'] = "#{ENV['PATH']}:/sbin"
     vmstatus = `facter virtual`
     vmstatus.chomp!
-  end
-
-  def get_uniqueid
-    os = Facter['kernel'].value 
-    if os == 'Linux' or os == 'FreeBSD'
-      # best to use UUID from dmidecode
-      uuid = getuuid
-      # Stupid SeaMicro boxes all have the same UUID below. So we won't
-      # want to use it, use mac address instead
-      if uuid and uuid != "78563412-3412-7856-90AB-CDDEEFAABBCC"
-        uniqueid = uuid
-      # next best thing to use is macaddress
-      else
-        uniqueid = Facter['macaddress'].value
-      end 
-    elsif Facter['uniqueid'] && Facter['uniqueid'].value
-      # This sucks, it's just using hostid, which is generally tied to an
-      # IP address, not the physical hardware
-      uniqueid = Facter['uniqueid'].value
-    elsif Facter['sp_serial_number'] && Facter['sp_serial_number'].value
-      # I imagine Mac serial numbers are unique
-      uniqueid = Facter['sp_serial_number'].value
-    end
-    return uniqueid
-  end
-  
-  def getuuid
-    uuid = nil
-    # dmidecode will fail if not run as root
-    if Process.euid != 0 
-      raise "This must be run as root"
-    end
-    uuid_entry = `/usr/sbin/dmidecode  | grep UUID`
-    if uuid_entry
-      uuid = uuid_entry.split(":")[1]
-    end
-    return uuid.strip
   end
 
   # This is based on the perl version in HardwareInfo.pm
