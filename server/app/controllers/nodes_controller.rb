@@ -339,7 +339,7 @@ class NodesController < ApplicationController
     priorstatus = @node.status
     respond_to do |format|
       if @node.update_attributes(params[:node])
-        email_status_update(params,priorstatus)
+        email_status_update(params,priorstatus) if MyConfig.notifications.status_update
         flash[:notice] = 'Node was successfully updated.'
         format.html { redirect_to node_url(@node) }
         format.xml  { render :xml => xmloutput.to_xml }

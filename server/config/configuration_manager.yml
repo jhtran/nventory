@@ -8,6 +8,8 @@ common: &every_env
     email:
       from: unix-sa@example.com
       to: unix-sa@example.com
+  notifications:
+    status_update: true
     
 development: &non_production_env
   <<: *every_env
