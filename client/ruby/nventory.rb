@@ -1611,6 +1611,7 @@ class NVentory::Client
 
   def get_drac_info
     info = {}
+    result = nil
     begin
       timeout(5) do
         result = `/usr/sbin/racadm getsysinfo` || ""
@@ -1651,6 +1652,7 @@ class NVentory::Client
   # service_tag and slot_num as the keys
   def get_dell_chassis_info
     chassis = {}
+    result = nil
     begin
       #result = `omreport modularenclosure -fmt ssv` 
       #result.split("\n").each do |line|
