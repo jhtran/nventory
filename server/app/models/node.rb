@@ -69,7 +69,7 @@ class Node < ActiveRecord::Base
   validates_numericality_of :processor_core_count,   :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
   validates_numericality_of :os_processor_count,     :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
   validates_numericality_of :power_supply_count,     :only_integer => true, :greater_than_or_equal_to => 0, :allow_nil => true
-  #validates_format_of :virtualarch, :with => /^(xen|vmware)$/i, :if => :virtualarch
+  #validates_format_of :virtualarch, :with => /^(xen|vmware|kvm)$/i, :if => :virtualarch
 
   CONSOLE_TYPES = ['','Serial','HP iLO','Dell DRAC','Sun RSC','Sun ALOM']
   def self.allowed_console_types
@@ -93,8 +93,8 @@ class Node < ActiveRecord::Base
     if (virtualarch.blank? || virtualarch.nil?)
       return true
     else
-      unless virtualarch.match(/^(xen|vmware)$/i)
-        errors.add(:virtualarch, "#{virtualarch} - invalid.  Can only be \"xen\" or \"vmware\"\n")
+      unless virtualarch.match(/^(xen|vmware|kvm)$/i)
+        errors.add(:virtualarch, "#{virtualarch} - invalid.  Can only be \"xen\", \"vmware\" or \"kvm\"\n")
         return false
       end
     end
