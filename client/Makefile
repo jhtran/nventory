@@ -135,11 +135,11 @@ solaris: pkginfo depend
 # packages.
 tpkg: tpkg.xml
 	rm -rf $(BUILDROOT)
-	mkdir -p $(BUILDROOT)/root/home/t/lib/perl5/site_perl/5.10.0
-	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/root/home/t/lib/perl5/site_perl/5.10.0)
-	mkdir -p $(BUILDROOT)/root/home/t/ruby-ypc/lib/ruby/site_ruby/1.8
+	mkdir -p $(BUILDROOT)/root/opt/tpkg/lib/perl5/site_perl/5.10.0
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/root/opt/tpkg/lib/perl5/site_perl/5.10.0)
+	mkdir -p $(BUILDROOT)/root/opt/tpkg/ruby-1.8/lib/ruby/site_ruby/1.8
 	sed "s/VER/$(VER)/" tpkg.xml > $(BUILDROOT)/tpkg.xml
-	cp -p ruby/nventory.rb $(BUILDROOT)/root/home/t/ruby-ypc/lib/ruby/site_ruby/1.8
+	cp -p ruby/nventory.rb $(BUILDROOT)/root/opt/tpkg/ruby-1.8/lib/ruby/site_ruby/1.8
 	tpkg --make $(BUILDROOT)
 	rm -rf $(BUILDROOT)
 
