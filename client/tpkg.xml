@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tpkg SYSTEM "http://tpkg.sourceforge.net/tpkg-1.0.dtd">
+<tpkg>
+  <name>nventory</name>
+  <version>VER</version>
+  <maintainer>nventory-users@lists.sourceforge.net</maintainer>
+  <description>nVentory libraries</description>
+  <bugreporting>https://sourceforge.net/apps/trac/nventory/newticket</bugreporting>
+  <dependencies>
+    <dependency>
+      <name>ruby</name>
+    </dependency>
+    <dependency>
+      <name>gem-facter</name>
+    </dependency>
+    <dependency>
+      <name>cpan-perl510-XML-LibXML</name>
+    </dependency>
+  </dependencies>
+</tpkg>
