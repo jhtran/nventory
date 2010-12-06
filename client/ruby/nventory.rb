@@ -684,6 +684,17 @@ class NVentory::Client
     elsif vmstatus == 'vmware'
       data['virtualmode'] = 'guest'
       data['virtualarch'] = 'vmware'
+    elsif vmstatus == 'kvm_host'
+      data['virtualmode'] = 'host'
+      data['virtualarch'] = 'kvm'
+    end
+
+    if vmstatus == 'kvm_host'
+      guests = get_kvm_hostinfo
+      guests.each do |vm|
+        data["vmguest[#{vm}][vmimg_size]"] =  0
+        data["vmguest[#{vm}][vmspace_size]"] = 0
+      end
     end
 
     # Looks like this no longer works. virtual_client_ids is not valid
@@ -1568,6 +1579,18 @@ class NVentory::Client
     ENV['PATH'] = "#{ENV['PATH']}:/sbin"
     vmstatus = `facter virtual`
     vmstatus.chomp!
+
+    # extra check to see if we're running kvm hypervisor
+    os = Facter['kernel'].value
+    if os == 'Linux'
+      begin
+        `cat /proc/modules | grep kvm`
+        vmstatus = "kvm_host" if $? == 0
+      rescue
+        warn "Failed to get modules information"
+      end
+    end
+    return vmstatus
   end
 
   # This is based on the perl version in HardwareInfo.pm
@@ -1680,5 +1703,22 @@ class NVentory::Client
       warn "Failed to run/parse Dell's omreport command"
     end
     return chassis
+  end
+
+  # Currently, the only info this method gather is the list
+  # of kvm guests running on this host
+  def get_kvm_hostinfo
+    guests = []
+    begin
+      result = `virsh list --all`
+      result.split("\n").each do |line|
+        if line =~ /(\d+)\s+(\S+)\s+(\S+)/
+          guests << $2
+        end
+      end
+    rescue
+      warn "Failed to run/parse virsh command"
+    end
+    return guests
   end
 end
