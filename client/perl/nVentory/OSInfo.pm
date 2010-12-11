@@ -27,9 +27,9 @@ my $swapmemory;
 my $cpupercent;
 my %oscpus;
 my $timezone;
-my $xenstatus;
+my $virtualstatus;
 my $vmwarestatus;
-my %xenhostinfo;
+my %virtualhostinfo;
 my %vmwarehostinfo;
 my %volumes;
 my $diskusage;
@@ -304,31 +304,31 @@ sub getvmwarestatus
         return $vmwarestatus;
 }
 
-sub getxenstatus
+sub getvirtualstatus
 {
-        if (!$xenstatus)
+        if (!$virtualstatus)
         {
-                $xenstatus = `facter virtual`;
-                chomp($xenstatus);
+                $virtualstatus = `facter virtual`;
+                chomp($virtualstatus);
         }
-        warn "getxenstatus returning '$xenstatus'" if ($debug);
-        return $xenstatus;
+        warn "getvirtualstatus returning '$virtualstatus'" if ($debug);
+        return $virtualstatus;
 }
 
-sub getxenhostinfo
+sub getvirtualhostinfo
 {
-	if (!%xenhostinfo)
+	if (!%virtualhostinfo)
 	{
-		my @xmlist = `xm list`;
-		foreach my $line (@xmlist) 
+		my @virshlist = `virsh list`;
+		foreach my $line (@virshlist)
 		{
-  			next if $line =~ /(^Name |Domain-0)/;
-  			my ($guest) = $line =~ /^(\S+)/;
-			push(@{$xenhostinfo{'guests'}}, $guest);
-		}
-		## Reserve the hash for other host info such as $xenhostinfo{'memory'}
+			next if $line =~ /(Id Name|^---|^$|Domain-0)/;
+                        $line =~ /\s(\d+)\s(\S+)\s(\S+)/;
+			my $guest = $2;
+			push(@{$virtualhostinfo{'guests'}}, $guest);
+                 }
 	}
-	return %xenhostinfo;
+	return %virtualhostinfo;
 }
 
 sub getvmwarehostinfo

@@ -27,8 +27,10 @@ my $PROXY_SERVER;
 ########################################################################################
 use nVentory::CompaqSmartArray;
 
-# dir location where xen img files held if this is xen host
-my $XEN_IMGDIR = '/home/xen/disks';
+# dir location where xen/kvm img files held at the moment
+# it would be nice to figure this out but I only see getting this from virsh dumpxml
+my $VM_IMGDIR = '/home/xen/disks';
+
 # If user manually specifies server other than the default
 sub setserver
 {
@@ -800,53 +802,66 @@ sub register
         $data{physical_memory_sizes} = $temp_physical_memory_sizes unless (!$temp_physical_memory_sizes);
 	# Switchport detection depends on if virtual or not
 
-	## XEN HOST <=> GUEST REGISTRATION
-	if ($data{kernel_version} =~ /xenU?$/)
+	## KVM/XEN HOST <=> GUEST REGISTRATION
+	my $virtual_status = nVentory::OSInfo::getvirtualstatus();
+	## GUESTS
+	## some facter versions prior to 1.5.8 fail to report a xen guest as virtual so switching to checking for the module
+	if (($virtual_status eq 'kvm') || (system("grep -q xen /proc/modules") == 0))
 	{
-		$data{virtualarch} = 'xen';
-        	my $xen_status = nVentory::OSInfo::getxenstatus();
-		if ($xen_status =~ /xenu/)
+		if ($virtual_status eq 'kvm')
 		{
-			print "XEN GUEST VM.\n";
-			$data{virtualmode} = 'guest';
-        		$data{'hardware_profile[manufacturer]'} = 'Xen' if ($data{'hardware_profile[manufacturer]'} eq 'Unknown');
-	                $data{'hardware_profile[model]'} = 'VM' if ($data{'hardware_profile[model]'} eq 'Unknown');
+			$data{virtualarch} = 'kvm';
 		}
-		elsif ($xen_status =~ /xen0/)
+		else
 		{
-			print "XEN MASTER HOST.  Listing all guest vm:\n";
-			$data{virtualmode} = 'host';
-			my %xenhostinfo = nVentory::OSInfo::getxenhostinfo;
-			foreach my $xenguest (@{$xenhostinfo{'guests'}})
-			{
-				print "$xenguest\n";
-				my $size;
-				my $sparse_size;
-				if (-e "$XEN_IMGDIR/$xenguest.img") 
-				{
-					## Actual file size of disk image ##
-					$size = -s "$XEN_IMGDIR/$xenguest.img";
-					$size = round($size / 1024);
+			$data{virtualarch} = 'xen';
+			$data{'hardware_profile[manufacturer]'} = 'Xen' if ($data{'hardware_profile[manufacturer]'} eq 'Unknown');
+			$data{'hardware_profile[model]'} = 'VM' if ($data{'hardware_profile[model]'} eq 'Unknown');
+		}
+   		print "$data{virtualarch} GUEST VM\n";
+		$data{virtualmode} = 'guest';
+	}
+	## MASTER HOSTS
+	elsif ((-e '/dev/kvm') || ($virtual_status =~ /xen0/))
+	{
+		if (-e '/dev/kvm')
+		{
+			$data{virtualarch} = 'kvm';
+		}
+		else
+		{
+			$data{virtualarch} = 'xen';
+		}
+		my %virtualhostinfo = nVentory::OSInfo::getvirtualhostinfo;
+		print "$data{virtualarch} MASTER HOST\n";
+		$data{virtualmode} = 'host';
 
-					## True sparse file size (in use) ##
-					my $st = stat("$XEN_IMGDIR/$xenguest.img");
-					my $blocks = $st->blocks;
-					$sparse_size = $blocks * 512;
-					$sparse_size = round($sparse_size / 1024);
-				}
-				print "   IMG SIZE: $size KB\n" if $size ;
-				print "   SPARSE SIZE: $sparse_size KB\n" if $sparse_size;
-				$data{"vmguest[$xenguest][vmimg_size]"} = $size;
-				$data{"vmguest[$xenguest][vmspace_used]"} = $sparse_size;
-				## subroutine to round the integer when divided
-				sub round {
-				    my($number) = shift;
-				    return int($number + .5);
-				}
+		foreach my $valuedguest (@{$virtualhostinfo{'guests'}})
+		{
+			print "$valuedguest\n";
+			my $size;
+			my $sparse_size;
+			if (-e "$VM_IMGDIR/$valuedguest.img")
+			{
+				$size = -s "$VM_IMGDIR/$valuedguest.img";
+				$size = round($size / 1024);
+  				my $st = stat("$VM_IMGDIR/$valuedguest.img");
+      				my $blocks = $st->blocks;
+    				$sparse_size = $blocks * 512;
+    				$sparse_size = round($sparse_size / 1024);
+			}
+ 			print "   IMG SIZE: $size KB\n" if $size ;
+			print "   SPARSE SIZE: $sparse_size KB\n" if $sparse_size;
+   			$data{"vmguest[$valuedguest][vmimg_size]"} = $size;
+  			$data{"vmguest[$valuedguest][vmspace_used]"} = $sparse_size;
+ 			## subroutine to round the integer when divided
+ 			sub round
+ 			{
+				my($number) = shift;
+ 				return int($number + .5);
 			}
 		}
 	}
-
 
 	## VMWARE HOST <=> GUEST REGISTRATION
        	my $vmware_status = nVentory::OSInfo::getvmwarestatus();
