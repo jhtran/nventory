@@ -607,8 +607,8 @@ if (%get || %exactget || %regexget )
 				push(@tmp, $inc) unless ($inc eq 'node_groups');
 			}
 			@includes = @tmp;
-			push(@includes, 'node_groups[tags]');
 		}
+		push(@includes, 'node_groups[tags]');
 		push(@fields, 'node_groups[tags][name]') unless grep(/^node_groups\[tags\]\[name\]$/, @fields);
 	}
 	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget, \%regexget, \%exclude, \%and, \@includes);
