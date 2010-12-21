@@ -38,6 +38,7 @@ $removenodegroupfromnodegroup = nil
 $register = false
 $username = ENV['LOGNAME']
 $delete = nil
+$showtags = nil
 $withaliases = nil
 $debug = nil
 $dryrun = nil
@@ -485,6 +486,7 @@ if $get || $exactget || $regexget
   getdata[:exclude] = $exclude
   getdata[:and] = $and
   if $showtags
+    $fields ||= []
     $fields << 'node_groups[tags][name]' unless $fields.include?('node_groups[tags][name]')
     if includes 
       includes.delete('node_groups') if includes.include?('node_groups')
