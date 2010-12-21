@@ -24,6 +24,7 @@ Usage: nv
     [--objecttype object]
        The type of object to get/set.  Defaults to nodes.
     [--get field=value1[,value2]]
+    [--showtags, Lists all tags the node(s) belongs to]
     [--regexget field=value1,[value2]]
        Select objects for display or updating, may be specified multiple
        times to search on multiple fields.  get does a substring match,
@@ -135,6 +136,7 @@ my $register;
 my $server;
 my $username = $ENV{LOGNAME};
 my $delete;
+my $showtags;
 my $withaliases;
 my $debug;
 my $dryrun;
@@ -168,6 +170,7 @@ my $getopt = GetOptions(
 	'username=s' => \$username,
 	'register' => \$register,
         'delete' => \$delete,
+        'showtags' => \$showtags,
         'withaliases' => \$withaliases,
         'server:s' => \$server,
 	'debug' => \$debug,
@@ -207,6 +210,7 @@ if ($withaliases) {
 $objecttype = 'nodes' if (!$objecttype);
 
 usage() if ((@addtonodegroup || @removefromnodegroup) && $objecttype ne 'nodes');
+die "--showtags can only be used if objecttype = nodes" if ($showtags && $objecttype ne 'nodes');
 
 # allfields might contain comma-seperated fields
 # But there's the special case that allfields might contain just one
@@ -593,6 +597,20 @@ my %results;
 my @names;
 if (%get || %exactget || %regexget )
 {
+	if ($showtags)
+	{
+		if (grep /^node_groups$/, @includes)
+		{
+			my @tmp;
+			foreach my $inc (@includes) 
+			{
+				push(@tmp, $inc) unless ($inc eq 'node_groups');
+			}
+			@includes = @tmp;
+			push(@includes, 'node_groups[tags]');
+		}
+		push(@fields, 'node_groups[tags][name]') unless grep(/^node_groups\[tags\]\[name\]$/, @fields);
+	}
 	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget, \%regexget, \%exclude, \%and, \@includes);
 	@names = sort keys %results;
 }
