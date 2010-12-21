@@ -85,6 +85,9 @@ opts.on('--get [field=value1,value2][,field2=value1[,value2]]') do |opt|
     $get = opt_hash_parse(opt)
   end
 end
+opts.on('--showtags', 'Can only be used when searching for node results') do |opt|
+  $showtags = opt
+end
 opts.on('--delete', 'Delete the object(s) returned') do |opt|
   $delete = opt
 end
@@ -244,6 +247,7 @@ opts.parse(ARGV)
 (puts opts; exit) if ($nodegroup || $nodegroupexpanded) && ($get || $exactget || $regexget || $exclude || $name || $and)
 (puts opts; exit) if $register && ($get || $exactget || $regexget || $exclude || $name || $getfieldnames || $getallvalues || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup || $and)
 (puts opts; exit) if ($addtonodegroup || $removefromnodegroup) && $objecttype != 'nodes'
+(puts '--showtags can only be used if objecttype = nodes'; exit) if $showtags && ($objecttype != 'nodes')
 
 if $name
   $get = {} if !$get
@@ -480,6 +484,15 @@ if $get || $exactget || $regexget
   getdata[:regexget] = $regexget
   getdata[:exclude] = $exclude
   getdata[:and] = $and
+  if $showtags
+    $fields << 'node_groups[tags][name]' unless $fields.include?('node_groups[tags][name]')
+    if includes 
+      includes.delete('node_groups') if includes.include?('node_groups')
+      (includes << 'node_groups[tags]') unless includes.include?('node_groups[tags]')
+    else
+      includes='node_groups[tags]'
+    end
+  end # if $showtags
   getdata[:includes] = includes
   results = nvclient.get_objects(getdata)
   if $delete
