@@ -926,6 +926,47 @@ class NVentory::Client
     set_objects('node_groups', parent_groups, nodegroupdata, login, password_callback)
   end
 
+  # Add a new or pre-existing tag (by name string) to a node_group (by hash returned from get_objects)
+  def add_tag_to_node_group(ng_hash, tag_name, login, password_callback=PasswordCallback)
+    tag_found = get_objects({:objecttype => 'tags', :exactget => {:name => tag_name}})
+    if tag_found.empty?
+      tagset_data = { :name => tag_name }
+      set_objects('tags',{},tagset_data,login, password_callback)
+      tag_found = get_objects({:objecttype => 'tags', :exactget => {:name => tag_name}})
+    end
+    # tag_found is hash, even tho only one result
+    (tag_data = tag_found[tag_found.keys.first]) && (tag_id = tag_data['id'])
+    ng_hash.each_pair do |ng_name,ng_data|
+      setdata = { :taggable_type => 'NodeGroup', :taggable_id => ng_data['id'], :tag_id => tag_id }
+      set_objects('taggings',{},setdata,login,password_callback)
+    end
+  end
+
+  # Add a new or pre-existing tag (by name string) to a node_group (by hash returned from get_objects)
+  def remove_tag_from_node_group(ng_hash, tag_name, login, password_callback=PasswordCallback)
+    tag_found = get_objects({:objecttype => 'tags', :exactget => {:name => tag_name}})
+    if tag_found.empty?
+      puts "ERROR: Could not find any tags with the name #{tag_name}" 
+      exit
+    end
+    # tag_found is hash, even tho only one result
+    (tag_data = tag_found[tag_found.keys.first]) && (tag_id = tag_data['id'])
+    taggings_to_del = {}
+    ng_hash.each_pair do |ng_name,ng_data|
+      get_data = {:objecttype => 'taggings', 
+                  :exactget => { :taggable_type => 'NodeGroup', :taggable_id => ng_data['id'], :tag_id => tag_id } }
+      tagging_found = get_objects(get_data)
+      unless tagging_found.empty?
+        taggings_to_del.merge!(tagging_found)
+      end
+    end
+    if taggings_to_del.empty?
+      puts "ERROR: Could not find any tags \"#{tag_name}\" assigned to those node_groups"
+    else
+      delete_objects('taggings', taggings_to_del, login, password_callback=PasswordCallback)
+    end
+  end
+
   #
   # Helper methods
   #
