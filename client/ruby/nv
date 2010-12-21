@@ -85,7 +85,7 @@ opts.on('--get [field=value1,value2][,field2=value1[,value2]]') do |opt|
     $get = opt_hash_parse(opt)
   end
 end
-opts.on('--showtags', 'Can only be used when searching for node results') do |opt|
+opts.on('--showtags', 'Lists all tags the node(s) belongs to') do |opt|
   $showtags = opt
 end
 opts.on('--delete', 'Delete the object(s) returned') do |opt|
