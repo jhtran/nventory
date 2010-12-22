@@ -35,6 +35,9 @@ $removefromnodegroup = nil
 $addnodegrouptonodegroup = nil
 $addcomment = nil
 $removenodegroupfromnodegroup = nil
+$createtag = nil
+$addtagtonodegroup = nil
+$removetagfromnodegroup = nil
 $register = false
 $username = ENV['LOGNAME']
 $delete = nil
@@ -208,6 +211,18 @@ opts.on('--removenodegroupfromnodegroup child_group,parent_group', Array,
         'node group from the second') do |opt|
   $removenodegroupfromnodegroup = [opt[0],opt[1]]
 end
+opts.on('--createtag tagname1[,tagname2]', Array,
+        'Create one or more tags by name') do |opt|
+  $createtag= opt
+end
+opts.on('--addtagtonodegroup tag,node_group', Array,
+        'adds a tag to a node_group') do |opt|
+  $addtagtonodegroup = [opt[0],opt[1]]
+end
+opts.on('--removetagfromnodegroup tag,node_group', Array,
+        'removes a tag from a node_group') do |opt|
+  $removetagfromnodegroup = [opt[0],opt[1]]
+end
 opts.on('--register',
         'Gather as much information as possible about the local machine',
         'and register that information into the nVentory database.') do |opt|
@@ -239,15 +254,15 @@ end
 
 opts.parse(ARGV)
 
-(puts opts; exit) unless $get || $exactget || $regexget || $name || $getfieldnames || $getallvalues || $register || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup
+(puts opts; exit) unless $get || $exactget || $regexget || $name || $getfieldnames || $getallvalues || $register || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup || $addtagtonodegroup || $createtag || $removetagfromnodegroup
 # These options are mutually exclusive
 (puts opts; exit) if $allfields && $fields
 (puts opts; exit) if $getfieldnames && ($get || $exactget || $regexget || $name)
 (puts opts; exit) if $getallvalues && ($get || $exactget || $regexget || $name) 
 # FIXME: Should support searches on node group membership and other characteristics
 (puts opts; exit) if ($nodegroup || $nodegroupexpanded) && ($get || $exactget || $regexget || $exclude || $name || $and)
-(puts opts; exit) if $register && ($get || $exactget || $regexget || $exclude || $name || $getfieldnames || $getallvalues || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup || $and)
-(puts opts; exit) if ($addtonodegroup || $removefromnodegroup) && $objecttype != 'nodes'
+(puts opts; exit) if $register && ($get || $exactget || $regexget || $exclude || $name || $getfieldnames || $getallvalues || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup || $and || $createtag || $addtagtonodegroup || $removetagfromnodegroup)
+(puts opts; exit) if ($addtonodegroup || $removefromnodegroup || $addtagtonodegroup || $removetagfromnodegroup) && $objecttype != 'nodes'
 (puts '--showtags can only be used if objecttype = nodes'; exit) if $showtags && ($objecttype !~ /^(nodes|node_groups)$/)
 
 if $name
@@ -444,6 +459,31 @@ if $removenodegroupfromnodegroup
   exit
 end
 
+if $createtag
+  $createtag.each do |tag|
+    nvclient.set_objects('tags', nil, {'name' => tag}, $username)
+  end
+  exit
+end
+if $addtagtonodegroup
+  getdata = {}
+  getdata[:objecttype] = 'node_groups'
+  getdata[:exactget] = {'name' => [$addtagtonodegroup[1]]}
+  ng_results = nvclient.get_objects(getdata)
+  abort "Node group '#{$addtagtonodegroup[1]}' not found for 'addtagtonodegroup'\n" if (ng_results.length != 1)
+  nvclient.add_tag_to_node_group(ng_results, $addtagtonodegroup[0], $username)
+  exit
+end
+if $removetagfromnodegroup
+  getdata = {}
+  getdata[:objecttype] = 'node_groups'
+  getdata[:exactget] = {'name' => [$removetagfromnodegroup[1]]}
+  ng_results = nvclient.get_objects(getdata)
+  abort "Node group '#{$removetagfromnodegroup[1]}' not found for 'removetagfromnodegroup'\n" if (ng_results.length != 1)
+  nvclient.remove_tag_from_node_group(ng_results, $removetagfromnodegroup[0], $username)
+  exit
+end
+
 # Now handle the general case where we fetch a list of objects and then
 # perform operations on them.
 
@@ -490,6 +530,7 @@ if $get || $exactget || $regexget
     includes.delete('node_groups') if includes.include?('node_groups')
     $fields ||= []
     if  $objecttype == 'nodes' 
+      $fields << 'node_groups[name]' unless $fields.include?('node_groups[name]')
       $fields << 'node_groups[tags][name]' unless $fields.include?('node_groups[tags][name]')
       includes << 'node_groups[tags]' unless includes.include?('node_groups[tags]')
     elsif $objecttype == 'node_groups'
