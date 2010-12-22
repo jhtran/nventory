@@ -1334,6 +1334,43 @@ sub add_tags_to_node_groups
 	}
 }
 
+sub remove_tags_from_node_groups
+{
+	my ($node_groups_ref, $tag_string, $login, $password_callback) = @_;
+	my %node_groups = %$node_groups_ref;
+        my %getdata;
+        $getdata{'objecttype'} = 'tags';
+        $getdata{'exactget'} ={ 'name' => [$tag_string] };
+        my %tags_found = get_objects(\%getdata);
+	if (!scalar keys %tags_found)
+	{
+      		die "ERROR: Could not find any tags with the name $tag_string"
+	}
+	my $tag_id = $tags_found{$tag_string}{'id'};
+	my %taggings_to_delete;
+	# iterate through each node_group, find the tagging associated to it thatneeds to be removed
+	foreach my $ng_name (keys %node_groups)
+	{
+		my %tmpdata;
+		$tmpdata{'objecttype'} = 'taggings';
+		$tmpdata{'exactget'} = { 'taggable_type' => ['NodeGroup'], 
+					'taggable_id' => [$node_groups{$ng_name}{'id'}],
+					'tag_id' => [$tag_id] };
+		my %tmpresults = get_objects(\%tmpdata);
+		if (scalar keys %tmpresults)
+		{
+			my @tmparr = keys %tmpresults;
+			my $key = $tmparr[0];
+			$taggings_to_delete{$key} = $tmpresults{$key};
+		}
+	}
+	setdelete(1);
+	if (scalar keys %taggings_to_delete)
+	{
+        	set_objects('taggings', \%taggings_to_delete, {}, $login, $password_callback);
+	}
+}
+
 sub setdebug
 {
 	my ($newdebug) = @_;
