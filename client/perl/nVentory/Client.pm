@@ -171,7 +171,21 @@ sub _get_ua
 			if (($response->is_redirect) && ($response->header('location') =~ /^https:\/\/sso.*/)) {
 				warn "POST to $SERVER/accounts.xml was redirected, authenticating to SSO\n" if ($debug);
 		                print "Login: $login\n";
-		                $password = &$password_callback() if (!$password);
+				if (!$password)
+				{
+					# depending on what $password_callback var is, scalar or is it a subroutine
+					if (ref(\$password_callback) eq 'SCALAR')
+					{
+						$password = $password_callback;
+					}
+					elsif (ref(\$password_callback) eq 'REF')
+					{
+						if ( ref($password_callback) eq 'CODE' )
+						{
+							$password = &$password_callback() ;
+						}
+					}
+				}
 				my $redirflag = 0;
 				my $redircount = 0;
 				while ($redirflag != 1 && $redircount < 7) 
