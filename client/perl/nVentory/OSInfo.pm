@@ -961,7 +961,13 @@ sub getcpupercent
 			sub get_sar_data {
 			  my $sar_dir = $_[0];
 			  my $day;
-			  if ($_[1]) { $day = "0$_[1]"; }
+                          if ($_[1]) {
+                            if ($_[1] =~ /^([0-9])$/) {
+                              $day = "0$_[1]";
+                            } else {
+                              $day = "$_[1]";
+                            }
+                          }
 			  my @content;
 			  my @tempcontent;
 			  if ($day && ($day > 0)) { 

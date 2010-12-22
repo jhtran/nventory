@@ -973,8 +973,13 @@ class NVentory::Client
   def self.get_uniqueid
     os = Facter['kernel'].value
     if os == 'Linux' or os == 'FreeBSD'
-      # best to use UUID from dmidecode
-      uuid = getuuid
+      #
+      if File.exist?('/proc/modules') && `grep -q ^xen /proc/modules`
+        uuid = Facter['macaddress'].value
+      else
+        # best to use UUID from dmidecode
+        uuid = getuuid
+      end
       # Stupid SeaMicro boxes all have the same UUID below. So we won't
       # want to use it, use mac address instead
       if uuid and uuid != "78563412-3412-7856-90AB-CDDEEFAABBCC"
@@ -1625,7 +1630,7 @@ class NVentory::Client
     os = Facter['kernel'].value
     if os == 'Linux'
       begin
-        `cat /proc/modules | grep kvm`
+        `grep ^kvm /proc/modules`
         vmstatus = "kvm_host" if $? == 0
       rescue
         warn "Failed to get modules information"

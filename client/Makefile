@@ -43,11 +43,17 @@ rpm: nventory-client.spec
 	cat nventory-client.spec | sed '/^Requires:/s/$$/, kernel-utils/'|sed "s/@@VERSION@@/$(VER)/g" > $(TMPSPEC)
 	rpmbuild -bb --buildroot $(BUILDROOT) $(TMPSPEC)
 	mv /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.noarch.rpm /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.el4.noarch.rpm
-	# Starting with RHEL 5 dmidecode got its own package
+	# RHEL5 - Starting with RHEL 5 dmidecode got its own package
 	cat nventory-client.spec | sed '/^Requires:/s/$$/, dmidecode/' > $(TMPSPEC)
 	rpmbuild -bb --buildroot $(BUILDROOT) $(TMPSPEC)
-	cp /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.noarch.rpm /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.el6.noarch.rpm
 	mv /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.noarch.rpm /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.el5.noarch.rpm
+	# RHEL6 - Strarting with RHEL 6 perl5 path changes
+	mkdir -p $(BUILDROOT)/usr/local/share
+	mv $(BUILDROOT)/usr/lib/perl5/site_perl $(BUILDROOT)/usr/local/share/perl5
+	sed 's/\/usr\/lib\/perl5\/site_perl/\/usr\/local\/share\/perl5/' $(TMPSPEC) > $(TMPSPEC).bak
+	mv $(TMPSPEC).bak $(TMPSPEC)
+	rpmbuild -bb --buildroot $(BUILDROOT) $(TMPSPEC)
+	mv /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.noarch.rpm /usr/src/redhat/RPMS/noarch/nventory-client-$(VER)-1.el6.noarch.rpm
 	rm -rf $(BUILDROOT) $(TMPSPEC)
 
 debian: control

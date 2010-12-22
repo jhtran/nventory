@@ -908,6 +908,10 @@ sub _getdmidata
 		my $dmi_section;
 		my %dmi_section_data;
 		my $dmi_section_array;
+                if (-e '/proc/modules' && (system("grep -q ^xen /proc/modules") == 0))
+                {
+			return %dmidata;
+                }
 		warn "Running 'dmidecode'" if ($debug);
 		open my $dmifh, '-|', 'dmidecode' or die "open dmidecode: $!";
 		while (<$dmifh>)

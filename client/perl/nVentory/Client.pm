@@ -806,7 +806,7 @@ sub register
 	my $virtual_status = nVentory::OSInfo::getvirtualstatus();
 	## GUESTS
 	## some facter versions prior to 1.5.8 fail to report a xen guest as virtual so switching to checking for the module
-	if (($virtual_status eq 'kvm') || (system("grep -q xen /proc/modules") == 0))
+        if (($virtual_status eq 'kvm') || (-e '/proc/modules' && (system("grep -q ^xen /proc/modules") == 0)))
 	{
 		if ($virtual_status eq 'kvm')
 		{
