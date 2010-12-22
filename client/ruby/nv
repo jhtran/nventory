@@ -248,7 +248,7 @@ opts.parse(ARGV)
 (puts opts; exit) if ($nodegroup || $nodegroupexpanded) && ($get || $exactget || $regexget || $exclude || $name || $and)
 (puts opts; exit) if $register && ($get || $exactget || $regexget || $exclude || $name || $getfieldnames || $getallvalues || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup || $and)
 (puts opts; exit) if ($addtonodegroup || $removefromnodegroup) && $objecttype != 'nodes'
-(puts '--showtags can only be used if objecttype = nodes'; exit) if $showtags && ($objecttype != 'nodes')
+(puts '--showtags can only be used if objecttype = nodes'; exit) if $showtags && ($objecttype !~ /^(nodes|node_groups)$/)
 
 if $name
   $get = {} if !$get
@@ -486,13 +486,15 @@ if $get || $exactget || $regexget
   getdata[:exclude] = $exclude
   getdata[:and] = $and
   if $showtags
+    includes ||= []
+    includes.delete('node_groups') if includes.include?('node_groups')
     $fields ||= []
-    $fields << 'node_groups[tags][name]' unless $fields.include?('node_groups[tags][name]')
-    if includes 
-      includes.delete('node_groups') if includes.include?('node_groups')
-      (includes << 'node_groups[tags]') unless includes.include?('node_groups[tags]')
-    else
-      includes='node_groups[tags]'
+    if  $objecttype == 'nodes' 
+      $fields << 'node_groups[tags][name]' unless $fields.include?('node_groups[tags][name]')
+      includes << 'node_groups[tags]' unless includes.include?('node_groups[tags]')
+    elsif $objecttype == 'node_groups'
+      $fields << 'tags[name]' unless $fields.include?('tags[name]')
+      includes << 'tags' unless includes.include?('tags')
     end
   end # if $showtags
   getdata[:includes] = includes
