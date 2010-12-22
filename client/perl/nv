@@ -210,7 +210,7 @@ if ($withaliases) {
 $objecttype = 'nodes' if (!$objecttype);
 
 usage() if ((@addtonodegroup || @removefromnodegroup) && $objecttype ne 'nodes');
-die "--showtags can only be used if objecttype = nodes" if ($showtags && $objecttype ne 'nodes');
+die "--showtags can only be used when searching objecttype nodes or node_groups" if ($showtags && ($objecttype !~ /^(nodes|node_groups)$/));
 
 # allfields might contain comma-seperated fields
 # But there's the special case that allfields might contain just one
@@ -608,8 +608,16 @@ if (%get || %exactget || %regexget )
 			}
 			@includes = @tmp;
 		}
-		push(@includes, 'node_groups[tags]');
-		push(@fields, 'node_groups[tags][name]') unless grep(/^node_groups\[tags\]\[name\]$/, @fields);
+		if ($objecttype eq 'nodes')
+		{
+			push(@includes, 'node_groups[tags]') ;
+			push(@fields, 'node_groups[tags][name]') unless grep(/^node_groups\[tags\]\[name\]$/, @fields);
+		}
+		elsif ($objecttype eq 'node_groups')
+		{
+			push(@includes, 'tags') ;
+			push(@fields, 'tags[name]') unless grep(/^tags\[name\]$/, @fields);
+		}
 	}
 	%results = nVentory::Client::get_objects($objecttype, \%get, \%exactget, \%regexget, \%exclude, \%and, \@includes);
 	@names = sort keys %results;
