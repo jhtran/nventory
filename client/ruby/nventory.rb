@@ -691,9 +691,9 @@ class NVentory::Client
 
     if vmstatus == 'kvm_host'
       guests = get_kvm_hostinfo
-      guests.each do |vm|
-        data["vmguest[#{vm}][vmimg_size]"] =  0
-        data["vmguest[#{vm}][vmspace_size]"] = 0
+      guests.each do |vm, vminfo|
+        data["vmguest[#{vm}][vmimg_size]"] = vminfo['vmimg_size']
+        data["vmguest[#{vm}][vmspace_used]"] = vminfo['vmspace_used']
       end
     end
 
@@ -1751,20 +1751,40 @@ class NVentory::Client
     return chassis
   end
 
-  # Currently, the only info this method gather is the list
-  # of kvm guests running on this host
+  # Currently, the only info this method gathers is the info
+  # of the guests running on this kvm host
   def get_kvm_hostinfo
-    guests = []
+    guests = {}
     begin
       result = `virsh list --all`
       result.split("\n").each do |line|
         if line =~ /(\d+)\s+(\S+)\s+(\S+)/
-          guests << $2
+          guest_hostname = $2
+          guests[guest_hostname] = get_kvm_guest_info(guest_hostname)
         end
       end
     rescue
       warn "Failed to run/parse virsh command"
     end
     return guests
+  end
+
+  # Currently, the only info this method gathers is the
+  # image size
+  def get_kvm_guest_info(guest)
+    info = {}
+    result = `virsh dumpxml #{guest}`
+    result.split("\n").each do |line|
+      if line =~ /source file='(.+)'/
+        img_path = $1
+        if File.exists?(img_path)
+          # nVentory expects the value to be in KB
+          info['vmimg_size'] = File.stat(img_path).size.to_i / 1024
+          # how to calculate this?
+          # info['vmspace_used'] = ???
+        end
+      end
+    end
+    return info.clone
   end
 end
