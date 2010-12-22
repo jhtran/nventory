@@ -86,6 +86,12 @@ Usage: nv
     [--removenodegroupfromnodegroup child_group,parent_group]
        Takes two node group names seperated by a comma, removes the first
        node group from the second
+    [--createtag tag1[,tag2]]
+       Create a tag by name
+    [--addtagtonodegroup tag,node_group]
+       Add a tag to a node_group
+    [--removetagfromnodegroup tag,node_group]
+       Remove a tag from a node_group
     [--register]
        Gather as much information as possible about the local machine
        and register that information into the nVentory database.
@@ -132,6 +138,9 @@ my $addcomment;
 my @removefromnodegroup;
 my $addnodegrouptonodegroup;
 my $removenodegroupfromnodegroup;
+my @createtag;
+my $addtagtonodegroup;
+my $removetagfromnodegroup;
 my $register;
 my $server;
 my $username = $ENV{LOGNAME};
@@ -167,6 +176,9 @@ my $getopt = GetOptions(
 	'removefromnodegroup=s' => \@removefromnodegroup,
 	'addnodegrouptonodegroup=s' => \$addnodegrouptonodegroup,
 	'removenodegroupfromnodegroup=s' => \$removenodegroupfromnodegroup,
+	'createtags=s' => \@createtag,
+        'addtagtonodegroup=s' => \$addtagtonodegroup,
+        'removetagfromnodegroup=s' => \$removetagfromnodegroup,
 	'username=s' => \$username,
 	'register' => \$register,
         'delete' => \$delete,
@@ -188,7 +200,7 @@ if ( $version )
 usage() unless ($getopt);
 usage() if ($help);
 usage() unless (
-	%get || %exactget || %regexget || @name || $getfieldnames || @getallvalues || $register || $nodegroup || @nodegroupexpanded || @get_nodegroup_nodes || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup);
+	%get || %exactget || %regexget || @name || $getfieldnames || @getallvalues || $register || $nodegroup || @nodegroupexpanded || @get_nodegroup_nodes || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup || @createtag || $addtagtonodegroup || $removetagfromnodegroup );
 # These options are mutually exclusive
 usage() if (@allfields && @fields);
 usage() if ( %set && $delete );
@@ -196,7 +208,7 @@ usage() if ($getfieldnames && (%get || %exactget || %regexget || @name));
 usage() if (@getallvalues && (%get || %exactget || %regexget || @name));
 # FIXME: Should support searches on node group membership and other characteristics
 usage() if (($nodegroup || @nodegroupexpanded || @get_nodegroup_nodes) && (%get || %exactget || %regexget || %exclude || @name || %and));
-usage() if ($register && (%get || %exactget || %regexget || %exclude || %and || @name || $getfieldnames || @getallvalues || $nodegroup || @nodegroupexpanded || @get_nodegroup_nodes || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup));
+usage() if ($register && (%get || %exactget || %regexget || %exclude || %and || @name || $getfieldnames || @getallvalues || $nodegroup || @nodegroupexpanded || @get_nodegroup_nodes || @createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup || @createtag || $addtagtonodegroup || $removetagfromnodegroup ));
 # Enable aliases searching  when used with a 'name' field search and only with 'get' (no exactget nor regexpget)
 if ($withaliases) {
   if (%get) {
@@ -209,7 +221,6 @@ if ($withaliases) {
 
 $objecttype = 'nodes' if (!$objecttype);
 
-usage() if ((@addtonodegroup || @removefromnodegroup) && $objecttype ne 'nodes');
 die "--showtags can only be used when searching objecttype nodes or node_groups" if ($showtags && ($objecttype !~ /^(nodes|node_groups)$/));
 
 # allfields might contain comma-seperated fields
@@ -231,6 +242,7 @@ unless (scalar @allfields == 1 && $allfields[0] eq '')
 @get_nodegroup_nodes = split(/,/, join(',', @get_nodegroup_nodes));
 # createnodegroup might contain comma-seperated fields
 @createnodegroup = split(/,/, join(',', @createnodegroup));
+@createtag = split(/,/, join(',', @createtag));
 # addtonodegroup might contain comma-seperated fields
 @addtonodegroup = split(/,/, join(',', @addtonodegroup));
 # removefromnodegroup might contain comma-seperated fields
@@ -276,6 +288,24 @@ if ($removenodegroupfromnodegroup)
 {
 	@removenodegroupfromnodegroup = split(/,/, $removenodegroupfromnodegroup, 2);
 	usage() if (!$removenodegroupfromnodegroup[0] || !$removenodegroupfromnodegroup[1])
+}
+my @addtagtonodegroup;
+if ($addtagtonodegroup)
+{
+	@addtagtonodegroup = split(/,/, $addtagtonodegroup, 2);
+	if (!$addtagtonodegroup[0] || !$addtagtonodegroup[1])
+	{
+		die "Syntax Error.  You must specify --addtagtonodegroup tag_name,node_group_name";
+	}
+}
+my @removetagfromnodegroup;
+if ($removetagfromnodegroup)
+{
+	@removetagfromnodegroup = split(/,/, $removetagfromnodegroup, 2);
+	if (!$removetagfromnodegroup[0] || !$removetagfromnodegroup[1])
+	{
+		die "Syntax Error.  You must specify --removetagfromnodegroup tag_name,node_group_name";
+	}
 }
 
 if (@name)
@@ -540,6 +570,29 @@ if ($removenodegroupfromnodegroup)
 	exit;
 }
 
+if (@createtag)
+{
+	foreach my $tag (@createtag)
+	{
+		nVentory::Client::set_objects('tags', undef, {'name' => $tag}, $username, \&get_password);
+	}
+	exit;
+}
+if ($addtagtonodegroup)
+{
+	my %node_groups = nVentory::Client::get_objects('node_groups', {}, {'name' => [$addtagtonodegroup[1]]}, {}, {}, {});
+	die "node group '$addtagtonodegroup[1]' not found for 'addtagtonodegroup'\n" if (scalar keys %node_groups != 1);
+	nVentory::Client::add_tags_to_node_groups(\%node_groups, $addtagtonodegroup[0], $username, \&get_password);
+	exit;
+}
+if ($removetagfromnodegroup)
+{
+	my %node_groups = nVentory::Client::get_objects('node_groups', {}, {'name' => [$removetagfromnodegroup[1]]}, {}, {}, {});
+	die "node group '$removetagfromnodegroup[1]' not found for 'removetagfromnodegroup'\n" if (scalar keys %node_groups != 1);
+	nVentory::Client::remove_tags_from_node_groups(\%node_groups, $removetagfromnodegroup[0], $username, \&get_password);
+	exit;
+}
+
 # Now handle the general case where we fetch a list of objects and then
 # perform operations on them.
 
@@ -611,6 +664,7 @@ if (%get || %exactget || %regexget )
 		if ($objecttype eq 'nodes')
 		{
 			push(@includes, 'node_groups[tags]') ;
+			push(@fields, 'node_groups[name]') unless grep(/^node_groups\[name\]$/, @fields);
 			push(@fields, 'node_groups[tags][name]') unless grep(/^node_groups\[tags\]\[name\]$/, @fields);
 		}
 		elsif ($objecttype eq 'node_groups')
