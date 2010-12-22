@@ -90,7 +90,7 @@ class NVentory::Client
             # if they don't realize there's a config file lying
             # around
             warn "Using server #{@server} from #{configfile}" if (@debug)
-          elsif (key == 'sso_server' && !@sso_server) || (@sso_server == 'https://sso.example.com/')
+          elsif key == 'sso_server' && !@sso_server
             @sso_server = value
             warn "Using sso_server #{@sso_server} from #{configfile}" if (@debug)
           elsif key == 'proxy_server' && !@proxy_server
