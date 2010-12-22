@@ -1307,6 +1307,33 @@ sub set_nodegroup_nodegroup_assignments
 	set_objects('node_groups', $parent_groupsref, \%nodegroupdata, $login, $password_callback);
 }
 
+sub add_tags_to_node_groups
+{
+	my ($node_groups_ref, $tag_string, $login, $password_callback) = @_;
+	my %node_groups = %$node_groups_ref;
+        my %getdata;
+        $getdata{'objecttype'} = 'tags';
+        $getdata{'exactget'} ={ 'name' => [$tag_string] };
+        my %tags_found = get_objects(\%getdata);
+	if (!scalar keys %tags_found)
+	{
+		my %tagset_data;
+		$tagset_data{'name'} = $tag_string;
+		# create new tag with the $tag_string
+                set_objects('tags', undef, \%tagset_data, $login, $password_callback);
+        	%tags_found = get_objects(\%getdata);
+	}
+        my $tag_id = $tags_found{$tag_string}{'id'};
+	foreach my $ng (keys %node_groups)
+	{
+		my %taggingset_data;
+		$taggingset_data{'taggable_type'} = 'NodeGroup';
+		$taggingset_data{'taggable_id'} = $node_groups{$ng}{'id'} ;
+		$taggingset_data{'tag_id'} = $tag_id ;
+                set_objects('taggings', undef, \%taggingset_data, $login, $password_callback);
+	}
+}
+
 sub setdebug
 {
 	my ($newdebug) = @_;
