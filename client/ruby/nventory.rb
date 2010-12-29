@@ -788,6 +788,30 @@ class NVentory::Client
     puts "Command successful" if setresults == 1
   end
 
+  # Add the given node into the given nodegroup by directly
+  # creating the node_group_node_assignment
+  # First argument is the id of the node
+  # Second argument is the id of the nodegroup
+  def add_node_group_node_assignment(node_id, node_group_id, login, password_callback=PasswordCallback)
+    setdata = {:node_id => node_id, :node_group_id => node_group_id}
+        puts "Adding using the following setdata #{setdata.inspect}"
+    set_objects('node_group_node_assignments', nil, setdata, login, password_callback)
+  end
+
+  # The first argument is a hash returned by a 'nodes' call to get_objects
+  # The second argument is a hash returned by a 'node_groups'
+  # call to get_objects
+  # This method does the same thing as the add_nodes_to_nodegroups method. However, it
+  # will not be susceptible to the race condition mentioned in add_nodes_to_nodegroups method
+  # This is because it directly talks to the node_group_node_assignments controller
+  def add_node_group_node_assignments(nodes, nodegroups, login, password_callback=PasswordCallback)
+    nodegroups.each do |nodegroup_name, nodegroup|
+      nodes.each do |nodename, node|
+        add_node_group_node_assignment(node['id'], nodegroup['id'], login, password_callback)
+      end
+    end
+  end
+
   # The first argument is a hash returned by a 'nodes' call to get_objects
   # The second argument is a hash returned by a 'node_groups'
   # call to get_objects
@@ -974,7 +998,7 @@ class NVentory::Client
     os = Facter['kernel'].value
     if os == 'Linux' or os == 'FreeBSD'
       #
-      if File.exist?('/proc/modules') && `grep -q ^xen /proc/modules`
+      if File.exist?('/proc/modules') && `grep -q ^xen /proc/modules` && $? == 0
         uuid = Facter['macaddress'].value
       else
         # best to use UUID from dmidecode

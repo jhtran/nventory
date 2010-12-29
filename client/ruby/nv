@@ -30,6 +30,7 @@ $getallvalues = nil
 $nodegroup = nil
 $nodegroupexpanded = nil
 $createnodegroup = nil
+$addnodegroupnodeassignments = nil
 $addtonodegroup = nil
 $removefromnodegroup = nil
 $addnodegrouptonodegroup = nil
@@ -193,6 +194,10 @@ opts.on('--createnodegroup nodegroup1[,nodegroup2]', Array,
         'Create one or more node groups') do |opt|
   $createnodegroup = opt
 end
+opts.on('--addnodegroupnodeassignments nodegroup1[,nodegroup2]', Array,
+        'Assign nodes selected via get/exactget/regexget/exclude to one or more node groups') do |opt|
+  $addnodegroupnodeassignments = opt
+end
 opts.on('--addtonodegroup nodegroup1[,nodegroup2]', Array,
         'Add nodes selected via get/exactget/regexget/exclude to one or more node groups') do |opt|
   $addtonodegroup = opt
@@ -262,7 +267,7 @@ opts.parse(ARGV)
 # FIXME: Should support searches on node group membership and other characteristics
 (puts opts; exit) if ($nodegroup || $nodegroupexpanded) && ($get || $exactget || $regexget || $exclude || $name || $and)
 (puts opts; exit) if $register && ($get || $exactget || $regexget || $exclude || $name || $getfieldnames || $getallvalues || $nodegroup || $nodegroupexpanded || $createnodegroup || $addnodegrouptonodegroup || $removenodegroupfromnodegroup || $and || $createtag || $addtagtonodegroup || $removetagfromnodegroup)
-(puts opts; exit) if ($addtonodegroup || $removefromnodegroup || $addtagtonodegroup || $removetagfromnodegroup) && $objecttype != 'nodes'
+(puts opts; exit) if ($addtonodegroup || $addnodegroupnodeassignments || $removefromnodegroup || $addtagtonodegroup || $removetagfromnodegroup) && $objecttype != 'nodes'
 (puts '--showtags can only be used if objecttype = nodes'; exit) if $showtags && ($objecttype !~ /^(nodes|node_groups)$/)
 
 if $name
@@ -608,7 +613,7 @@ def fieldprint(fields, value)
   end
 end
 
-if names && !$getallvalues && !$set && !$addtonodegroup && !$removefromnodegroup && !$delete
+if names && !$getallvalues && !$set && !$addtonodegroup && !$addnodegroupnodeassignments && !$removefromnodegroup && !$delete
   names.each do |name|
     puts name
     if $allfields || $fields
@@ -663,21 +668,30 @@ if $set
   nvclient.set_objects($objecttype, results, $set, $username)
 end
 
-if $addtonodegroup
+if $addtonodegroup or $addnodegroupnodeassignments
   getdata = {}
   getdata[:objecttype] = 'node_groups'
-  getdata[:exactget] = {'name' => $addtonodegroup}
-  getdata[:includes] = ['nodes']
+  ngnames = $addtonodegroup || $addnodegroupnodeassignments
+  getdata[:exactget] = {'name' => ngnames}
+  if $addtonodegroup
+    getdata[:includes] = ['nodes']
+  end
+
   nodegroup_results = nvclient.get_objects(getdata)
-  if (nodegroup_results.length != $addtonodegroup.length)
+  if (nodegroup_results.length != ngnames.length)
     warn "Not all requested node groups for 'addtonodegroup' were found:"
     warn "Requested:  #{$addtonodegroup.join(',')}"
     warn "Found:  #{nodegroup_results.keys.join(',')}"
     abort
   end
 
-  nvclient.add_nodes_to_nodegroups(results, nodegroup_results, $username);
+  if $addtonodegroup
+    nvclient.add_nodes_to_nodegroups(results, nodegroup_results, $username);
+  elsif $addnodegroupnodeassignments
+    nvclient.add_node_group_node_assignments(results, nodegroup_results, $username);
+  end
 end
+
 if $removefromnodegroup 
   getdata = {}
   getdata[:objecttype] = 'node_groups'
