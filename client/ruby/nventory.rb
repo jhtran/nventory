@@ -578,18 +578,9 @@ class NVentory::Client
     #
     # Gather hardware-related information
     #
-
-    if Facter['manufacturer'] && Facter['manufacturer'].value  # dmidecode
-      data['hardware_profile[manufacturer]'] = Facter['manufacturer'].value
-      data['hardware_profile[model]'] = Facter['productname'].value
-    elsif Facter['sp_machine_name'] && Facter['sp_machine_name'].value  # Mac OS X
-      # There's a small chance of this not being true...
-      data['hardware_profile[manufacturer]'] = 'Apple'
-      data['hardware_profile[model]'] = Facter['sp_machine_name'].value
-    else
-      data['hardware_profile[manufacturer]'] = 'Unknown'
-      data['hardware_profile[model]'] = 'Unknown'
-    end
+    hardware_profile = NVentory::Client::get_hardware_profile
+    data['hardware_profile[manufacturer]'] = hardware_profile[:manufacturer]
+    data['hardware_profile[model]'] = hardware_profile[:model]
     if Facter['serialnumber'] && Facter['serialnumber'].value
       data['serial_number'] = Facter['serialnumber'].value
     elsif Facter['sp_serial_number'] && Facter['sp_serial_number'].value # Mac OS X
@@ -996,6 +987,7 @@ class NVentory::Client
   #
   def self.get_uniqueid
     os = Facter['kernel'].value
+    hardware_profile = NVentory::Client::get_hardware_profile
     if os == 'Linux' or os == 'FreeBSD'
       #
       if File.exist?('/proc/modules') && `grep -q ^xen /proc/modules` && $? == 0
@@ -1006,7 +998,10 @@ class NVentory::Client
       end
       # Stupid SeaMicro boxes all have the same UUID below. So we won't
       # want to use it, use mac address instead
-      if uuid and uuid != "78563412-3412-7856-90AB-CDDEEFAABBCC"
+      # Same problem with Dell C6100
+      if uuid && uuid != "78563412-3412-7856-90AB-CDDEEFAABBCC" &&
+        (hardware_profile[:manufacturer] !~ /Dell/ &&
+         hardware_profile[:model] != 'C6100')
         uniqueid = uuid
       # next best thing to use is macaddress
       else
@@ -1035,7 +1030,19 @@ class NVentory::Client
     end
     return uuid.strip
   end
- 
+
+  def self.get_hardware_profile
+    result = {:manufacturer => 'Unknown', :model => 'Unknown'}
+    if Facter['manufacturer'] && Facter['manufacturer'].value  # dmidecode
+      result[:manufacturer] = Facter['manufacturer'].value
+      result[:model] = Facter['productname'].value
+    elsif Facter['sp_machine_name'] && Facter['sp_machine_name'].value  # Mac OS X
+      # There's a small chance of this not being true...
+      result[:manufacturer] = 'Apple'
+      result[:model] = Facter['sp_machine_name'].value
+    end
+    return result
+  end
   
   #
   # Private methods
