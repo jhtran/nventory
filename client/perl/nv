@@ -726,51 +726,22 @@ if (!%set && !@addtonodegroup && !@removefromnodegroup)
 		if (@allfields || @fields)
 		{
 			print "$name:\n";
+			# if $showtags, remove the node_groups[name] and node_groups[tags][name] because doesn't fit this algorithm
+			if ($showtags)
+			{
+				if (@allfields)
+				{
+					@allfields = remove_showtag_fields(@allfields);
+				}
+				elsif (@fields)
+				{
+					@fields = remove_showtag_fields(@fields);
+				}
+				tagprint($results{$name});
+			}
 			fieldprint([], $results{$name});
 			print "\n";
 
-			# The results hash is a complex data structure.  This function
-			# does its best to render that in a human readable format.
-			sub fieldprint
-			{
-				my ($fieldsref, $value) = @_;
-				my @fieldnames = @$fieldsref;
-				# fields=['name'] => 'name'
-				# fields=['status', 'name'] => 'status[name]'
-				my $fieldname = '';
-				if (scalar @fieldnames > 0)
-				{
-					$fieldname .= $fieldnames[0];
-					if (scalar @fieldnames > 1)
-					{
-						foreach my $f (@fieldnames[1..$#fieldnames])
-						{
-							$fieldname .= "[$f]";
-						}
-					}
-				}
-
-				if (ref $value eq 'HASH')
-				{
-					foreach my $subfield (sort keys %$value)
-					{
-						fieldprint([@fieldnames, $subfield], $value->{$subfield});
-					}
-				}
-				elsif (ref $value eq 'ARRAY')
-				{
-					foreach my $entry (@$value)
-					{
-						fieldprint([@fieldnames], $entry);
-					}
-				}
-				elsif (
-					(@allfields && (!$allfields[0] || !grep(index($fieldname, $_) != -1, @allfields))) || 
-					 (@fields && grep(index($fieldname, $_) != -1, @fields)))
-				{
-					print "$fieldname: $value\n";
-				}
-			}
 		}
 		elsif (@getallvalues)
 		{
@@ -952,3 +923,81 @@ sub get_password
 	return $password;
 }
 
+# The results hash is a complex data structure.  This function
+# does its best to render that in a human readable format.
+sub fieldprint
+{
+	my ($fieldsref, $value) = @_;
+	my @fieldnames = @$fieldsref;
+	# fields=['name'] => 'name'
+	# fields=['status', 'name'] => 'status[name]'
+	my $fieldname = '';
+	if (scalar @fieldnames > 0)
+	{
+		$fieldname .= $fieldnames[0];
+		if (scalar @fieldnames > 1)
+		{
+			foreach my $f (@fieldnames[1..$#fieldnames])
+			{
+				$fieldname .= "[$f]";
+			}
+		}
+	}
+
+	if (ref $value eq 'HASH')
+	{
+		foreach my $subfield (sort keys %$value)
+		{
+			fieldprint([@fieldnames, $subfield], $value->{$subfield});
+		}
+	}
+	elsif (ref $value eq 'ARRAY')
+	{
+		foreach my $entry (@$value)
+		{
+			fieldprint([@fieldnames], $entry);
+		}
+	}
+	elsif (
+		(@allfields && (!$allfields[0] || !grep(index($fieldname, $_) != -1, @allfields))) || 
+		 (@fields && grep(index($fieldname, $_) != -1, @fields)))
+	{
+		print "$fieldname: $value\n";
+	}
+}
+
+sub tagprint
+{
+	my %data = %{$_[0]};
+	my $ref = $data{'node_groups'};
+	foreach my $entry (@$ref)
+	{
+		my %data = %$entry;
+		print "node_groups[name]: $data{'name'}\n";
+		foreach my $tag (@{$data{'tags'}})
+		{
+			my %tagdata = %$tag;
+			print "node_groups[tags][name]: " . $tagdata{'name'}. "\n";
+		}
+	}
+}
+
+sub remove_showtag_fields
+{
+	my @fieldsarr = @_;
+	my @tmparr;
+	if ((grep {$_ eq 'node_groups[tags][name]'} @fieldsarr) || (grep {$_ eq 'node_groups[name]'} @fieldsarr))
+	{
+		foreach my $tmpele (@fieldsarr) { 
+			unless (($tmpele eq 'node_groups[tags][name]') || ($tmpele eq 'node_groups[name]'))
+			{
+				push(@tmparr, $tmpele) ;
+			}
+		}
+	}
+	else
+	{
+		@tmparr = @fieldsarr;
+	}
+	return @tmparr;
+}
