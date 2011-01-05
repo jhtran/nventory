@@ -1602,7 +1602,7 @@ sub getstoragedata {
   {
     my $parser = XML::LibXML->new();
     print "Running lshw to detect storage devices\n";
-    open(my $lshwfh, '-|', '/usr/sbin/lshw -xml');
+    open(my $lshwfh, '-|', 'lshw -xml');
 
     # removes non-UTF characters otherwise libxml fails
     my @templshw = <$lshwfh>;

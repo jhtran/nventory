@@ -68,9 +68,9 @@ debian: control
 	# Make the perl client the default client for now
 	ln -s nv.perl $(BUILDROOT)/usr/bin/nv
 	ln -s nv $(BUILDROOT)/usr/bin/nventory
-	mkdir -p $(BUILDROOT)/usr/local/lib/site_perl/5.10.0
-	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/local/lib/site_perl/5.10.0)
-	mkdir -p $(BUILDROOT)/usr/local/lib/site_ruby/1.8
+	mkdir -p $(BUILDROOT)/usr/lib/perl/5.10
+	(cd perl && find nVentory | grep -v '\.svn' | cpio -pdum $(BUILDROOT)/usr/lib/perl/5.10)
+	mkdir -p $(BUILDROOT)/usr/local/lib/ruby/site_ruby/1.8
 	cp -p ruby/nventory.rb $(BUILDROOT)/usr/local/lib/site_ruby/1.8
 	mkdir -p $(BUILDROOT)/etc/nventory
 	cp -p nventory.conf $(BUILDROOT)/etc

@@ -82,15 +82,17 @@ sub getservedvolumes
 	if ($os =~ /Linux/)
 	{
 	        # EXPORTS - nfs exports
-	        open(FILE, "/etc/exports");
-	                foreach my $line (<FILE>) {
-	                        my ($vol) = $line =~ /(\S+)\s+/;
-	                        if ( -d $vol) {
+                if (-e "/etc/exports") {
+ 	 	        open(FILE, "/etc/exports");
+	                	foreach my $line (<FILE>) {
+	                       	 	my ($vol) = $line =~ /(\S+)\s+/;
+	                        	if ( -d $vol) {
 	                                        $served{"volumes[served][$vol][config]"} = "/etc/exports";
 	                                        $served{"volumes[served][$vol][type]"} = 'nfs';
-	                        }
-	                }
-	        close(FILE);
+	                        	}
+	                	}
+	        	close(FILE);
+		}
 	} # if ($os =~ /Linux/)
 
         return %served;
@@ -123,7 +125,7 @@ sub getmountedvolumes
 	                close(FILE);
 	                foreach my $line (@contents) {
 	                        if ( ( $line =~ /\w:\S/ ) && ( $line !~ /^\s*#/) ) {
-	                                # Parse it, Example : " nventory_backup    -noatime,intr   irvnetappbk:/vol/nventory_backup "
+	                                # Parse it, Example : " opsdb_backup    -noatime,intr   irvnetappbk:/vol/opsdb_backup "
 	                                (my $mnt, my $host, my $vol) = $line =~ /^(\w[\w\S]+)\s+\S+\s+(\w[\w\S]+):(\S+)/;
 	                                if ($mnt && $host && $vol) {
 	                                        $mounted{"volumes[mounted][/mnt/$mnt][config]"} = "$DIR/$file";
@@ -961,13 +963,13 @@ sub getcpupercent
 			sub get_sar_data {
 			  my $sar_dir = $_[0];
 			  my $day;
-                          if ($_[1]) {
-                            if ($_[1] =~ /^([0-9])$/) {
-                              $day = "0$_[1]";
-                            } else {
-                              $day = "$_[1]";
-                            }
-                          }
+			  if ($_[1]) { 
+			    if ($_[1] =~ /^([0-9])$/) { 
+			      $day = "0$_[1]"; 
+			    } else {
+			      $day = "$_[1]"; 
+			    }
+			  }
 			  my @content;
 			  my @tempcontent;
 			  if ($day && ($day > 0)) { 
