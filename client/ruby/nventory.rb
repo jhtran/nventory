@@ -69,7 +69,6 @@ class NVentory::Client
       parms[:sso_server] ? (@sso_server = parms[:sso_server]) : (@sso_server = nil)
       parms[:configfile] ? (configfile = parms[:configfile]) : (configfile = nil)
     end
-    @sso_server = 'https://sso.example.com/' unless @sso_server
     @ca_file = nil
     @ca_path = nil
     @dhparams = '/etc/nventory/dhparams'
@@ -117,6 +116,7 @@ class NVentory::Client
       @server = 'http://nventory/'
       warn "Using server #{@server}" if @debug
     end
+    @sso_server = 'https://sso.example.com/' unless @sso_server
     
     # Make sure the server URL ends in a / so that we can append paths to it
     # using URI.join
