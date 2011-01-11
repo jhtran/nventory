@@ -1701,36 +1701,50 @@ class NVentory::Client
     console_type = nil
     # only support Linux for now
     os = Facter['kernel'].value
-    if os == 'Linux' 
-      if File.exists?('/usr/sbin/racadm')
+    if os == 'Linux'
+      if get_racadm
         console_type = "Dell DRAC"
       end
-    end 
+    end
     return console_type
   end
 
   def get_drac_info
     info = {}
     result = nil
+    racadm = get_racadm
     begin
-      timeout(5) do
-        result = `/usr/sbin/racadm getsysinfo` || ""
+      timeout(10) do
+        cmd = "#{racadm} getsysinfo"
+        result = `#{cmd}` || ""
       end
       result.split("\n").each do |line|
-        if line =~ /IP Address/i
+        if line =~ /^Current IP Address\s*=/i
           info[:ip_address] = line.split("=")[1].strip
-        elsif line =~ /MAC Address/i
+        elsif line =~ /^MAC Address\s*=/i
           info[:mac_address] = line.split("=")[1].strip
-        elsif line =~ /DNS RAC Name/i
+        elsif line =~ /^DNS RAC Name\s*=/i
           info[:name] = line.split("=")[1].strip
         end
       end
     rescue Timeout::Error
       warn "Timed out when trying to get drac info"
-    rescue
+    rescue Exception => e
+      warn e.inspect
       warn "Failed to get DRAC IP"
     end
     return info
+  end
+
+  def get_racadm
+    path_env = (ENV['PATH'] || "").split(':')
+    other_paths = ["/usr/sbin", "/opt/dell/srvadmin/sbin"]
+    (path_env | other_paths).each do |path|
+      if File.executable?(File.join(path, 'racadm'))
+        return File.join(path, 'racadm')
+      end
+    end
+    return nil
   end
 
   def get_chassis_info
@@ -1751,6 +1765,7 @@ class NVentory::Client
   # given node resides in. Result is stored in hash with
   # service_tag and slot_num as the keys
   def get_dell_chassis_info
+    ENV['PATH'] = "#{ENV['PATH']}:/opt/dell/srvadmin/bin/"
     chassis = {}
     result = nil
     begin
