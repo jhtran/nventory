@@ -992,16 +992,16 @@ class NVentory::Client
       #
       if File.exist?('/proc/modules') && `grep -q ^xen /proc/modules` && $? == 0
         uuid = Facter['macaddress'].value
+      # Dell C6100 don't have unique uuid
+      elsif  hardware_profile[:manufacturer] =~ /Dell/ && hardware_profile[:model] == 'C6100'
+        uuid = Facter['macaddress'].value
       else
         # best to use UUID from dmidecode
         uuid = getuuid
       end
       # Stupid SeaMicro boxes all have the same UUID below. So we won't
       # want to use it, use mac address instead
-      # Same problem with Dell C6100
-      if uuid && uuid != "78563412-3412-7856-90AB-CDDEEFAABBCC" &&
-        (hardware_profile[:manufacturer] !~ /Dell/ &&
-         hardware_profile[:model] != 'C6100')
+      if uuid && uuid != "78563412-3412-7856-90AB-CDDEEFAABBCC"
         uniqueid = uuid
       # next best thing to use is macaddress
       else
