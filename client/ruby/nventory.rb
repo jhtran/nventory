@@ -1034,12 +1034,12 @@ class NVentory::Client
   def self.get_hardware_profile
     result = {:manufacturer => 'Unknown', :model => 'Unknown'}
     if Facter['manufacturer'] && Facter['manufacturer'].value  # dmidecode
-      result[:manufacturer] = Facter['manufacturer'].value
-      result[:model] = Facter['productname'].value
+      result[:manufacturer] = Facter['manufacturer'].value.strip
+      result[:model] = Facter['productname'].value.strip
     elsif Facter['sp_machine_name'] && Facter['sp_machine_name'].value  # Mac OS X
       # There's a small chance of this not being true...
       result[:manufacturer] = 'Apple'
-      result[:model] = Facter['sp_machine_name'].value
+      result[:model] = Facter['sp_machine_name'].value.strip
     end
     return result
   end
