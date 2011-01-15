@@ -2,6 +2,6 @@ Package: nventory-client
 Version: 1.62.8
 Maintainer: John Tran<jtran@attinteractive.com>
 Architecture: all
-Depends: cdpr, libxml-libxml-perl, libcrypt-ssleay-perl, libwww-perl, lshw, sysstat
+Depends: cdpr, liblwp-useragent-determined-perl,libxml-libxml-perl, libcrypt-ssleay-perl, libwww-perl, lshw, sysstat
 Description: nVentory client
 
