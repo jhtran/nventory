@@ -637,11 +637,13 @@ class NVentory::Client
     #data['physical_memory'] = 
     #data['physical_memory_sizes'] = 
 
+    nics = []
     if Facter['interfaces'] && Facter['interfaces'].value
-      Facter['interfaces'].value.split(',').each do |nic|
+      nics = Facter['interfaces'].value.split(',')
+      nics.each do |nic|
         data["network_interfaces[#{nic}][name]"] = nic
         data["network_interfaces[#{nic}][hardware_address]"] = Facter["macaddress_#{nic}"].value
-        #data["network_interfaces[#{nic}][interface_type]"] = 
+        #data["network_interfaces[#{nic}][interface_type]"]
         #data["network_interfaces[#{nic}][physical]"] = 
         #data["network_interfaces[#{nic}][up]"] = 
         #data["network_interfaces[#{nic}][link]"] = 
@@ -655,6 +657,15 @@ class NVentory::Client
         #data["network_interfaces[#{nic}][ip_addresses][0][broadcast]"] = 
       end
     end
+    # get additional nic info that facter doesn't know about
+    nic_info =  get_nic_info
+    nic_info.each do |nic, info|
+      next if !nics.include?(nic)
+      info.each do |key, value|
+        data["network_interfaces[#{nic}][#{key}]"] = value
+      end
+    end
+
     # Mark our NIC data as authoritative so that the server properly
     # updates its records (removing any NICs and IPs we don't specify)
     data['network_interfaces[authoritative]'] = true
@@ -1832,5 +1843,50 @@ class NVentory::Client
       end
     end
     return info.clone
+  end
+
+  # Most of the code in this method are based on the code of the
+  # perl nVentory client
+  def get_nic_info
+    info = {}
+    os = Facter['kernel'].value
+    # only support Linux right now
+    return info if os != 'Linux'
+   
+    nic = nil
+    result = `/sbin/ifconfig -a`
+    result.split("\n").each do |line|
+      if line =~ /^(\w+\S+)/
+        nic = $1
+        info[nic] = {}
+      end
+      if line =~ /(?:HWaddr|ether) ([\da-fA-F:]+)/
+        info[nic][:hardware_address] = $1
+        if line =~ /ether/i
+          info[nic][:interface_type] = 'Ethernet'
+        end
+      elsif line =~ /^\s+UP / || line =~ /flags=.*UP,/
+        info[nic][:up] = 1
+      end
+    end 
+
+    # Get additional info
+    info.each do |nic, nic_info|
+      next if nic_info[:interface_type] != 'Ethernet'
+      next if nic =~ /virbr|veth|vif|peth/
+      result = `/sbin/ethtool #{nic}`
+      result.split("\n").each do |line|
+        if line =~ /Speed: (\d+)Mb/
+          nic_info[:speed] = $1
+        elsif line =~ /Duplex: (\w+)/
+          ($1.downcase == 'full')? nic_info[:full_duplex] = 1 : nic_info[:full_duplex] = 0
+        elsif line =~ /Advertised auto-negotiation: (.*)/
+          ($1.downcase == 'yes')? nic_info[:autonegotiate] = 1 : nic_info[:autonegotiate] = 0
+        elsif line =~ /Link detected: (\w+)/
+          ($1.downcase == 'yes')? nic_info[:link] = 1: nic_info[:link] = 0
+        end
+      end
+    end
+    return info
   end
 end
