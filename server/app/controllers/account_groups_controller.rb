@@ -186,7 +186,9 @@ class AccountGroupsController < ApplicationController
         @graph.add_edge( @graphobjs[parent],@graphobjs[child] )
       end
     end
-    @graph.output( :output => 'gif',:file => "public/images/#{@account_group.name}_account_grouptree.gif" )
+    image_type = MyConfig.visualization.images.mtype
+    image_dir = File.join("public", MyConfig.visualization.images.dir)
+    @graph.output( :output => image_type,:file => "#{image_dir}/#{@account_group.name}_account_grouptree.#{image_type}" )
     respond_to do |format|
       format.html # graph_account_groups.html.erb
     end
