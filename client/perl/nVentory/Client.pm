@@ -223,7 +223,9 @@ sub _get_ua
 				$ua->max_redirect(2);
 				$ua->timeout(10);
 				$response = $ua->get($location);
-			} else {
+			} 
+			elsif ($response->code != '422')
+			{
 				die "Unable to get SSO session token.  Might be authentication failure or SSO problem\n";
 			}
 			$ua->max_redirect(7);
