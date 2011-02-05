@@ -1,6 +1,6 @@
 Name: nventory-client
 Summary: nVentory client
-Version: 1.65.6
+Version: 1.65.7
 Release: 1
 Group: Applications/System
 License: MIT

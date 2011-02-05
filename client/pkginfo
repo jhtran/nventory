@@ -1,7 +1,7 @@
 PKG="YPCnventory"
 NAME="nVentory client"
 ARCH="sparc,i386"
-VERSION="1.65.6"
+VERSION="1.65.7"
 CATEGORY="application"
 CLASSES="none"
 PSTAMP="none"

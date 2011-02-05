@@ -854,6 +854,7 @@ sub register
 
 		foreach my $valuedguest (@{$virtualhostinfo{'guests'}})
 		{
+			next unless $valuedguest;
 			print "$valuedguest\n";
 			my $size;
 			my $sparse_size;
