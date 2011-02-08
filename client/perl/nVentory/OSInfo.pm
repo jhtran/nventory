@@ -325,7 +325,7 @@ sub getvirtualhostinfo
 		foreach my $line (@virshlist)
 		{
 			next if $line =~ /(Id Name|^---|^$|Domain-0)/;
-                        $line =~ /\s(\d+)\s(\S+)\s(\S+)/;
+                        $line =~ /(\d+)\s+(\S+)\s+(\S+)/;
 			my $guest = $2;
 			push(@{$virtualhostinfo{'guests'}}, $guest);
                  }
