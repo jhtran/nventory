@@ -47,7 +47,13 @@
   <%= textilize_without_paragraph(h(@node_group.description)) %></p>
   <p class="metadata"><strong><%= tooltip(NodeGroup,:created_at) %>:</strong> <%= h(@node_group.created_at) %><br />
   <p><strong>Num of Nodes:</strong> <%= @node_group.nodes.size %></p>
-  <%= render :partial => 'tags', :locals => {:node_group => @node_group} %>
+  <div class="tags_column">
+    <%= render :partial => 'tags', :locals => {:node_group => @node_group} %>
+  </div>
+  <div class="tags_column">
+    <%= render :partial => 'graffitis', :locals => {:node_group => @node_group} %>
+  </div>
+  <div style="clear: both;"> </div>
 </div> 
 <!-- end local attributes-->
 
@@ -103,6 +109,8 @@
 <%= javascript_tag "Element.hide('tree')" %>
 <%= javascript_tag "Element.hide('add_tag')" %>
 <%= javascript_tag "Element.hide('new_tag')" %>
+<%= javascript_tag "Element.hide('add_graffiti')" %>
+<%= javascript_tag "Element.hide('new_graffiti')" %>
 <%= javascript_tag "Element.hide('list_all_contacts')" %>
 
 <%= @tooltips %>

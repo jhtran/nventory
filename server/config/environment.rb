@@ -70,6 +70,7 @@ Rails::Initializer.run do |config|
     MyConfig = ConfigurationManager.new_manager
   end
   #require 'ruport/acts_as_reportable'
+  config.gem 'is_graffitiable'
 end
 
 # Add new inflection rules using the following format 
@@ -174,4 +175,6 @@ ExceptionNotifier.exception_recipients = $admin_email
 ExceptionNotifier.sender_address = $admin_email
 require 'model_extensions'
 ActiveRecord::Base.send(:extend, ModelExtensions)
+
+require 'graffiti_extensions'
 

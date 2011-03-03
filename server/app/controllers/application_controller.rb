@@ -447,7 +447,7 @@ class ApplicationController < ActionController::Base
 
   def list_models
     %w( Node NodeGroup Account AccountGroup Comment DatabaseInstance Datacenter Drive HardwareProfile IpAddress LbPool LbProfile NameAlias NetworkInterface NetworkPort 
-        NodeRack OperatingSystem Outlet Service ServiceProfile Status StorageController Subnet ToolTip Vip Volume Tag )
+        NodeRack OperatingSystem Outlet Service ServiceProfile Status StorageController Subnet ToolTip Vip Volume Tag Graffiti )
   end
 
   def custom_auth_controllers

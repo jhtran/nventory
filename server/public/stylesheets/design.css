@@ -378,5 +378,11 @@ table.network_summary caption
 
 #loginbox p { text-align: right; }
 
+.tags_column {
+	float: left; 
+	width: 400px; 
+	margin-right: 5px;
+}
+
 /* Hide all HRs, they are only meant for print, or non CSS browsers */
 hr { display: none; }

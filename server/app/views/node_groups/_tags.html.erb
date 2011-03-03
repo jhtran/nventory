@@ -4,7 +4,7 @@
 
 <p id="add_tag_link">
   <%- if allow_perm(@node_group, ['updater']) %>
-    <%= link_to_function 'Add Tag', "Element.show('add_tag');Element.hide('add_tag_link')" %> | <%= link_to 'Edit', edit_node_group_path(node_group) %> 
+    <%= link_to_function 'Add Tag', "Element.show('add_tag');Element.hide('add_tag_link')" %> 
   <%- end -%>
 </p>
 
@@ -14,7 +14,7 @@
     <%= f.select(:tag_id, Tag.all.collect{|a| [a.name,a.id]}) %>
     <%= f.hidden_field(:taggable_id, {:value => node_group.id}) %>
     <%= f.hidden_field(:taggable_type, {:value =>'NodeGroup'}) %>
-    <%= submit_tag "Add" %> <%= "| " + link_to_function('Create New', "Element.show('new_tag');Element.hide('add_tag')") if allow_perm(Tag,'creator') %> | <%= link_to_function 'Cancel', "Element.show('add_tag_link');Element.hide('add_tag')"%></p>
+    <%= submit_tag "Add" %> <%= "| " + link_to_function('Create New', "Element.show('new_tag');Element.hide('add_tag')") if allow_perm(Tag,'creator') %> | <%= link_to_function 'Cancel', "Element.hide('add_tag'), Element.show('add_tag_link')"%></p>
   <%- end -%>
   </p>
 </div>
@@ -22,6 +22,6 @@
 <div id="new_tag">
   <% remote_form_for :node_group, :url => {:action => :add_tag, :id => node_group.id } do %>
     <%= text_field_tag :tag %>
-    <%= submit_tag "Add" %> | <%= link_to_function 'Cancel', "Element.show('add_tag_link');Element.hide('new_tag')"%></p>
+    <%= submit_tag "Add" %> | <%= link_to_function 'Cancel', "Element.hide('new_tag'); Element.show('add_tag_link')"%></p>
   <% end %>
 </div>

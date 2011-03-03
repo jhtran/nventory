@@ -1,5 +1,5 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
   <%- list = [] %>
   <%- tags.each{ |tag| list << link_to(tag.name,tag) } -%>
-  <p><strong><font size=1><%= tooltip(NodeGroup, :tag_list,'Tags') %>: </strong><%= list.join(', ') %></font><br /></p>
+  <p><strong><%= tooltip(NodeGroup, :tag_list,'Tags') %>: </strong><font size=1><%= list.join(', ') %></font><br /></p>
 <%= @tooltips if ttflag %>

@@ -2,6 +2,7 @@ class NodeGroup < ActiveRecord::Base
   acts_as_authorizable
   acts_as_audited
   acts_as_taggable 
+  is_graffitiable 
   named_scope :def_scope
   
   acts_as_commentable

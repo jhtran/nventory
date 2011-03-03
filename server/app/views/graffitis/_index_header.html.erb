@@ -1,0 +1,9 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th><%= tooltip(Graffiti,:name) %></th>
+  <th><%= tooltip(Graffiti,:value) %></th>
+  <th>Graffitized on</th>
+</tr>
+
+<%= @tooltips if ttflag %>

@@ -1,0 +1,16 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Graffiti" %>
+
+<div class="record_view">
+
+<h1><%= tooltip(nil,:graffitis,'Graffiti') %>: <%= @graffiti.name %></h1>
+
+<p><strong><%= tooltip(Graffiti,:value) %>:</strong>
+<%= textilize_without_paragraph(h(@graffiti.value )) %></p>
+<p><strong>Created at:</strong> <%= h(@graffiti.created_at.to_formatted_s(:long)) %>
+<p><strong>Updated at:</strong> <%= h(@graffiti.updated_at.to_formatted_s(:long)) %>
+<p><strong>Graffitized on:</strong>
+<%= link_to @graffiti.graffitiable.name, self.send(@graffiti.graffitiable_type.underscore + '_path', @graffiti.graffitiable) %>
+</p>
+</div>
+<%= @tooltips %>

@@ -171,6 +171,28 @@ class NodeGroupsController < ApplicationController
       }
     end
   end
+
+  def add_graffiti
+    return unless filter_perms(@auth,Graffiti,['creator'])
+    @node_group = NodeGroup.find(params[:id])
+    return unless filter_perms(@auth,@node_group,['updater'])
+   
+    @node_group.graffiti_map[params[:name].to_s] = params[:value].to_s
+    respond_to do |format|
+      format.js {
+        if @node_group.save
+          render(:update) { |page|
+            page.replace_html 'graffiti_list', :partial => 'node_groups/graffiti_list', :locals => { :graffitis => @node_group.graffitis }
+            page.hide 'add_graffiti'
+            page.hide 'new_graffiti'
+            page.show 'add_graffiti_link'
+          }
+        else
+          render(:update) { |page| page.alert(@node_group.errors.full_messages) }
+        end
+      }
+    end
+  end
   
   # GET /node_groups/1/version_history
   def version_history

@@ -1,0 +1,27 @@
+<div id="graffiti_list">
+  <%= render :partial => 'graffiti_list', :locals => { :graffitis => @node_group.graffitis } %>
+</div>
+<p id="add_graffiti_link">
+  <%- if allow_perm(@node_group, ['updater']) %>
+    <%= link_to_function 'Add Graffiti', "Element.show('new_graffiti');Element.hide('add_graffiti_link')" %> 
+  <%- end -%>
+</p>
+<div id="add_graffiti">
+  <p>
+  <% remote_form_for :graffiti, :url => {:controller => 'graffitis', :action => :create, :div => 'graffiti_list', :partial => 'node_groups/graffiti_list', :refcontroller => 'node_groups'  } do |f| %>
+    <%= f.select(:graffiti_id, Graffiti.all.collect{|a| [a.name,a.id]}) %>
+    <%= f.hidden_field(:graffitiable_id, {:value => node_group.id}) %>
+    <%= f.hidden_field(:graffitiable_type, {:value =>'NodeGroup'}) %>
+    <%= submit_tag "Add" %> <%= "| " + link_to_function('Create New', "Element.show('new_graffiti');Element.hide('add_graffiti')") if allow_perm(Graffiti,'creator') %> | <%= link_to_function 'Cancel', "Element.show('add_graffiti_link');Element.hide('add_graffiti')"%></p>
+  <%- end -%>
+  </p>
+</div>
+
+<div id="new_graffiti">
+  <% remote_form_for :node_group, :url => {:action => :add_graffiti, :id => node_group.id } do %>
+    <%= text_field_tag :name %>
+    <%= text_field_tag :value %>
+    <br/>
+    <%= submit_tag "Add" %> | <%= link_to_function 'Cancel', "Element.hide('new_graffiti'); Element.show('add_graffiti_link')"%></p>
+  <% end %>
+</div>

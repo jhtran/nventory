@@ -51,6 +51,7 @@ ActionController::Routing::Routes.draw do |map|
   map.resources :tool_tips,                         :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :tags,                              :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :taggings,                                                                                    :member => { :version_history => :get }
+  map.resources :graffitis,                         :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
 
   # add get method that will return the consumer on this outlet (used in AJAX on Node page)
   map.resources :outlets, :member => { :consumer => :get } 
