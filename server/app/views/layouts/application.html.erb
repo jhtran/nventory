@@ -80,7 +80,7 @@
 <h3>Groups</h3>
 <ul>
     <li><%= @modelperms["Tag"] ? link_to('N', new_tag_path) : '&nbsp&nbsp&nbsp'%>&nbsp;&nbsp;<%= link_to "Tags", tags_url, :title => mtitle(Tag) %></li>
-    <li>&nbsp&nbsp&nbsp&nbsp;&nbsp;<%= link_to "Graffitis",graffitis_url, :title => "Graffiti" %></li>
+    <li><%= @modelperms["Graffiti"] ? link_to('N', new_graffiti_path) : '&nbsp&nbsp&nbsp'%>&nbsp;&nbsp;<%= link_to "Graffitis",graffitis_url, :title => "Graffiti" %></li>
     <li><%= @modelperms["NodeGroup"] ? link_to('N', new_node_group_path) : '&nbsp&nbsp&nbsp'%>&nbsp;&nbsp;<%= link_to "Node Groups", node_groups_url, :title => mtitle(NodeGroup) %></li>
     <li>&nbsp;&nbsp;&nbsp;&nbsp;<%= link_to "Services", '/node_groups?exact_tag[name]=services', :title => mtitle(Service) %></li>
     <li><%= @modelperms["LbPool"] ? link_to('N', new_lb_pool_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Load Balancer Pools", lb_pools_url, :title => mtitle(LbPool) %></li>

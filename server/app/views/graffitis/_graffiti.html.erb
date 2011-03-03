@@ -1,6 +1,8 @@
 <%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
 <p><strong><%= tooltip(Graffiti,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
 
-<p><strong><%= tooltip(Graffiti,:value) %></strong> <br /> <%= f.text_area :value, {"cols" => 30, "rows" => 4}  %></p>
+<p><strong><%= tooltip(Graffiti,:value) %></strong> <em>*</em>  <br /> <%= f.text_area :value, {"cols" => 30, "rows" => 4}  %></p>
+<p><strong><%= tooltip(Graffiti,:graffitiable_type) %></strong> <em>*</em>  <br />  <%= f.text_field :graffitiable_type %></p>
+<p><strong>Graffitiable Id</strong>  <em>*</em> <br />  <%= f.text_field :graffitiable_id %></p>
 
 <%= @tooltips if ttflag %>
