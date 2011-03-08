@@ -71,6 +71,7 @@ class ServicesController < ApplicationController
   # GET /services/1/edit
   def edit
     @service = @object
+
     redirect_to edit_node_group_url(@service) unless @service.service_profile
   end
 
@@ -83,6 +84,8 @@ class ServicesController < ApplicationController
     logger.debug "service_save_successful: #{service_save_successful}"
     
     if service_save_successful
+      add_services_tag
+
       # Process any service -> service assignment creations
       service_assignment_save_successful = process_service_assignments()
       logger.debug "service_assignment_save_successful: #{service_assignment_save_successful}"
@@ -165,6 +168,7 @@ class ServicesController < ApplicationController
   private :process_service_assignments
 
   def graph_services
+    image_type = MyConfig.visualization.images.mtype
     @service = Service.find(params[:id])
     @graphobjs = {}
     @graph = GraphViz::new( "G", "output" => "png" )
@@ -181,7 +185,7 @@ class ServicesController < ApplicationController
         @graph.add_edge( @graphobjs[parent],@graphobjs[child] )
       end
     end
-    @graph.output( :output => 'gif',:file => "public/images/#{@service.name}_servicetree.gif" )
+    @graph.output( :output => image_type,:file => "public/#{MyConfig.visualization.images.dir}/#{@service.name}_servicetree.#{image_type}" )
     respond_to do |format|
       format.html # graph_services.html.erb
     end
@@ -211,4 +215,10 @@ class ServicesController < ApplicationController
   end
   private :dot_parent_services
 
+  private
+  def add_services_tag
+    node_group = NodeGroup.find(@service.id)
+    node_group.tag_list << 'services'
+    node_group.save    
+  end
 end

@@ -1101,6 +1101,7 @@ class NodesController < ApplicationController
   private :dot_parent_node_groups
 
   def graph_services
+    image_type = MyConfig.visualization.images.mtype
     @node = Node.find(params[:id])
     @graphobjs = {}
     @graph = GraphViz::new( "G", "output" => "png" )
@@ -1119,7 +1120,7 @@ class NodesController < ApplicationController
         @graph.add_edge( @graphobjs[parent],@graphobjs[child] )
       end
     end
-    @graph.output( :output => 'gif',:file => "public/images/#{@node.name}_servicetree.gif" )
+    @graph.output( :output => image_type,:file => "public/#{MyConfig.visualization.images.dir}/#{@node.name}_servicetree.#{image_type}" )
     respond_to do |format|
       format.html # graph_services.html.erb
     end

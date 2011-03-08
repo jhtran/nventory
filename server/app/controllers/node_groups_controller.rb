@@ -159,6 +159,7 @@ class NodeGroupsController < ApplicationController
     respond_to do |format|
       format.js {
         if @node_group.save
+          convert_to_service(@node_group) if @node_group.is_service? and !@node_group.service_profile
           render(:update) { |page|
             page.replace_html 'tag_list', :partial => 'node_groups/tag_list', :locals => { :tags => @node_group.tags }
             page.hide 'add_tag'

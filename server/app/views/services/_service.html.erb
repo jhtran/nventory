@@ -50,7 +50,7 @@
   <strong><%= tooltip(Service,:child_services,'Clients') %></strong> <br />
   <% # FIXME: This belongs in the CSS %>
   <font size="-1">
-  <%- Service.find(:all, :select => "id, name", :order => Service.default_search_attribute).each do |ng| -%>
+  <%- Service.def_scope.find(:all, :order => :name).each do |ng| -%>
     <%= check_box_tag('service_service_assignments[child_services][]', ng.id, object.child_services.include?(ng)) %> <%= ng.name %><br/>
   <%- end -%>
   </font>
