@@ -35,6 +35,8 @@ $addtonodegroup = nil
 $removefromnodegroup = nil
 $addnodegrouptonodegroup = nil
 $addcomment = nil
+$addgraffiti= nil
+$deletegraffiti = nil
 $removenodegroupfromnodegroup = nil
 $createtag = nil
 $addtagtonodegroup = nil
@@ -57,6 +59,10 @@ def singularize(string)
     singular = string
   end
   return singular;
+end
+
+def camelize(string)
+  string.split(/[^a-z0-9]/i).map{|w| w.capitalize}.join
 end
 
 def opt_hash_parse(opt)
@@ -141,6 +147,12 @@ opts.on('--name value[,value2]', Array,
 end
 opts.on('--addcomment "add your comment here"', Array) do |opt|
   $addcomment = opt
+end
+opts.on('--addgraffiti "key:value pairs"', Array) do |opt|
+  $addgraffiti = opt
+end
+opts.on('--deletegraffiti "graffiti keys"', Array) do |opt|
+  $deletegraffiti = opt
 end
 opts.on('--allfields [excludefield1[,excludefield2]]', Array,
         'Display all fields for selected objects.',
@@ -563,6 +575,22 @@ if $addcomment
       },
       $username);
   end
+end
+
+if $addgraffiti
+  obj_type = camelize(singularize($objecttype))
+  $addgraffiti.each do |graffiti|
+    nvclient.add_graffiti(obj_type, results, graffiti, $username)
+  end
+  exit
+end
+
+if $deletegraffiti
+  obj_type = camelize(singularize($objecttype))
+  $deletegraffiti.each do |graffiti_name|
+    nvclient.delete_graffiti(obj_type, results, graffiti_name, $username)
+  end
+  exit
 end
 
 if $nodegroupexpanded

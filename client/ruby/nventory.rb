@@ -993,6 +993,38 @@ class NVentory::Client
     end
   end
 
+  # Add a new graffiti to given objects. We're assuming that graffiti is a string
+  # of "key:value" format
+  # obj_type is a string that describe the type of the obj (e.g NodeGroup)
+  # obj_hash is the hash returned from calling get_objects
+  def add_graffiti(obj_type, obj_hash, graffiti, login, password_callback=PasswordCallback)
+    name,value = graffiti.split(':')
+    obj_hash.each_value do |obj|
+      set_objects('graffitis', nil,
+        {  :name => name,
+           :value => value,
+           :graffitiable_id => obj['id'],           
+           :graffitiable_type => obj_type,
+        },
+        login, password_callback);
+    end
+  end
+
+  # Delete the graffiti (based on the name) from the given objects
+  # obj_type is a string that describe the type of the obj (e.g NodeGroup)
+  # obj_hash is the hash returned from calling get_objects
+  def delete_graffiti(obj_type, obj_hash, graffiti_name, login, password_callback=PasswordCallback)
+    obj_hash.each_value do |obj|
+      getdata = {:objecttype => 'graffitis',
+                 :exactget => {:name => graffiti_name,
+                               :graffitiable_id => obj['id'],
+                               :graffitiable_type => obj_type}
+                }
+      graffitis_to_delete = get_objects(getdata)
+      delete_objects('graffitis', graffitis_to_delete, login, password_callback)
+    end
+  end
+
   #
   # Helper methods
   #
