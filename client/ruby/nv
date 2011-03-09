@@ -148,10 +148,10 @@ end
 opts.on('--addcomment "add your comment here"', Array) do |opt|
   $addcomment = opt
 end
-opts.on('--addgraffiti "key:value pairs"', Array) do |opt|
+opts.on('--addgraffiti "key:value pair"') do |opt|
   $addgraffiti = opt
 end
-opts.on('--deletegraffiti "graffiti keys"', Array) do |opt|
+opts.on('--deletegraffiti "graffiti name"') do |opt|
   $deletegraffiti = opt
 end
 opts.on('--allfields [excludefield1[,excludefield2]]', Array,
@@ -579,17 +579,13 @@ end
 
 if $addgraffiti
   obj_type = camelize(singularize($objecttype))
-  $addgraffiti.each do |graffiti|
-    nvclient.add_graffiti(obj_type, results, graffiti, $username)
-  end
+  nvclient.add_graffiti(obj_type, results, $addgraffiti, $username)
   exit
 end
 
 if $deletegraffiti
   obj_type = camelize(singularize($objecttype))
-  $deletegraffiti.each do |graffiti_name|
-    nvclient.delete_graffiti(obj_type, results, graffiti_name, $username)
-  end
+  nvclient.delete_graffiti(obj_type, results, $deletegraffiti, $username)
   exit
 end
 
