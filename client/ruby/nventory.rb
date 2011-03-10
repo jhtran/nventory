@@ -6,6 +6,7 @@ rescue LoadError
   require 'rubygems'
   require 'facter'
 end
+require 'facter/util/memory' # used for converting MB to GB and stuff
 require 'uri'
 require 'net/http'
 require 'net/https'
@@ -73,6 +74,7 @@ class NVentory::Client
     @ca_path = nil
     @dhparams = '/etc/nventory/dhparams'
     @delete = false  # Initialize the variable, see attr_accessor above
+    @dmi_data = nil
     
     CONFIG_FILES << configfile if configfile
  
@@ -541,11 +543,11 @@ class NVentory::Client
       data['operating_system[architecture]'] = Facter['hardwaremodel'].value
     end
     data['kernel_version'] = Facter['kernelrelease'].value
-    if Facter['memorysize'] && Facter['memorysize'].value
-      data['os_memory'] = Facter['memorysize'].value
-    elsif Facter['sp_physical_memory'] && Facter['sp_physical_memory'].value  # Mac OS X
+    if Facter.value('memorysize')
+      data['os_memory'] = Facter.value('memorysize')
+    elsif Facter.value('sp_physical_memory') # Mac OS X
       # More or less a safe bet that OS memory == physical memory on Mac OS X
-      data['os_memory'] = Facter['sp_physical_memory'].value
+      data['os_memory'] = Facter.value('sp_physical_memory')
     end
     if Facter['swapsize']
       data['swap'] = Facter['swapsize'].value
@@ -634,8 +636,10 @@ class NVentory::Client
     data['processor_core_count'] = get_cpu_core_count
     #data['processor_socket_count'] = 
     #data['power_supply_count'] = 
-    #data['physical_memory'] = 
     #data['physical_memory_sizes'] = 
+
+    physical_memory = get_physical_memory
+    data['physical_memory'] = Facter::Memory.scale_number(physical_memory, "MB") if physical_memory
 
     nics = []
     if Facter['interfaces'] && Facter['interfaces'].value
@@ -1921,4 +1925,102 @@ class NVentory::Client
     end
     return info
   end
+
+  # Parse dmidecode data and put it into a hash
+  # This method is based on the corresponding method in the perl client
+  def get_dmi_data
+    return @dmi_data if @dmi_data
+
+    case Facter.value(:kernel)
+    when 'Linux'
+      return nil unless FileTest.exists?("/usr/sbin/dmidecode")
+
+      output=%x{/usr/sbin/dmidecode 2>/dev/null}
+    when 'FreeBSD'
+      return nil unless FileTest.exists?("/usr/local/sbin/dmidecode")
+
+      output=%x{/usr/local/sbin/dmidecode 2>/dev/null}
+    when 'NetBSD'
+      return nil unless FileTest.exists?("/usr/pkg/sbin/dmidecode")
+   
+      output=%x{/usr/pkg/sbin/dmidecode 2>/dev/null}
+    when 'SunOS'
+      return nil unless FileTest.exists?("/usr/sbin/smbios")
+
+      output=%x{/usr/sbin/smbios 2>/dev/null}
+    else
+      warn "Can't get dmi_data because of unsupported OS"
+      return
+    end
+
+    look_for_section_name = false
+    dmi_section = nil
+    dmi_section_data = {}
+    dmi_section_array = nil 
+    @dmi_data = {}
+
+    output.split("\n").each do |line|
+      if line =~ /^Handle/
+        if dmi_section && !dmi_section_data.empty?
+          @dmi_data[dmi_section] ||= []
+          @dmi_data[dmi_section] << dmi_section_data
+        end
+        dmi_section = nil
+        dmi_section_data = {}
+        dmi_section_array = nil
+        look_for_section_name = true
+      elsif look_for_section_name
+        next if line =~ /^\s*DMI type/
+        if line =~ /^\s*(.*)/
+          dmi_section = $1
+          look_for_section_name = false
+        end
+      elsif dmi_section && line =~ /^\s*([^:]+):\s*(\S.*)/
+        dmi_section_data[$1] = $2;
+        dmi_section_array = nil
+      elsif dmi_section && line =~ /^\s*([^:]+):$/
+        dmi_section_array = $1
+      elsif dmi_section && dmi_section_array && line =~ /^\s*(\S.+)$/
+        dmi_section_data[dmi_section_array] ||= []
+        dmi_section_data[dmi_section_array] << $1
+      end
+    end
+    @dmi_data
+  end  
+
+  # This method is based on the one in the perl client
+  def get_physical_memory
+    # only support Linux and FreeBSD right now
+    os = Facter['kernel']
+    return if os.nil? or (os.value != 'Linux' and os.value != 'FreeBSD')
+
+    physical_memory = 0
+    dmi_data = get_dmi_data
+
+    return if dmi_data.nil? or dmi_data['Memory Device'].nil?
+
+    dmi_data['Memory Device'].each do |mem_dev|
+
+      size = mem_dev['Size']
+      form_factor = mem_dev['Form Factor']
+      locator = mem_dev['Locator']
+      # Some systems report little chunks of memory other than
+      # main system memory as Memory Devices, the 'DIMM' as
+      # form factor seems to indicate main system memory.
+      # Unfortunately some DIMMs are reported with a form
+      # factor of '<OUT OF SPEC>'.  In that case fall back to
+      # checking for signs of it being a DIMM in the locator
+      # field. 
+      if (size != 'No Module Installed' &&
+            ((form_factor == 'DIMM' || form_factor == 'FB-DIMM' ) ||
+             (form_factor == '<OUT OF SPEC>' && locator =~ /DIMM/)))
+        megs, units = size.split(' ')
+
+        next if units != 'MB'
+        physical_memory += megs.to_i;
+      end
+    end
+    physical_memory
+  end
+
 end
