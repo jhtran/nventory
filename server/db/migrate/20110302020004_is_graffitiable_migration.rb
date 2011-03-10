@@ -8,7 +8,7 @@ class IsGraffitiableMigration < ActiveRecord::Migration
       t.timestamps
     end
     
-    add_index :graffitis,     [:name, :graffitiable_id, :graffitiable_type]
+#    add_index :graffitis,     [:name, :graffitiable_id, :graffitiable_type]
   end
   
   def self.down
