@@ -2012,7 +2012,7 @@ class NVentory::Client
       # checking for signs of it being a DIMM in the locator
       # field. 
       if (size != 'No Module Installed' &&
-            ((form_factor == 'DIMM' || form_factor == 'FB-DIMM' ) ||
+            ((form_factor == 'DIMM' || form_factor == 'FB-DIMM' || form_factor == 'SODIMM') ||
              (form_factor == '<OUT OF SPEC>' && locator =~ /DIMM/)))
         megs, units = size.split(' ')
 
