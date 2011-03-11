@@ -1075,7 +1075,11 @@ class NVentory::Client
     if uuid_entry
       uuid = uuid_entry.split(":")[1]
     end
-    return uuid.strip
+    if uuid
+      return uuid.strip
+    else
+      return nil
+    end
   end
 
   def self.get_hardware_profile
