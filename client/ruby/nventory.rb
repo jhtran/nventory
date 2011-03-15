@@ -1029,6 +1029,28 @@ class NVentory::Client
     end
   end
 
+  def get_service_tree(service_name)
+    getdata = {}
+    getdata[:objecttype] = 'services'
+    getdata[:exactget] = {'name' => [service_name]}
+    getdata[:includes] = ['nodes', 'parent_services']
+    services = {service_name => []}
+    results = get_objects(getdata)
+
+    if results.has_key?(service_name)
+      if results[service_name].has_key?('parent_services') && !results[service_name]['parent_services'].empty?
+        results[service_name]['parent_services'].each do |service|
+          services[service_name] << get_service_tree(service['name'])
+        end
+      else
+        return service_name
+      end
+    else # no such service
+      return {}
+    end
+    return services
+  end
+
   #
   # Helper methods
   #
