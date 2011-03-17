@@ -226,7 +226,10 @@ sub _get_ua
 			} 
 			elsif ($response->code != '422')
 			{
+				unless ($response->code != '200')
+				{
 				die "Unable to get SSO session token.  Might be authentication failure or SSO problem\n";
+				}
 			}
 			$ua->max_redirect(7);
 		}
