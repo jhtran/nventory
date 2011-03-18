@@ -904,9 +904,9 @@ class NVentory::Client
       # eliminate duplicates
       merged_nodegroups = child_groups
 
-      if parent_group[child_groups]
-        parent_group[child_groups].each do |child_group|
-          name = child_group[name]
+      if parent_group['child_groups']
+        parent_group['child_groups'].each do |child_group|
+          name = child_group['name']
           merged_nodegroups[name] = child_group
         end
       end
@@ -927,9 +927,9 @@ class NVentory::Client
     # method currently suffers from.
     parent_groups.each_pair do |parent_group_name, parent_group|
       desired_child_groups = {}
-      if parent_groups[child_groups]
-        parent_group[child_groups].each do |child_group|
-          name = child_group[name]
+      if parent_group['child_groups']
+        parent_group['child_groups'].each do |child_group|
+          name = child_group['name']
           if !child_groups.has_key?(name)
             desired_child_groups[name] = child_group
           end
@@ -939,6 +939,7 @@ class NVentory::Client
       set_nodegroup_nodegroup_assignments(desired_child_groups, {parent_group_name => parent_group}, login, password_callback)
     end
   end
+
   # Both arguments are hashes returned by a 'node_groups' call to get_objects
   def set_nodegroup_nodegroup_assignments(child_groups, parent_groups, login, password_callback=PasswordCallback)
     child_ids = []
