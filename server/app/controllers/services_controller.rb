@@ -84,6 +84,7 @@ class ServicesController < ApplicationController
     logger.debug "service_save_successful: #{service_save_successful}"
     
     if service_save_successful
+      create_dummy_service_profile(@service) unless @service.service_profile
       add_services_tag
 
       # Process any service -> service assignment creations
@@ -220,5 +221,10 @@ class ServicesController < ApplicationController
     node_group = NodeGroup.find(@service.id)
     node_group.tag_list << 'services'
     node_group.save    
+  end
+
+  def create_dummy_service_profile(service)
+    service.service_profile_attributes = {}
+    service.save
   end
 end
