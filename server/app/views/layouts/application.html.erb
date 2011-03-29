@@ -22,7 +22,7 @@
 
 <p id="account_links">
 <%- if logged_in_account -%>
-  <%= "Welcome back, #{link_to logged_in_account.name, account_path(logged_in_account)}! | #{link_to "Help", HELP_URL} | " %>
+  <%= "Welcome back, #{link_to h(logged_in_account.name), account_path(logged_in_account)}! | #{link_to "Help", HELP_URL} | " %>
   <%= session[:sso] ? link_to("Logout (SSO)", sso_obj.logout_url) : link_to("Logout", :controller => 'login', :action => 'logout') %>
 <%- else -%>
   <%= (SSO_AUTH_SERVER && SSO_LOGIN_URL) ?  " | #{link_to "Login (SSO)", SSO_LOGIN_URL}" : " | #{link_to("Login", :controller => 'login', :action => 'login')}" %>
