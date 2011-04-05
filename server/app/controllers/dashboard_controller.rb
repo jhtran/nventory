@@ -7,7 +7,7 @@ class DashboardController < ApplicationController
     respond_to do |format|
       format.html {
         @nodes_over_time_chart = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'nodes_over_time_chart', :format => :json ))
-        @operating_systems_pie = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'operating_systems_pie', :format => :json ))
+        @operating_systems_pie = open_flash_chart_object(700,400, url_for( :action => 'index', :graph => 'operating_systems_pie', :format => :json ))
         @hardware_profiles_pie = open_flash_chart_object(700,400, url_for( :action => 'index', :graph => 'hardware_profiles_pie', :format => :json ))
         @global_cpu_percent_chart = open_flash_chart_object(500,300, url_for( :action => 'index', :graph => 'global_cpu_percent_chart', :format => :json ))        
       } # format.html
