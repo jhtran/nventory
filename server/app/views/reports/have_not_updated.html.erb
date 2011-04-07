@@ -1,7 +1,14 @@
 <%- @tooltips = [] %>
-<%- @page_title = 'Nodes' + tooltip(Node,:updated_at,'Not Updated') + ' > 7 Days' %>
-<h1>Nodes <%= tooltip(Node,:updated_at,'Not Updated') %> > 7 Days</h1>
+<%- @page_title = 'Nodes' + tooltip(Node,:updated_at,'Not Updated') + " since #{@ago} #{@unit} ago" %>
+<h1>Nodes <%= tooltip(Node,:updated_at,'Not Updated') %> since <%=@ago%> <%=@unit%> ago</h1>
 
+<div>
+<% form_tag "/reports/have_not_updated" do -%>
+  Query nodes that haven't been updated since: <%= text_field_tag :ago %> <%= select_tag "unit", options_for_select([ "days", "hours" ], "days") %> ago
+  <%= submit_tag 'Submit' %>
+<% end -%>
+</div>
+<br/>
 <table width="100%">
 <tr>
 <td>

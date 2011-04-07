@@ -6,7 +6,7 @@ class ReportsController < ApplicationController
   def list_reports
     reports = []
     reports << ['Nodes not assigned to racks', :racks_unassigned]
-    reports << ['Nodes not updated > 7 days', :have_not_updated]
+    reports << ['Nodes not updated', :have_not_updated]
     reports << ['Unused hardware_profiles', :unused_hardware_profiles]
     reports << ['Nodes OS CPU count != phys CPU count', :conflict_cpucount]
     reports << ['Nodes OS memory != phys memory', :conflict_memorysize]
@@ -28,6 +28,16 @@ class ReportsController < ApplicationController
     end
   end
   def have_not_updated
+    @ago = params[:ago] || 7
+    @ago = @ago.to_i
+    @unit = params[:unit] || "days"
+
+    if @unit == "hours"
+      timestamp = DateTime.parse((Time.now - @ago.hours).to_s)
+    else
+      timestamp = (Date.today - @ago.days).to_s
+    end
+
     # sort param passed from web gui's row header #
     sort = 'updated_at'
     if (params[:sort] =~ /updated_at_reverse/)
@@ -36,7 +46,7 @@ class ReportsController < ApplicationController
       sort = 'nodes.name'
       sort << ' DESC' if (params[:sort] =~ /name_reverse/)
     end
-    @objects = Node.find(:all,:conditions => ['updated_at < ?', (Date.today - 7.days).to_s], :order => sort).paginate(:page => params[:page])
+    @objects = Node.find(:all,:conditions => ['updated_at < ?', timestamp], :order => sort).paginate(:page => params[:page])
      
     respond_to do |format|
       format.html # index.html.erb
