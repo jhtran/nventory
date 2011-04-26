@@ -23,7 +23,12 @@ output = {}
 #
 
 nvclient = NVentory::Client.new
-results = nvclient.get_objects('nodes', {}, { 'name' => name }, ['node_groups'])
+getdata = {
+            :objecttype => 'nodes',
+            :get => {'name' => name},
+            :includes => ['node_groups']
+          }
+results = nvclient.get_objects(getdata)
 
 if results.empty?
   # Silently exit, puppet will call this script again with the name
