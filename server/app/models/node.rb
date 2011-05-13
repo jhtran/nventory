@@ -108,19 +108,11 @@ class Node < ActiveRecord::Base
       users = contact.split(',')
       users.each do |user|
         user.strip!
-        uri = URI.parse("https://#{SSO_AUTH_SERVER}/users.xml?login=#{user}")
+        uri = URI.parse("https://#{SSO_AUTH_SERVER}/users/email?username=#{user}")
         http = Net::HTTP::Proxy(SSO_PROXY_SERVER,8080).new(uri.host,uri.port)
         http.use_ssl = true
-        sso_xmldata = http.get(uri.request_uri).body
-        sso_xmldoc = Hpricot::XML(sso_xmldata)
-        if (sso_xmldoc/:kind).first
-          kind = (sso_xmldoc/:kind).first.innerHTML
-          unless kind == "employee"|| kind == "contractor"
-            flag << user
-          end
-        else
-          flag << user
-        end # if (sso_xmldoc/:kind).first
+        result = http.get(uri.request_uri).body
+        (flag << user) if result.blank?
       end
     end
     if (flag.nil? || flag.empty?)
