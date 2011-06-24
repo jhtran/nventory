@@ -22,11 +22,13 @@ class LoginController < ApplicationController
     if request.post? 
       account = Account.authenticate(params[:login], params[:password])
       if (account)
+        logger.info "+ successful authentication #{account.login}"
         session[:account_id] = account.id
         uri = session[:original_uri] 
         session[:original_uri] = nil 
         redirect_to(uri || { :controller => 'dashboard' })
       else 
+        logger.info "- failed authentication invalid login/password (#{params[:login]})"
         flash[:error] = "Invalid login/password combination"
         session[:account_id] = nil
         redirect_to :controller => 'login', :action => 'login'
