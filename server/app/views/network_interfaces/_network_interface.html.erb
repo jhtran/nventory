@@ -3,7 +3,7 @@
 
 <p><strong><%= tooltip(NetworkInterface,:interface_type) %></strong> <br /> <%= f.text_field :interface_type %></p>
 
-<p><strong><%= tooltip(NetworkInterface,:node) %></strong> <br /> <%= select 'network_interface', 'node_id', Node.all.collect { |n| [n.name, n.id] } %></p>
+<p><strong><%= tooltip(NetworkInterface,:node) %></strong> <br /> <%= select 'network_interface', 'node_id', Node.all.collect { |n| [n.name, n.id] }.sort %></p>
 
 <p><strong><%= tooltip(NetworkInterface,:physical) %></strong> <br /> <%= f.check_box :physical %></p>
 
