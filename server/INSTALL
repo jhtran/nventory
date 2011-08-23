@@ -1,0 +1,14 @@
+INSTALL
+
+1) Install rvm (http://beginrescueend.com/)
+2) Install bundler (http://gembundler.com/)
+3) $ rvm install 1.8.7
+3) $ bundle install
+4) $ bundle exec script/server
+
+NOTES:
+
+- If bundle install has problems insalling the MySQL gem, try:
+
+  $ bundle config build.mysql --with-mysql-config=/path/to/mysql_config
+     * example: bundle config build.mysql --with-mysql-config=/usr/local/mysql/bin/mysql_config
