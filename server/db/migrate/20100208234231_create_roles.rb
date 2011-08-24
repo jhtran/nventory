@@ -14,7 +14,6 @@ class CreateRoles < ActiveRecord::Migration
     add_index :roles_users, :account_group_id
     add_index :roles, :name
     add_index :roles, :authorizable_id
-    admin = Account.find_by_login('admin')
   end
 
   def self.down
