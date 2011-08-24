@@ -1,7 +1,7 @@
 source "http://rubygems.org"
 source "http://gems.github.com"
 gem "ruby-mysql"
-gem "rails", "2.3.2"
+gem "rails", "2.3.9"
 gem "RedCloth", "4.2.2"
 gem "ruby-net-ldap", "0.0.4"
 gem "ruport", "1.6.1"
