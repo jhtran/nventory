@@ -8,7 +8,7 @@ LOGF=install.log
 # Sample installation script for CentOS6
 
 MYSQL_CONFIG_FILE="/usr/bin/mysql_config"
-RAILS_VER="2.3.9"
+RAILS_VER="2.3.2"
 RUBY_VER="1.8.7"
 RUBYGEMS_VER="1.5.3"
 
