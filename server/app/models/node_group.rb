@@ -327,6 +327,10 @@ class NodeGroup < ActiveRecord::Base
                              :include => {:taggings=>{:tag=>{}}}}
     incls[:tags] = { :assoc => Tagging.reflect_on_association(:tag),
                              :include => {:taggings=>{:tag=>{}}}}
+    prefnode = { :assoc => NodeGroupNodeAssignment.reflect_on_association(:node),
+                             :include => {:node_group_node_assignments=>{:node=>{}}}}
+    incls[:nodes] = prefnode
+    incls[:node] = prefnode
     return incls
   end
 
