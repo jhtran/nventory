@@ -35,7 +35,7 @@ class ApplicationController < ActionController::Base
     # already authenticated if they want to make a change.  This
     # provides for a more seamless user experience.  XML users
     # don't have to authenticate unless they're making a change.
-    if params[:format] && params[:format] == 'xml'
+    if params[:format] && (params[:format] == 'xml' or params[:format] == 'json')
       unless params[:controller] == 'accounts'
         return true if request.get?
       end

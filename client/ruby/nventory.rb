@@ -14,6 +14,15 @@ require 'cgi'
 require 'rexml/document'
 require 'yaml'
 
+# Only use json gem if its there
+begin
+  require 'rubygems'
+  require 'json'
+  HAS_JSON_GEM = true
+rescue LoadError
+  HAS_JSON_GEM = false
+end
+
 # fix for ruby http bug where it encodes the params incorrectly
 class Net::HTTP::Put
   def set_form_data(params, sep = '&')
@@ -302,7 +311,18 @@ class NVentory::Client
     # Send the query to the server
     #
 
-    uri = URI::join(@server, "#{objecttype}.xml?#{querystring}")
+    if parms[:format] == 'json'
+      if HAS_JSON_GEM
+        uri = URI::join(@server, "#{objecttype}.json?#{querystring}")
+      else
+        warn "Warning: Cannot use json format because json gem is not installed. Using xml format instead."
+        parms[:format] = 'xml'
+        uri = URI::join(@server, "#{objecttype}.xml?#{querystring}")
+      end
+    else
+      uri = URI::join(@server, "#{objecttype}.xml?#{querystring}")
+    end
+
     req = Net::HTTP::Get.new(uri.request_uri)
     warn "GET URL: #{uri}" if (@debug)
     response = send_request(req, uri, login, password_callback)
@@ -316,26 +336,28 @@ class NVentory::Client
       response.error!
     end
 
-    #
-    # Parse the XML data from the server
-    # This tries to render the XML into the best possible representation
-    # as a Perl hash.  It may need to evolve over time.
-    #
-
-    puts response.body if (@debug)
-    results_xml = REXML::Document.new(response.body)
-    results = {}
-    if results_xml.root.elements["/#{objecttype}"]
-      results_xml.root.elements["/#{objecttype}"].each do |elem|
-        # For some reason Elements[] is returning things other than elements,
-        # like text nodes
-        next if elem.node_type != :element
-        data = xml_to_ruby(elem)
-        name = data['name'] || data['id']
-        if !results[name].nil?
-          warn "Duplicate entries for #{name}. Only one will be shown."
+    if parms[:format] == 'json' 
+      results = JSON.parse(response.body)
+    else
+      #
+      # Parse the XML data from the server
+      # This tries to render the XML into the best possible representation
+      # as a Perl hash.  It may need to evolve over time.
+      puts response.body if (@debug)
+      results_xml = REXML::Document.new(response.body)
+      results = {}
+      if results_xml.root.elements["/#{objecttype}"]
+        results_xml.root.elements["/#{objecttype}"].each do |elem|
+          # For some reason Elements[] is returning things other than elements,
+          # like text nodes
+          next if elem.node_type != :element
+          data = xml_to_ruby(elem)
+          name = data['name'] || data['id']
+          if !results[name].nil?
+            warn "Duplicate entries for #{name}. Only one will be shown."
+          end
+          results[name] = data
         end
-        results[name] = data
       end
     end
 

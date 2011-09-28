@@ -163,6 +163,8 @@ class Search
     results[:csvobj] = csvobj
     if (params[:format] && params[:format] == 'xml')
       results[:search_results] = search_results
+    elsif (params[:format] && params[:format] == 'json')
+      results[:search_results] = search_results
     elsif (params[:format] && params[:format] == 'csv')
       results[:search_results] = search_results.as(:csv)
     else
@@ -201,7 +203,19 @@ class Search
       page = find_data[:page]
       sort = find_data[:sort]
       RAILS_DEFAULT_LOGGER.info "FIND INCLUDES:\n" + includes.to_yaml
-      if format && format == 'csv'
+      if (format && format == 'json') 
+        options = { :select => select,
+                    :joins => joins,
+                    :include => includes,
+                    :conditions => [ conditions_string, *conditions_values ],
+                    :order => sort }
+        if page
+          options[:page] = page
+          search_results = mainmodel.def_scope.paginate(:all, options)
+        else
+          search_results = mainmodel.def_scope.find(:all, options)
+        end
+      elsif format && format == 'csv'
         search_results = mainmodel.def_scope.report_table(:all,
                              :select => select,
                              :joins => joins,

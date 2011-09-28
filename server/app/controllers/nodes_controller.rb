@@ -46,6 +46,14 @@ class NodesController < ApplicationController
                                                    :dasherize => false)
         end
       end
+      format.json do
+        if @objects.kind_of?(WillPaginate::Collection)
+          ret = {:offset => @objects.offset, :total_entries => @objects.total_entries, :per_page => @objects.per_page, :objects => @objects}
+        else
+          ret = @objects 
+        end
+        render :json => ret.to_json(:include => convert_includes(includes))
+      end
       format.csv do
         if params[:inline] == "off"
           send_data(@objects)
