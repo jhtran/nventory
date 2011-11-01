@@ -184,7 +184,6 @@ class NodeGroupsController < ApplicationController
         if @node_group.save
           render(:update) { |page|
             page.replace_html 'graffiti_list', :partial => 'node_groups/graffiti_list', :locals => { :graffitis => @node_group.graffitis }
-            page.hide 'add_graffiti'
             page.hide 'new_graffiti'
             page.show 'add_graffiti_link'
           }
