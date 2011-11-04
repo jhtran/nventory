@@ -799,7 +799,17 @@ class NVentory::Client
       end
     end
 
-    # If we failed to find an existing entry based on the unique id
+    # If we failed to find an existing entry based on the unique id,
+    # fall back to using serial number.
+    if results.empty? && data['serial_number']
+      getdata = {}
+      getdata[:objecttype] = 'nodes'
+      getdata[:exactget] = {'serial_number' => [data['serial_number']]}
+      getdata[:login] = 'autoreg'
+      results = get_objects(getdata)
+    end
+
+    # If we failed to find an existing entry based on the unique id and serial number,
     # fall back to the hostname.  This may still fail to find an entry,
     # if this is a new host, but that's OK as it will leave %results
     # as undef, which triggers set_nodes to create a new entry on the
