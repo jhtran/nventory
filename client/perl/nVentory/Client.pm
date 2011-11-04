@@ -1070,10 +1070,7 @@ sub register
 	}
 
 	# If we failed to find an existing entry based on the unique id
-	# fall back to the hostname.  This may still fail to find an entry,
-	# if this is a new host, but that's OK as it will leave %results
-	# as undef, which triggers set_objects to create a new entry on the
-	# server.
+	# fall back to the hostname.
 	if (!%results && $data{name})
 	{
                 my %getdata;
@@ -1081,6 +1078,20 @@ sub register
                 $getdata{'exactget'} = {'name' => [$data{name}]};
                 $getdata{'login'} = 'autoreg';
                 %results = get_objects(\%getdata);
+	}
+
+	# If we can't get a match on the uniqueid or hostname we'll want 
+	# to do a match based on the hardware serial number, if available.
+	# If at this point we still fail to find an entry, it will simply
+	# leave %results as undef, which triggers set_objects to create a
+	# new entry on the server.
+	if (!%results && $data{serial_number})
+	{
+		my %getdata;
+		$getdata{'objecttype'} = 'nodes';
+		$getdata{'exactget'} = {'serial_number' => [$data{serial_number}]};
+		$getdata{'login'} = 'autoreg';
+		%results = get_objects(\%getdata);
 	}
 
 	set_objects('nodes', \%results, \%data, 'autoreg');
