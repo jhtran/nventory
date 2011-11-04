@@ -1058,17 +1058,6 @@ sub register
                 }
 	}
 
-	# If we can't get a match on the uniqueid, we'll want to do a match
-	# based on the hardware serial number, if available. 
-	if (!%results && $data{serial_number})
-	{
-		my %getdata;
-		$getdata{'objecttype'} = 'nodes';
-		$getdata{'exactget'} = {'serial_number' => [$data{serial_number}]};
-		$getdata{'login'} = 'autoreg';
-		%results = get_objects(\%getdata);
-	}
-
 	# If we failed to find an existing entry based on the unique id
 	# fall back to the hostname.
 	if (!%results && $data{name})
