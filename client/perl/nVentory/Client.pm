@@ -1074,7 +1074,7 @@ sub register
 	# If at this point we still fail to find an entry, it will simply
 	# leave %results as undef, which triggers set_objects to create a
 	# new entry on the server.
-	if (!%results && $data{serial_number})
+	if (!%results && $data{serial_number} && $data{serial_number} !~ /not specified/i)
 	{
 		my %getdata;
 		$getdata{'objecttype'} = 'nodes';
