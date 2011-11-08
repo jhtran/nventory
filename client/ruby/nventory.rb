@@ -814,9 +814,9 @@ class NVentory::Client
     # if this is a new host, but that's OK as it will leave %results
     # as undef, which triggers set_nodes to create a new entry on the
     # server.
-    if results.empty? && data['serial_number'] 
-                      && !data['serial_number'].empty?
-                      && data['serial_number'] != "Not Specified"
+    if results.empty? && data['serial_number'] &&
+                         !data['serial_number'].empty? &&
+                         data['serial_number'] != "Not Specified"
       getdata = {}
       getdata[:objecttype] = 'nodes'
       getdata[:exactget] = {'serial_number' => [data['serial_number']]}
