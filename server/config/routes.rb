@@ -16,6 +16,8 @@ ActionController::Routing::Routes.draw do |map|
   map.resources :node_group_node_assignments,                                                                 :member => { :version_history => :get }
   map.resources :node_group_vip_assignments,                                                                  :member => { :version_history => :get }
   map.resources :node_group_node_group_assignments,                                                           :member => { :version_history => :get }
+  map.resources :node_support_contract_assignments,                                                           :member => { :version_history => :get }
+  map.resources :hardware_lifecycles,               :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :account_group_account_group_assignments,                                                     :member => { :version_history => :get }
   map.resources :account_group_self_group_assignments,                                                        :member => { :version_history => :get }
   map.resources :account_group_authz_assignments,                                                             :member => { :version_history => :get }
@@ -39,6 +41,7 @@ ActionController::Routing::Routes.draw do |map|
   map.resources :volume_drive_assignments,                                                                    :member => { :version_history => :get }
   map.resources :ip_address_network_port_assignments,                                                         :member => { :version_history => :get }
   map.resources :volumes,                           :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
+  map.resources :support_contracts,                 :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :network_ports,                     :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :drives,                            :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }
   map.resources :statuses,                          :collection => { :field_names => :get, :search => :get }, :member => { :version_history => :get }

@@ -1,0 +1,5 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(HardwareLifecycle,:ship_date) %>:</strong> <br/><%= f.datetime_select :ship_date %></p>
+<p><strong><%= tooltip(HardwareLifecycle,:out_of_service_date) %>:</strong> <br/><%= f.datetime_select :out_of_service_date %></p>
+
+<%= @tooltips if ttflag %>

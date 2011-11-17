@@ -1,0 +1,9 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<tr>
+  <th nowrap="nowrap" width="5%">&nbsp;</th>
+  <th><%= tooltip(HardwareLifecycle,:node_id) %></th>
+  <th><%= tooltip(HardwareLifecycle,:ship_date) %></th>
+  <th><%= tooltip(HardwareLifecycle,:out_of_service_date) %></th>
+</tr>
+
+<%= @tooltips if ttflag %>

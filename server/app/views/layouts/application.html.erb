@@ -108,6 +108,7 @@
     <li><%= @modelperms["Status"] ? link_to('N', new_status_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Statuses", statuses_url, :title => mtitle(Status) %></li>
     <li><%= @modelperms["NodeRack"] ? link_to('N', new_node_rack_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Racks", node_racks_url, :title => mtitle(NodeRack) %></li>
     <li><%= @modelperms["Outlet"] ? link_to('N', new_outlet_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Outlets", outlets_url, :title => mtitle(Outlet) %></li>
+    <li><%= @modelperms["SupportContract"] ? link_to('N', new_support_contract_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Support Contracts", support_contracts_url %></li>
 </ul>
 
 <h3>Admin</h3>

@@ -42,6 +42,12 @@
 <p><strong><%= tooltip(@node.class,:network_interfaces) %>:</strong> <br />FIXME </p>
 
 <p><strong><%= tooltip(@node.class,:description) %>:</strong> <br /><%= f.text_area :description, {"cols" => 60, "rows" => 4} %> </p>
+
+<% f.fields_for :hardware_lifecycle do |hdwr_lfccle| %>
+<p><strong><%= tooltip(hdwr_lfccle.class,:ship_date) %>:</strong> <br/><%= hdwr_lfccle.datetime_select(:ship_date,:include_blank => true) %></p>
+<p><strong><%= tooltip(hdwr_lfccle.class,:out_of_service_date) %>:</strong> <br/><%= hdwr_lfccle.datetime_select(:out_of_service_date,:include_blank => true) %></p>
+<% end %>
+
 <%= @tooltips %>
 
 <%= @tooltips if ttflag %>

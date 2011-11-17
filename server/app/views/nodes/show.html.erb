@@ -322,10 +322,35 @@
   </div>
 </div> <!-- end smartrelationship -->
 
+<div class="relationship">
+<h2><%= tooltip(@node.class,:hardware_lifecycle,'Hardware Lifecycle') %></h2>
+  <div id="hardware_lifecycle">
+    <%= render :partial => 'hardware_lifecycle', :locals => { :node => @node } %>
+  </div>
+</div> <!-- end hardware_lifecycle relationship -->
+
+<div class="relationship">
+<h2><%= tooltip(@node.class,:support_contract,'Support Contracts') %></h2>
+  <div id="node_support_contract_assignments">
+  <%= render :partial => 'support_contract_assignments', :locals => { :node => @node} %>
+  </div>
+ 
+  <div id="create_support_contract_assignment">
+  <%= render :partial => 'create_support_contract_assignment', :locals => { :node => @node } %>
+  </div>
+  <p id="new_support_contract">
+  </p>
+ 
+  <p id="add_support_contract_assignment_link">
+  <%= render :partial => 'add_support_contract_link', :locals => { :node => @node }  if allow_perm(@node, ['updater'])%>
+  </p>
+</div> <!-- end support_contract relationship -->
+
 <%= javascript_tag "Element.hide('create_node_group_assignment')" %>
 <%= javascript_tag "Element.hide('create_outlet')" %>
 <%= javascript_tag "Element.hide('create_virtual_assignment')" %>
 <%= javascript_tag "Element.hide('create_node_rack_assignment')" %>
+<%= javascript_tag "Element.hide('create_support_contract_assignment')" %>
 <%= javascript_tag "Element.hide('create_volume_served')" %>
 <%= javascript_tag "Element.hide('create_volume_mounted')" %>
 <%= javascript_tag "Element.hide('create_name_alias')" %>

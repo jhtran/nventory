@@ -1,0 +1,34 @@
+<div class="relationship">
+
+  <h2>Nodes</h2>
+
+  <p id="show_nodes_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="show_nodes">
+    <%= button_to_remote "Show Nodes", :url => {:action => :get_deps, :id => support_contract.id, 
+        :partial => 'node_assignments' }, :update => 'nodes', :loading => "Element.show('show_nodes_spinner')", 
+        :after => "Element.hide('show_nodes')", :loaded => "Element.show('hide_nodes');Element.hide('show_nodes_spinner');Element.show('add_node_link')" %></p>
+
+  <p id="hide_nodes">
+    <%= button_to_remote "Hide Nodes", :url => {:action => :get_deps}, :update => 'nodes', 
+        :after => "Element.hide('hide_nodes');Element.show('show_nodes');Element.hide('add_node_link')" %></p>
+
+  <div id="nodes"> </div>
+
+  <div id="create_node_assignment">
+    <%= render :partial => 'create_node_assignment' %>
+  </div>
+
+  <p id="add_node_spinner"><b><font color=red size=3>Loading...<br /></font></b> <%= image_tag('spinner.gif', :alt => 'Loading') %></p>
+
+  <p id="add_node_link">
+    <%= render :partial => 'add_node_link' if allow_perm(@support_contract, ['updater']) %>
+  </p>
+
+</div>
+
+<%= javascript_tag "Element.hide('add_node_link')" %>
+<%= javascript_tag "Element.hide('create_node_assignment')" %>
+<%= javascript_tag "Element.hide('hide_nodes')" %>
+<%= javascript_tag "Element.hide('show_nodes_spinner')" %>
+<%= javascript_tag "Element.hide('add_node_spinner')" %>

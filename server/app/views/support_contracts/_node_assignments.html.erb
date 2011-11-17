@@ -1,0 +1,27 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if support_contract.node_support_contract_assignments.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="A list of the nodes assigned to this support_contract.">
+  <thead>
+  <tr>
+      <th><%= tooltip(SupportContract,:name) %></th>
+      <th><%= tooltip(SupportContract,:assigned_at) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- for assignment in support_contract.node_support_contract_assignments.sort{|a,b| a.node.name <=> b.node.name} %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.node.name, node_path(assignment.node) %></td>
+      <td><%= h(assignment.assigned_at) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => node_support_contract_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete if allow_perm(support_contract,'updater') && allow_perm(assignment.node,'updater') %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<% else %>
+  There is no node assigned to this support_contract
+<%- end -%>
+<%= @tooltips if ttflag %>

@@ -1,0 +1,32 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%- if node.support_contracts.count > 0 -%>
+  <table cellspacing="0" class="styled" summary="Support Contract assignment for this node.">
+  <thead>
+  <tr>
+      <th><%= tooltip(SupportContract,:name) %></th>
+      <th><%= tooltip(SupportContract,:service_level) %></th>
+      <th><%= tooltip(SupportContract,:expiration) %></th>
+      <th><%= tooltip(SupportContract,:assigned_at) %></th>
+      <th>&nbsp;</th>
+  </tr>
+  </thead>
+  <tbody>
+  <%- node.node_support_contract_assignments.each do |assignment| %>
+  <tr class="<%= cycle('odd', 'even') -%>" id="<%= dom_id(assignment) %>">
+      <td><%= link_to assignment.support_contract.name, support_contract_path(assignment.support_contract) %></td>
+      <td><%= assignment.support_contract.service_level %></td>
+      <td><%= h(assignment.support_contract.expiration.to_formatted_s(:long)) if assignment.support_contract.expiration %></td>
+      <td><%= h(assignment.assigned_at.to_formatted_s(:long)) %></td>
+      <td><%= link_to_remote 'Delete',
+                              :url => node_support_contract_assignment_path(assignment),
+                              :confirm => 'Are you sure?',
+                              :method => :delete if allow_perm(node,['updater']) && allow_perm(assignment.support_contract,['updater']) %></td>
+  </tr>
+  <%- end %>
+  </tbody>
+  </table>
+<%- else -%>
+  <p>This node is not assigned to any support contract.</p>
+<%- end -%>
+
+<%= @tooltips if ttflag %>

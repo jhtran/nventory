@@ -441,13 +441,13 @@ class ApplicationController < ActionController::Base
     respond_to do |format|
       format.html { flash[:error] = $denied and redirect_to(:action => :index) and return }
       format.js { render :update do |page| page.replace_html(params[:div],replace_html_msg ) end if params[:div] }
-      format.xml { render :text => $denied and return }
+      format.xml { render :text => $denied, :status => 401 and return }
     end # respond_to do |format|
   end
 
   def list_models
     %w( Node NodeGroup Account AccountGroup Comment DatabaseInstance Datacenter Drive HardwareProfile IpAddress LbPool LbProfile NameAlias NetworkInterface NetworkPort 
-        NodeRack OperatingSystem Outlet Service ServiceProfile Status StorageController Subnet ToolTip Vip Volume Tag Graffiti )
+        NodeRack OperatingSystem Outlet Service ServiceProfile Status StorageController Subnet ToolTip Vip Volume Tag Graffiti SupportContract HardwareLifecycle )
   end
 
   def custom_auth_controllers

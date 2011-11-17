@@ -1,0 +1,8 @@
+<% if node.hardware_lifecycle %>
+  <strong><%= tooltip(@node.hardware_lifecycle.class,:ship_date) %>:</strong> <%=h @node.hardware_lifecycle.ship_date %><br />
+  <strong><%= tooltip(@node.hardware_lifecycle.class,:out_of_service_date) %>:</strong> <%=h @node.hardware_lifecycle.out_of_service_date %><br /><br/>
+  <%= link_to 'More Details', hardware_lifecycle_path(@node.hardware_lifecycle) %><br/>
+<% else %>
+  This node has no hardware life cycle information.<br/>
+<% end %>
+<br/>

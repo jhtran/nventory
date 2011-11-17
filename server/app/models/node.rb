@@ -10,6 +10,14 @@ class Node < ActiveRecord::Base
   has_one :node_rack_node_assignment, :dependent => :destroy
   has_one :node_rack, :through => :node_rack_node_assignment
 
+  has_one :hardware_lifecycle, :dependent => :destroy
+  accepts_nested_attributes_for :hardware_lifecycle, 
+                                :reject_if     => :all_blank
+
+  has_many :node_support_contract_assignments, :dependent => :destroy
+  has_many :support_contracts, :through => :node_support_contract_assignments
+  accepts_nested_attributes_for :support_contracts, :allow_destroy => true
+
   has_many :lb_pool_node_assignments, :dependent => :destroy
   has_many :lb_pools, :through => :lb_pool_node_assignments
 

@@ -1,0 +1,6 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<p><strong><%= tooltip(SupportContract,:name) %></strong> <em>*</em> <br /> <%= f.text_field :name %></p>
+<p><strong><%= tooltip(SupportContract,:service_level) %></strong> <br /> <%= f.text_field :service_level %></p>
+<p><strong><%= tooltip(SupportContract,:expiration) %></strong> <br /> <%= f.datetime_select(:expiration,:include_blank => true) %></p>
+
+<%= @tooltips if ttflag %>

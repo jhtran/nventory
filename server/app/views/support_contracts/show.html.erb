@@ -1,0 +1,14 @@
+<%- @tooltips = [] %>
+<%- @page_title = "SupportContract: " + h(@support_contract.name) %>
+
+<div class="record_view">
+<h1><%= tooltip(SupportContract,:name,'Contract Name') %>: <%=h @support_contract.name %></h1>
+<p><strong><%= tooltip(SupportContract,:service_level) %>:</strong> <%= h(@support_contract.service_level) %></p>
+<p><strong><%= tooltip(SupportContract,:expiration) %>:</strong> <%= h(@support_contract.expiration) %></p>
+</div>
+
+<!-- BEGIN NODE RELATIONSHIPS -->
+<%= render :partial => 'nodes', :locals => {:support_contract => @support_contract} %>
+<!-- END NODE RELATIONSHIPS -->
+
+<%= @tooltips %>

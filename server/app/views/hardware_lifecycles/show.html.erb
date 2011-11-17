@@ -1,0 +1,17 @@
+<%- @tooltips = [] %>
+<%- @page_title = "Hardware Lifecycle: " + h(@hardware_lifecycle.node.name) %>
+
+<div class="record_view">
+
+<h1>Hardware Lifecycle</h1>
+
+<p><strong><%= tooltip(HardwareLifecycle,:node) %>:</strong> <%= link_to @hardware_lifecycle.node.name, node_path(@hardware_lifecycle.node) %><br />
+<strong><%= tooltip(HardwareLifecycle,:ship_date) %>:</strong> <%= @hardware_lifecycle.ship_date %><br />
+<strong><%= tooltip(HardwareLifecycle,:out_of_service_date) %>:</strong> <%= @hardware_lifecycle.out_of_service_date %><br />
+
+<p class="metadata"><strong><%= tooltip(HardwareLifecycle,:created_at) %>:</strong> <%= h(@hardware_lifecycle.created_at) %><br />
+<strong><%= tooltip(HardwareLifecycle,:updated_at) %>:</strong> <%= h(@hardware_lifecycle.updated_at) %></p>
+
+</div>
+
+<%= @tooltips %>

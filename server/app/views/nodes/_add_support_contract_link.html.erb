@@ -1,0 +1,4 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<%= link_to_function 'Add Support Contract', "Element.show('create_support_contract_assignment');Element.hide('add_support_contract_assignment_link')" %>
+
+<%= @tooltips if ttflag %>

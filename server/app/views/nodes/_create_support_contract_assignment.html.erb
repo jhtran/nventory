@@ -1,0 +1,10 @@
+<%- unless @tooltips ; then @tooltips = []; ttflag = true ; else; ttflag = false ;  end %>
+<% remote_form_for( :node_support_contract_assignment, :url => {:controller => 'node_support_contract_assignments', :action => :create, :div => :node_support_contract_assignments}, :loading => "Element.show('add_support_contract_spinner')", :loaded => "Element.hide('add_support_contract_spinner')" ) do |f| %>
+  <p>Support Contract:
+  <%= f.select( :support_contract_id, SupportContract.find(:all,:select => 'id,name,service_level',:order => :name).collect{|a| ["#{a.name} -- #{a.service_level}",a.id]}, { :include_blank => true } ) %>
+  <%= f.hidden_field( :node_id, { :value => @node.id } ) %>
+  <%= submit_tag "Assign" %> | <%= link_to_function 'Cancel', "Element.show('add_support_contract_link');Element.hide('create_support_contract_assignment')"%></p>
+
+<% end %>
+
+<%= @tooltips if ttflag %>

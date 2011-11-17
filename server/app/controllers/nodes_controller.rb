@@ -99,6 +99,7 @@ class NodesController < ApplicationController
   # GET /nodes/new
   def new
     @node = @object
+    @node.build_hardware_lifecycle
     respond_to do |format|
       format.html # show.html.erb
       format.js  { render :action => "inline_new", :layout => false }
@@ -108,6 +109,7 @@ class NodesController < ApplicationController
   # GET /nodes/1/edit
   def edit
     @node = @object
+    @node.build_hardware_lifecycle unless @node.hardware_lifecycle
   end
 
   # POST /nodes
