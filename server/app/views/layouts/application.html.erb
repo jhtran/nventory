@@ -90,6 +90,7 @@
 <ul>
     <li><%= @modelperms["Vip"] ? link_to('N', new_vip_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "VIPs", vips_url, :title => mtitle(Vip) %></li>
     <li><%= @modelperms["IpAddress"] ? link_to('N', new_ip_address_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Ip Addresses", ip_addresses_url, :title => mtitle(IpAddress) %></li>
+    <li><%= @modelperms["NetworkInterface"] ? link_to('N', new_network_interface_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Network Interfaces", network_interfaces_url, :title => mtitle(NetworkInterface) %></li>
     <li><%= @modelperms["NetworkPort"] ? link_to('N', new_network_port_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Network Ports", network_ports_url, :title => mtitle(NetworkPort) %></li>
     <li><%= @modelperms["Subnet"] ? link_to('N', new_subnet_path) : '&nbsp&nbsp&nbsp' %>&nbsp;&nbsp;<%= link_to "Subnets", subnets_url, :title => mtitle(Subnet) %></li>
 </ul>

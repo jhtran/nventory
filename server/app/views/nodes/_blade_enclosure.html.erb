@@ -1,0 +1,6 @@
+<strong><font color=purple><%= tooltip(@node.class,:blade_enclosure) %>:</strong> <%= link_to h(blade_results.producer.name), node_url(blade_results.producer) %></font>
+<% if blade_results.producer.node_rack %>
+  (Rack <%= link_to h(blade_results.producer.node_rack.name), node_rack_url(blade_results.producer.node_rack) %>)
+<% end %>
+<br />
+<strong><font color=purple><%= tooltip(@node.class,:blade_slot) %></strong> <%= blade_results.name %></font><br />

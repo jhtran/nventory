@@ -60,8 +60,7 @@
 <%- end -%>
 <!-- BLADE? -->
 <%- if blade_results = @node.consumed_blade -%>
-    <%= "<strong><font color=purple>" + tooltip(@node.class,:blade_enclosure) + ":</strong> #{blade_results.producer.name}</font><br />" %>
-    <%= "<strong><font color=purple>" + tooltip(@node.class,:blade_slot) + ":</strong> #{blade_results.name}</font><br />" %>
+  <%= render :partial => 'blade_enclosure', :locals => {:blade_results => blade_results} %>
 <%- end -%>
 </p>
 
