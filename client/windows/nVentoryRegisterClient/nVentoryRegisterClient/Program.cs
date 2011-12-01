@@ -98,7 +98,18 @@ namespace nVentoryRegisterClient
             {
                 bodyParts.Add("operating_system[variant]=" + Uri.EscapeDataString(osCaption));
             }
-            bodyParts.Add("operating_system[architecture]=" + Uri.EscapeDataString(win32OperatingSystem["OSArchitecture"].ToString()));
+
+            // Not sure how to check if OSArchitecture property is available. So I'll just wrap this
+            // around a try catch block
+            try
+            {
+                bodyParts.Add("operating_system[architecture]=" + Uri.EscapeDataString(win32OperatingSystem["OSArchitecture"].ToString()));
+            }
+            catch (System.Management.ManagementException me)
+            {
+                System.Console.WriteLine("WARNING: Couldn't get OSArchitecture");
+            }
+
             bodyParts.Add("node[kernel_version]=" + Uri.EscapeDataString(win32OperatingSystem["BuildNumber"].ToString()));
 
             // General hardware info
