@@ -261,7 +261,7 @@ namespace nVentoryRegisterClient
             request.Method = "POST";
             request.ContentType = "application/x-www-form-urlencoded";
             String username = "autoreg";
-            String password = "qq8Erkee&T";
+            String password = "mypassword";
             String authBody = "login=" + Uri.EscapeDataString(username) + "&password=" + Uri.EscapeDataString(password);
             byte[] authBodyBytes = Encoding.UTF8.GetBytes(authBody);
             request.ContentLength = authBodyBytes.Length;
