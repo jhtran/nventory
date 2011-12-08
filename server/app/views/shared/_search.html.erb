@@ -26,6 +26,7 @@
     <% next if assoc.name == :audits -%>
     <% next if assoc.name == :users -%>
     <% next if assoc.name == :utilization_metrics -%>
+    <% next if assoc.options[:polymorphic] %>
     <!-- FIXME - not sure why the following break search -->
     <% next if assoc.name == :volumes_mounted-%>
     <!-- FIXME - these probably break because their model don't exist? (alias of another model?)  -->

@@ -6,6 +6,7 @@
 <%- end -%></td>
   <td><%= link_to index_row.name, self.send(index_row.class.to_s.underscore + '_path', index_row) %></td>
   <td><%= index_row.service_level %></td>
+  <td><%= link_to(index_row.link, index_row.link) %></td>
   <td><%= index_row.expiration %></td>
 </tr>
 

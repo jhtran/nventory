@@ -9,7 +9,7 @@
     <ul>
     <%- nic.ip_addresses.each do |ip| -%>
       <li>
-        <%= link_to ip.address, ip_address_url(ip) %>
+        <%= link_to ip.address, ip_address_url(ip) %> (Go there: <%= link_to "https", "https://#{ip.address}" %> | <%= link_to "http", "http://#{ip.address}" %>)
       </li>
     <%- end -%>
     </ul>
