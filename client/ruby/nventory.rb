@@ -1761,8 +1761,7 @@ class NVentory::Client
 
   def getvmstatus
     # facter virtual makes calls to commands that are under /sbin
-    ENV['PATH'] = "#{ENV['PATH']}:/sbin"
-    vmstatus = `facter virtual`
+    vmstatus = Facter.virtual
     vmstatus.chomp!
 
     # extra check to see if we're running kvm hypervisor
